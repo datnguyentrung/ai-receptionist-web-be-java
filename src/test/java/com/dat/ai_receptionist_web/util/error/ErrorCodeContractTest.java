@@ -82,6 +82,7 @@ class ErrorCodeContractTest {
                 Map.entry("FITNESS_RECORD_NOT_FOUND", 404),
                 Map.entry("NOTIFICATION_NOT_FOUND", 404),
                 Map.entry("NOTIFICATION_RECIPIENT_NOT_FOUND", 404),
+                Map.entry("NOTIFICATION_RECIPIENT_NOT_ELIGIBLE", 400),
                 Map.entry("NOTIFICATION_RECIPIENT_REQUIRED", 400),
                 Map.entry("NOTIFICATION_RECIPIENTS_NOT_FOUND", 400),
                 Map.entry("UNAUTHORIZED", 401),

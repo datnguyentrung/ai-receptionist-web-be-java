@@ -2,6 +2,7 @@ package com.dat.ai_receptionist_web.controller.Notification;
 
 import com.dat.ai_receptionist_web.dto.Notification.NotificationRecipientDTO;
 import com.dat.ai_receptionist_web.dto.PageResponse;
+import com.dat.ai_receptionist_web.enums.Training.NotificationType;
 import com.dat.ai_receptionist_web.service.Notification.NotificationRecipientService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,40 @@ public class NotificationRecipientController {
     @GetMapping
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).NOTIFICATION_RECIPIENT_READ.getCode())")
     public PageResponse<NotificationRecipientDTO.Response> list(Pageable pageable) { return service.list(pageable); }
+
+    @GetMapping("/mine")
+    @PreAuthorize("isAuthenticated()")
+    public PageResponse<NotificationRecipientDTO.MineResponse> listMine(
+            Pageable pageable,
+            @RequestParam(required = false) Boolean read,
+            @RequestParam(required = false) NotificationType type,
+            @RequestParam(required = false) String search) {
+        return service.listMine(read, type, search, pageable);
+    }
+
+    @GetMapping("/mine/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public NotificationRecipientDTO.MineResponse getMine(@PathVariable UUID id) {
+        return service.getMine(id);
+    }
+
+    @GetMapping("/mine/unread-count")
+    @PreAuthorize("isAuthenticated()")
+    public NotificationRecipientDTO.UnreadCountResponse unreadCountMine() {
+        return service.unreadCountMine();
+    }
+
+    @PatchMapping("/mine/read-all")
+    @PreAuthorize("isAuthenticated()")
+    public NotificationRecipientDTO.UnreadCountResponse markAllRead() {
+        return service.markAllRead();
+    }
+
+    @PatchMapping("/{id}/read")
+    @PreAuthorize("isAuthenticated()")
+    public NotificationRecipientDTO.UnreadCountResponse markRead(@PathVariable UUID id) {
+        return service.markRead(id);
+    }
 
     /**
      * Tác dụng: Lấy chi tiết một bản ghi theo khóa định danh.

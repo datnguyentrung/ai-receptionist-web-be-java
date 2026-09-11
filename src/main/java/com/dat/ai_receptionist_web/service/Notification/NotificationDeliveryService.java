@@ -26,12 +26,15 @@ public class NotificationDeliveryService {
         List<Delivery> deliveries = transaction.execute(status ->
                 recipientRepository.findDeliveryRows(notificationId).stream()
                         .map(row -> new Delivery(row.getNotificationRecipientId(),
+                                row.getNotification().getNotificationId(),
+                                row.getContextPerson() == null ? null : row.getContextPerson().getPersonId(),
                                 row.getRecipientUser().getUserId(), row.getNotification().getTitle(),
                                 row.getNotification().getBody(), row.getNotification().getPayload())).toList());
         if (deliveries == null) return;
         for (Delivery delivery : deliveries) {
             boolean sent = sender.send(authSessionService.fcmTokensForUser(delivery.userId()),
-                    delivery.title(), delivery.body(), delivery.payload());
+                    delivery.title(), delivery.body(), delivery.payload(),
+                    delivery.recipientId(), delivery.notificationId(), delivery.contextPersonId());
             transaction.executeWithoutResult(status -> {
                 NotificationRecipient recipient = recipientRepository.findById(delivery.recipientId()).orElseThrow();
                 recipient.setNotificationRecipientStatus(sent
@@ -40,7 +43,8 @@ public class NotificationDeliveryService {
             });
         }
     }
-    private record Delivery(UUID recipientId, UUID userId, String title, String body, String payload) {}
+    private record Delivery(UUID recipientId, UUID notificationId, UUID contextPersonId,
+                            UUID userId, String title, String body, String payload) {}
 }
 
 

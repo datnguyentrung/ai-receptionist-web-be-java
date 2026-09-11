@@ -1,5 +1,6 @@
 package com.dat.ai_receptionist_web.domain.Notification;
 
+import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.domain.Security.User;
 import com.dat.ai_receptionist_web.enums.Training.NotificationRecipientStatus;
 import jakarta.persistence.*;
@@ -19,8 +20,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "notification_recipient", schema = "notification", uniqueConstraints =
-        @UniqueConstraint(name = "uk_notification_recipient", columnNames = {"notification_id", "recipient_user_id"}))
+@Table(name = "notification_recipient", schema = "notification")
 public class NotificationRecipient {
     @Id
     @GeneratedValue
@@ -35,6 +35,10 @@ public class NotificationRecipient {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "recipient_user_id", nullable = false)
     private User recipientUser;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "context_person_id")
+    private Person contextPerson;
 
     @Column(name = "read", nullable = false)
     private boolean read;

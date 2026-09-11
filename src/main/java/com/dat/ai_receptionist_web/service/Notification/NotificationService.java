@@ -1,15 +1,19 @@
 package com.dat.ai_receptionist_web.service.Notification;
+import com.dat.ai_receptionist_web.domain.Core.UserPerson;
 import com.dat.ai_receptionist_web.domain.Notification.*;
 import com.dat.ai_receptionist_web.domain.Security.User;
 import com.dat.ai_receptionist_web.dto.Notification.NotificationDTO;
 import com.dat.ai_receptionist_web.dto.PageResponse;
-import com.dat.ai_receptionist_web.enums.Training.NotificationRecipientStatus;
 import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.code.NotificationErrorCode;
 import com.dat.ai_receptionist_web.mapper.Notification.NotificationMapper;
 import com.dat.ai_receptionist_web.repository.Notification.*;
 import com.dat.ai_receptionist_web.repository.Core.UserPersonRepository;
 import com.dat.ai_receptionist_web.repository.Security.UserRepository;
+import com.dat.ai_receptionist_web.service.Notification.NotificationRecipientEligibilityPolicy.AudienceContext;
+import com.dat.ai_receptionist_web.service.Notification.NotificationRecipientEligibilityPolicy.EligibilityResult;
+import com.dat.ai_receptionist_web.service.Notification.NotificationRecipientEligibilityPolicy.ResolvedRecipientTarget;
+import com.dat.ai_receptionist_web.service.Notification.NotificationRecipientEligibilityPolicy.TargetSource;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -19,9 +23,10 @@ import java.util.*;
 @RequiredArgsConstructor
 public class NotificationService {
     private final NotificationRepository notificationRepository;
-    private final NotificationRecipientRepository recipientRepository;
     private final UserRepository userRepository;
     private final UserPersonRepository userPersonRepository;
+    private final NotificationRecipientService recipientService;
+    private final NotificationRecipientEligibilityPolicy eligibilityPolicy;
     private final NotificationDeliveryService deliveryService;
     private final NotificationMapper notificationMapper;
     private final TransactionAfterCommitExecutor afterCommitExecutor;
@@ -53,23 +58,32 @@ public class NotificationService {
      */
     @Transactional
     public NotificationDTO.Response create(NotificationDTO.CreateRequest request) {
-        Set<UUID> recipientIds = resolveRecipients(request);
-        if (recipientIds.isEmpty()) {
+        List<ResolvedTarget> targets = resolveTargets(request);
+        if (targets.isEmpty()) {
             throw new ApiException(NotificationErrorCode.NOTIFICATION_RECIPIENT_REQUIRED);
         }
-        List<User> users = userRepository.findAllById(recipientIds);
-        if (users.size() != recipientIds.size())
+        Map<UUID, User> users = indexUsers(targets.stream()
+                .map(target -> target.target().recipientUserId())
+                .collect(java.util.stream.Collectors.toSet()));
+        if (users.size() != targets.stream().map(target -> target.target().recipientUserId()).collect(java.util.stream.Collectors.toSet()).size())
             throw new ApiException(NotificationErrorCode.NOTIFICATION_RECIPIENTS_NOT_FOUND);
         Notification notification = notificationRepository.save(Notification.builder()
                 .title(request.title()).body(request.body()).notificationType(request.type())
                 .referenceType(request.referenceType()).referenceId(request.referenceId())
                 .payload(request.payload()).build());
-        users.forEach(user -> recipientRepository.save(NotificationRecipient.builder()
-                .notification(notification).recipientUser(user).read(false)
-                .notificationRecipientStatus(NotificationRecipientStatus.PENDING).build()));
+        List<NotificationRecipient> recipients = targets.stream()
+                .map(resolved -> recipientService.createRecipient(
+                        notification,
+                        users.get(resolved.target().recipientUserId()),
+                        resolved.candidateUserPerson() == null ? null : resolved.candidateUserPerson().getPerson(),
+                        resolved.target().source(),
+                        resolved.candidateUserPerson(),
+                        EligibilityResult.ALLOW))
+                .toList();
+        recipientService.saveAll(recipients);
         afterCommitExecutor.afterCommit(() ->
                 deliveryService.deliver(notification.getNotificationId()));
-        return new NotificationDTO.Response(notification.getNotificationId(), users.size());
+        return new NotificationDTO.Response(notification.getNotificationId(), recipients.size());
     }
 
     /**
@@ -99,14 +113,59 @@ public class NotificationService {
      * Input: Nhận NotificationDTO.CreateRequest request từ caller hoặc request.
      * Output: Trả về Set<UUID> theo kết quả xử lý.
      */
-    private Set<UUID> resolveRecipients(NotificationDTO.CreateRequest request) {
-        Set<UUID> recipients = new HashSet<>(safe(request.recipientUserIds()));
-        safe(request.recipientPersonIds()).forEach(personId ->
-                recipients.addAll(userPersonRepository.findActiveUserIdsByPersonId(personId)));
+    private List<ResolvedTarget> resolveTargets(NotificationDTO.CreateRequest request) {
+        Map<TargetKey, ResolvedTarget> targets = new LinkedHashMap<>();
+        safe(request.recipientUserIds()).forEach(userId -> addTarget(targets,
+                new ResolvedTarget(new ResolvedRecipientTarget(userId, null, TargetSource.DIRECT_USER, AudienceContext.ACCOUNT), null)));
         safe(request.recipientRoleCodes()).stream()
                 .map(code -> code.trim().toUpperCase(Locale.ROOT))
-                .forEach(roleCode -> recipients.addAll(userRepository.findUserIdsByRoleCode(roleCode)));
-        return recipients;
+                .forEach(roleCode -> userRepository.findUserIdsByRoleCode(roleCode).forEach(userId -> addTarget(targets,
+                        new ResolvedTarget(new ResolvedRecipientTarget(userId, null, TargetSource.ROLE, AudienceContext.ACCOUNT), null))));
+        resolvePersonTargets(request, targets);
+        return List.copyOf(targets.values());
+    }
+
+    private void resolvePersonTargets(NotificationDTO.CreateRequest request,
+                                      Map<TargetKey, ResolvedTarget> targets) {
+        Set<UUID> personIds = safe(request.recipientPersonIds());
+        if (personIds.isEmpty()) {
+            return;
+        }
+        List<UserPerson> candidates = userPersonRepository.findActiveByPersonIds(personIds);
+        for (UserPerson candidate : candidates) {
+            EligibilityResult result = eligibilityPolicy.decide(new NotificationRecipientEligibilityPolicy.Request(
+                    request.type(),
+                    request.referenceType(),
+                    request.referenceId(),
+                    TargetSource.PERSON,
+                    candidate.getRelationshipType(),
+                    candidate,
+                    AudienceContext.PERSON));
+            if (result != EligibilityResult.ALLOW) {
+                throw NotificationRecipientService.notEligible(result);
+            }
+            addTarget(targets, new ResolvedTarget(
+                    new ResolvedRecipientTarget(
+                            candidate.getUser().getUserId(),
+                            candidate.getPerson().getPersonId(),
+                            TargetSource.PERSON,
+                            AudienceContext.PERSON),
+                    candidate));
+        }
+        if (candidates.isEmpty()) {
+            throw NotificationRecipientService.notEligible(EligibilityResult.UNSUPPORTED);
+        }
+    }
+
+    private void addTarget(Map<TargetKey, ResolvedTarget> targets, ResolvedTarget resolved) {
+        ResolvedRecipientTarget target = resolved.target();
+        targets.putIfAbsent(new TargetKey(target.recipientUserId(), target.contextPersonId()), resolved);
+    }
+
+    private Map<UUID, User> indexUsers(Set<UUID> userIds) {
+        Map<UUID, User> users = new HashMap<>();
+        userRepository.findAllById(userIds).forEach(user -> users.put(user.getUserId(), user));
+        return users;
     }
 
     /**
@@ -126,6 +185,12 @@ public class NotificationService {
     private Notification find(UUID id) {
         return notificationRepository.findById(id)
                 .orElseThrow(() -> new ApiException(NotificationErrorCode.NOTIFICATION_NOT_FOUND));
+    }
+
+    private record TargetKey(UUID recipientUserId, UUID contextPersonId) {
+    }
+
+    private record ResolvedTarget(ResolvedRecipientTarget target, UserPerson candidateUserPerson) {
     }
 }
 

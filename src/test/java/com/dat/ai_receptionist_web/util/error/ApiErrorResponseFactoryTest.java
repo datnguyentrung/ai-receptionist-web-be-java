@@ -9,6 +9,7 @@ import com.dat.ai_receptionist_web.error.SensitiveFieldRule;
 import com.dat.ai_receptionist_web.error.ValidationError;
 import com.dat.ai_receptionist_web.service.Security.AuthorizationService;
 import com.dat.ai_receptionist_web.error.code.CatalogErrorCode;
+import com.dat.ai_receptionist_web.error.code.NotificationErrorCode;
 import com.dat.ai_receptionist_web.error.code.SecurityErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
@@ -58,6 +59,26 @@ class ApiErrorResponseFactoryTest {
         assertThat(body.getInstance().toString()).isEqualTo("/api/v1/course-prices");
         assertThat(body.getProperties()).containsEntry("code", "COURSE_NOT_FOUND")
                 .containsEntry("correlationId", "cid-1");
+    }
+
+    @Test
+    void apiExceptionSafeDetailSurvivesProblemDetailMapping() {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/notifications");
+
+        ProblemDetail denied = factory.response(new ApiException(
+                NotificationErrorCode.NOTIFICATION_RECIPIENT_NOT_ELIGIBLE,
+                "Notification recipient is denied for this context"), request).getBody();
+        ProblemDetail unsupported = factory.response(new ApiException(
+                NotificationErrorCode.NOTIFICATION_RECIPIENT_NOT_ELIGIBLE,
+                "Notification recipient eligibility is unsupported for this context"), request).getBody();
+
+        assertThat(denied).isNotNull();
+        assertThat(unsupported).isNotNull();
+        assertThat(denied.getProperties()).containsEntry("code", "NOTIFICATION_RECIPIENT_NOT_ELIGIBLE");
+        assertThat(unsupported.getProperties()).containsEntry("code", "NOTIFICATION_RECIPIENT_NOT_ELIGIBLE");
+        assertThat(denied.getDetail()).isEqualTo("Notification recipient is denied for this context");
+        assertThat(unsupported.getDetail())
+                .isEqualTo("Notification recipient eligibility is unsupported for this context");
     }
 
     @Test

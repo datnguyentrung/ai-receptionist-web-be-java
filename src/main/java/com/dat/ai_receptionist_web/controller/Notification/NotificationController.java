@@ -3,7 +3,6 @@ package com.dat.ai_receptionist_web.controller.Notification;
 import com.dat.ai_receptionist_web.dto.Notification.NotificationDTO;
 import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.service.Notification.NotificationService;
-import com.dat.ai_receptionist_web.service.Notification.NotificationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;

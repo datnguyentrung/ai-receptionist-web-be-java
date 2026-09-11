@@ -23,6 +23,8 @@ public interface UserPersonRepository extends JpaRepository<UserPerson, UUID> {
             RelationshipType relationshipType
     );
 
+    Optional<UserPerson> findByUser_UserIdAndPerson_PersonIdAndActiveTrue(UUID userId, UUID personId);
+
     @Query("""
             select up
             from UserPerson up
@@ -38,4 +40,13 @@ public interface UserPersonRepository extends JpaRepository<UserPerson, UUID> {
 
     @Query("select distinct up.user.userId from UserPerson up where up.person.personId = :personId and up.active = true")
     List<UUID> findActiveUserIdsByPersonId(@Param("personId") UUID personId);
+
+    @EntityGraph(attributePaths = {"user", "person"})
+    @Query("""
+            select up
+            from UserPerson up
+            where up.person.personId in :personIds
+              and up.active = true
+            """)
+    List<UserPerson> findActiveByPersonIds(@Param("personIds") Set<UUID> personIds);
 }

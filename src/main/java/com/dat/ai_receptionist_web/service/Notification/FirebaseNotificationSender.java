@@ -21,11 +21,15 @@ public class FirebaseNotificationSender {
      * Input: Nhận Set<String> tokens, String title, String body, String payload từ caller hoặc request.
      * Output: Trả về true/false thể hiện kết quả kiểm tra hoặc xử lý.
      */
-    public boolean send(Set<String> tokens, String title, String body, String payload) {
+    public boolean send(Set<String> tokens, String title, String body, String payload,
+                        UUID notificationRecipientId, UUID notificationId, UUID contextPersonId) {
         if (tokens.isEmpty() || firebaseMessaging == null) return false;
         try {
             MulticastMessage.Builder message = MulticastMessage.builder().addAllTokens(tokens)
-                    .putData("title", title).putData("body", body);
+                    .putData("title", title).putData("body", body)
+                    .putData("notificationRecipientId", notificationRecipientId.toString())
+                    .putData("notificationId", notificationId.toString());
+            if (contextPersonId != null) message.putData("contextPersonId", contextPersonId.toString());
             if (payload != null) message.putData("payload", payload);
             return firebaseMessaging.sendEachForMulticast(message.build()).getSuccessCount() > 0;
         } catch (FirebaseMessagingException exception) {

@@ -13,7 +13,9 @@ public enum NotificationErrorCode implements ErrorCode {
     NOTIFICATION_RECIPIENT_REQUIRED("NOTIFICATION_RECIPIENT_REQUIRED", HttpStatus.BAD_REQUEST,
             "Notification recipient required", "At least one notification recipient is required"),
     NOTIFICATION_RECIPIENTS_NOT_FOUND("NOTIFICATION_RECIPIENTS_NOT_FOUND", HttpStatus.BAD_REQUEST,
-            "Notification recipients not found", "One or more notification recipients do not exist");
+            "Notification recipients not found", "One or more notification recipients do not exist"),
+    NOTIFICATION_RECIPIENT_NOT_ELIGIBLE("NOTIFICATION_RECIPIENT_NOT_ELIGIBLE", HttpStatus.BAD_REQUEST,
+            "Notification recipient not eligible", "Notification recipient is not eligible for this context");
 
     private final String code;
     private final HttpStatus status;

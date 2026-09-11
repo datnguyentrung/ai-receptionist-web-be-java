@@ -2,12 +2,15 @@ package com.dat.ai_receptionist_web.repository.Training;
 
 import com.dat.ai_receptionist_web.domain.Training.ClassSession;
 import com.dat.ai_receptionist_web.enums.Training.SessionStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ClassSessionRepository extends JpaRepository<ClassSession, UUID> {
@@ -54,6 +57,7 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, UUID
         where c.status = com.dat.ai_receptionist_web.enums.Training.SessionStatus.ACTIVE
           and c.attendanceClosed = false
           and c.sessionDate <= :sessionDate
+          and (c.attendanceReopenedUntil is null or c.attendanceReopenedUntil <= current_timestamp)
     """)
     List<ClassSession> findSessionsToClose(@Param("sessionDate") LocalDate sessionDate);
 
@@ -94,4 +98,53 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, UUID
 
     List<ClassSession> findByCourse_CourseIdAndSessionDateBetweenAndStatusNot(
             UUID courseId, LocalDate fromDate, LocalDate untilDate, SessionStatus status);
+
+    @Query("""
+        select c
+        from ClassSession c
+        where :unrestricted = true
+           or exists (
+               select 1
+               from CourseStaffAssignment a
+               where a.staffPerson.personId = :activePersonId
+                 and a.course.courseId = c.course.courseId
+                 and a.startDate <= c.sessionDate
+                 and (a.endDate is null or a.endDate >= c.sessionDate)
+                 and a.assignmentStatus in (
+                     com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ACTIVE,
+                     com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ENDED
+                 )
+           )
+    """)
+    Page<ClassSession> findAccessible(
+            @Param("activePersonId") UUID activePersonId,
+            @Param("unrestricted") boolean unrestricted,
+            Pageable pageable
+    );
+
+    @Query("""
+        select c
+        from ClassSession c
+        where c.classSessionId = :id
+          and (
+              :unrestricted = true
+              or exists (
+                  select 1
+                  from CourseStaffAssignment a
+                  where a.staffPerson.personId = :activePersonId
+                    and a.course.courseId = c.course.courseId
+                    and a.startDate <= c.sessionDate
+                    and (a.endDate is null or a.endDate >= c.sessionDate)
+                    and a.assignmentStatus in (
+                        com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ACTIVE,
+                        com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ENDED
+                    )
+              )
+          )
+    """)
+    Optional<ClassSession> findAccessibleById(
+            @Param("id") UUID id,
+            @Param("activePersonId") UUID activePersonId,
+            @Param("unrestricted") boolean unrestricted
+    );
 }

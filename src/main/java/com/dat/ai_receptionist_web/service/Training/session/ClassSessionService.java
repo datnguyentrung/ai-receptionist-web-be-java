@@ -8,47 +8,59 @@ import com.dat.ai_receptionist_web.enums.Catalog.CourseStatus;
 import com.dat.ai_receptionist_web.enums.Training.SessionStatus;
 import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.code.CatalogErrorCode;
+import com.dat.ai_receptionist_web.error.code.GeneralErrorCode;
 import com.dat.ai_receptionist_web.error.code.TrainingErrorCode;
 import com.dat.ai_receptionist_web.mapper.Training.ClassSessionMapper;
 import com.dat.ai_receptionist_web.repository.Catalog.CourseRepository;
 import com.dat.ai_receptionist_web.repository.Training.ClassSessionRepository;
+import com.dat.ai_receptionist_web.service.Security.access.AccessContext;
+import com.dat.ai_receptionist_web.service.Security.access.CurrentAccessContextResolver;
+import com.dat.ai_receptionist_web.service.Training.access.ClassSessionAccessPolicy;
+import com.dat.ai_receptionist_web.service.Training.access.TrainingAccessScope;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.UUID;
 
-/**
- * CRUD + filter ClassSession. courseId bất biến; xóa là soft-cancel;
- * session đã bắt đầu/hoàn thành/quá khứ không được sửa.
- */
 @Service
 @RequiredArgsConstructor
 public class ClassSessionService {
     private final ClassSessionRepository repository;
     private final ClassSessionMapper mapper;
     private final CourseRepository courseRepository;
+    private final CurrentAccessContextResolver currentAccessContextResolver;
+    private final ClassSessionAccessPolicy accessPolicy;
 
     @Transactional(readOnly = true)
     public PageResponse<ClassSessionDTO.Response> list(Pageable pageable) {
-        return PageResponse.of(repository.findAll(pageable), mapper::toResponse);
+        AccessContext context = currentAccessContextResolver.current();
+        TrainingAccessScope scope = accessPolicy.resolveReadScope(context);
+        return PageResponse.of(
+                repository.findAccessible(context.activePersonId(), scope.unrestricted(), pageable),
+                mapper::toResponse
+        );
     }
 
     @Transactional(readOnly = true)
     public ClassSessionDTO.Response get(UUID id) {
-        return mapper.toResponse(find(id));
+        AccessContext context = currentAccessContextResolver.current();
+        return mapper.toResponse(findAccessible(id, context, accessPolicy.resolveReadScope(context)));
     }
 
     @Transactional
     public ClassSessionDTO.Response create(ClassSessionDTO.CreateRequest request) {
+        AccessContext context = currentAccessContextResolver.current();
         Course course = courseRepository.findById(request.courseId())
                 .orElseThrow(() -> new ApiException(CatalogErrorCode.COURSE_NOT_FOUND));
         if (course.getStatus() != CourseStatus.ACTIVE) {
             throw new ApiException(TrainingErrorCode.COURSE_NOT_ACTIVE);
         }
+        accessPolicy.requireCanManage(context, request.courseId(), request.sessionDate());
         validateTime(request.startTime(), request.endTime());
         if (request.sessionDate().isBefore(LocalDate.now())) {
             throw new ApiException(TrainingErrorCode.CLASS_SESSION_IMMUTABLE,
@@ -62,7 +74,8 @@ public class ClassSessionService {
                 .course(course)
                 .sessionDate(request.sessionDate())
                 .status(request.status())
-                .attendanceClosed(request.attendanceClosed())
+                .attendanceClosed(false)
+                .attendanceReopenedUntil(null)
                 .startTime(request.startTime())
                 .endTime(request.endTime())
                 .note(request.note())
@@ -72,12 +85,14 @@ public class ClassSessionService {
 
     @Transactional
     public ClassSessionDTO.Response update(UUID id, ClassSessionDTO.UpdateRequest request) {
-        ClassSession entity = find(id);
+        AccessContext context = currentAccessContextResolver.current();
+        ClassSession entity = findAccessible(id, context, accessPolicy.resolveWriteScope(context));
         requireMutable(entity);
         if (!entity.getCourse().getCourseId().equals(request.courseId())) {
             throw new ApiException(TrainingErrorCode.CLASS_SESSION_IMMUTABLE,
                     "Course of a class session cannot be changed");
         }
+        accessPolicy.requireCanManage(context, request.courseId(), request.sessionDate());
         validateTime(request.startTime(), request.endTime());
         if (!request.sessionDate().equals(entity.getSessionDate())
                 && repository.existsByCourse_CourseIdAndSessionDateAndStatusNot(
@@ -90,14 +105,37 @@ public class ClassSessionService {
 
     @Transactional
     public void delete(UUID id) {
-        ClassSession entity = find(id);
+        AccessContext context = currentAccessContextResolver.current();
+        ClassSession entity = findAccessible(id, context, accessPolicy.resolveWriteScope(context));
+        accessPolicy.requireCanManage(context, entity.getCourse().getCourseId(), entity.getSessionDate());
         requireMutable(entity);
         entity.setStatus(SessionStatus.CANCELLED);
     }
 
-    private ClassSession find(UUID id) {
-        return repository.findById(id)
-                .orElseThrow(() -> new ApiException(TrainingErrorCode.CLASS_SESSION_NOT_FOUND));
+    @Transactional
+    public ClassSessionDTO.Response reopenAttendance(UUID id, ClassSessionDTO.ReopenAttendanceRequest request) {
+        if (request.attendanceReopenedUntil() == null
+                || !request.attendanceReopenedUntil().isAfter(LocalDateTime.now())) {
+            throw new ApiException(GeneralErrorCode.INVALID_REQUEST_BODY,
+                    "attendanceReopenedUntil must be in the future");
+        }
+        AccessContext context = currentAccessContextResolver.current();
+        ClassSession entity = findAccessible(id, context, accessPolicy.resolveWriteScope(context));
+        accessPolicy.requireCanManage(context, entity.getCourse().getCourseId(), entity.getSessionDate());
+        entity.setAttendanceReopenedUntil(request.attendanceReopenedUntil());
+        return mapper.toResponse(repository.save(entity));
+    }
+
+    private ClassSession findAccessible(
+            UUID id,
+            AccessContext context,
+            TrainingAccessScope scope
+    ) {
+        return repository.findAccessibleById(
+                id,
+                context.activePersonId(),
+                scope.unrestricted()
+        ).orElseThrow(() -> new ApiException(TrainingErrorCode.CLASS_SESSION_NOT_FOUND));
     }
 
     private void requireMutable(ClassSession entity) {

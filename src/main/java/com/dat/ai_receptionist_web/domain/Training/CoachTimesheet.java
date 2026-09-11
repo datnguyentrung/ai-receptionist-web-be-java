@@ -19,7 +19,7 @@ import java.util.UUID;
 @Entity
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "coach_timesheet", schema = "training", uniqueConstraints =
-        @UniqueConstraint(name = "uk_timesheet_assignment_session", columnNames = {"coach_assignment_id", "class_session_id"}))
+        @UniqueConstraint(name = "uk_timesheet_assignment_session", columnNames = {"course_staff_assignment_id", "class_session_id"}))
 public class CoachTimesheet {
     @Id
     @GeneratedValue
@@ -28,8 +28,8 @@ public class CoachTimesheet {
     private UUID coachTimesheetId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "coach_assignment_id", nullable = false)
-    private CoachAssignment coachAssignment;
+    @JoinColumn(name = "course_staff_assignment_id", nullable = false)
+    private CourseStaffAssignment courseStaffAssignment;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "class_session_id", nullable = false)

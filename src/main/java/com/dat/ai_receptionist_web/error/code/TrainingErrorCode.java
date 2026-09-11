@@ -8,8 +8,8 @@ import org.springframework.http.HttpStatus;
 public enum TrainingErrorCode implements ErrorCode {
     CLASS_SESSION_NOT_FOUND("CLASS_SESSION_NOT_FOUND", HttpStatus.NOT_FOUND, "Class session not found",
             "Class session not found"),
-    COACH_ASSIGNMENT_NOT_FOUND("COACH_ASSIGNMENT_NOT_FOUND", HttpStatus.NOT_FOUND,
-            "Coach assignment not found", "Coach assignment not found"),
+    COURSE_STAFF_ASSIGNMENT_NOT_FOUND("COURSE_STAFF_ASSIGNMENT_NOT_FOUND", HttpStatus.NOT_FOUND,
+            "Course staff assignment not found", "Course staff assignment not found"),
     COACH_TIMESHEET_NOT_FOUND("COACH_TIMESHEET_NOT_FOUND", HttpStatus.NOT_FOUND,
             "Coach timesheet not found", "Coach timesheet not found"),
     BELT_EXAM_NOT_FOUND("BELT_EXAM_NOT_FOUND", HttpStatus.NOT_FOUND,
@@ -36,7 +36,17 @@ public enum TrainingErrorCode implements ErrorCode {
             "Leave enrollment not found",
             "No active student enrollment covers the leave session for this course"),
     ATTENDANCE_ALREADY_CLOSED("ATTENDANCE_ALREADY_CLOSED", HttpStatus.CONFLICT,
-            "Attendance already closed", "Attendance for this class session is already closed");
+            "Attendance already closed", "Attendance for this class session is already closed"),
+    ATTENDANCE_CLOSED("ATTENDANCE_CLOSED", HttpStatus.CONFLICT,
+            "Attendance closed", "Attendance is closed and has not been reopened"),
+    ATTENDANCE_UPDATE_NOT_ALLOWED("ATTENDANCE_UPDATE_NOT_ALLOWED", HttpStatus.FORBIDDEN,
+            "Attendance update not allowed", "Attendance update is not allowed"),
+    COURSE_STAFF_ASSIGNMENT_NOT_EFFECTIVE("COURSE_STAFF_ASSIGNMENT_NOT_EFFECTIVE", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Course staff assignment not effective", "Course staff assignment is not effective for this session"),
+    COURSE_STAFF_ASSIGNMENT_AMBIGUOUS("COURSE_STAFF_ASSIGNMENT_AMBIGUOUS", HttpStatus.CONFLICT,
+            "Course staff assignment ambiguous", "Multiple effective staff assignments match the same course and date"),
+    STUDENT_ENROLLMENT_NOT_EFFECTIVE("STUDENT_ENROLLMENT_NOT_EFFECTIVE", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Student enrollment not effective", "Student enrollment is not effective for this session");
 
     private final String code;
     private final HttpStatus status;

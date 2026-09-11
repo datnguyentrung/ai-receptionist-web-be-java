@@ -55,4 +55,25 @@ class SchemaMigrationContractTest {
                 .doesNotContain("course_schedule_change")
                 .doesNotContain("course_schedule_impact");
     }
+
+    @Test
+    void v7AddsPolicyAuthorizationFactsAndCourseStaffAssignment() throws Exception {
+        String sql = Files.readString(Path.of(
+                "src/main/resources/db/migration/V7__hybrid_policy_authorization_facts.sql"));
+
+        assertThat(sql)
+                .contains("WHERE code = 'COACH_ASSIGNMENT_READ'")
+                .contains("code = 'COURSE_STAFF_ASSIGNMENT_READ'")
+                .contains("WHERE code = 'COACH_ASSIGNMENT_CREATE'")
+                .contains("code = 'COURSE_STAFF_ASSIGNMENT_CREATE'")
+                .contains("RENAME TO course_staff_assignment")
+                .contains("RENAME COLUMN coach_assignment_id TO course_staff_assignment_id")
+                .contains("RENAME COLUMN coach_person_id TO staff_person_id")
+                .contains("assignment_type")
+                .contains("ck_course_staff_assignment_period")
+                .contains("ck_student_enrollment_period")
+                .contains("attendance_reopened_until")
+                .contains("idx_course_staff_assignment_person_course_period")
+                .contains("idx_user_person_user_relationship_person_active");
+    }
 }

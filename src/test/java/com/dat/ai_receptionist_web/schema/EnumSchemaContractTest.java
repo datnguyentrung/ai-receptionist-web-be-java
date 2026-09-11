@@ -24,7 +24,8 @@ class EnumSchemaContractTest {
         assertValues(CourseStatus.class, "OPEN", "ACTIVE", "CLOSED", "CANCELLED");
         assertValues(RelationshipType.class, "OWNER", "GUARDIAN", "MANAGER");
         assertValues(PersonStatus.class, "ACTIVE", "INACTIVE", "SUSPENDED");
-        assertValues(CoachAssignmentStatus.class, "PENDING", "ACTIVE", "SUSPENDED", "ENDED", "CANCELLED");
+        assertValues(AssignmentType.class, "PRIMARY_COACH", "ASSISTANT_COACH", "TEACHING_ASSISTANT", "MANAGER");
+        assertValues(CourseStaffAssignmentStatus.class, "PENDING", "ACTIVE", "SUSPENDED", "ENDED", "CANCELLED");
         assertValues(StudentEnrollmentStatus.class, "PENDING_START", "ACTIVE", "COMPLETED", "EXPIRED", "CANCELLED");
         assertValues(WalletTransactionStatus.class, "PENDING", "PROCESSING", "APPROVED", "REJECTED");
         assertValues(ScheduleLevel.class, "BASIC", "ADVANCED", "EXPERT");

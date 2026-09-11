@@ -48,8 +48,8 @@ public class StudentAttendance {
     private EvaluationStatus evaluationStatus;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "coach_assignment_id")
-    private CoachAssignment coachAssignment;
+    @JoinColumn(name = "course_staff_assignment_id")
+    private CourseStaffAssignment courseStaffAssignment;
 
     @Column(name = "note", length = 500)
     private String note;

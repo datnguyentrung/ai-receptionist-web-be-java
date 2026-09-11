@@ -2,7 +2,8 @@ package com.dat.ai_receptionist_web.domain.Training;
 
 import com.dat.ai_receptionist_web.domain.Catalog.Course;
 import com.dat.ai_receptionist_web.domain.Core.Person;
-import com.dat.ai_receptionist_web.enums.Training.CoachAssignmentStatus;
+import com.dat.ai_receptionist_web.enums.Training.AssignmentType;
+import com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
@@ -21,31 +22,35 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "coach_assignment", schema = "training")
-public class CoachAssignment {
+@Table(name = "course_staff_assignment", schema = "training")
+public class CourseStaffAssignment {
     @Id
     @GeneratedValue
     @UuidGenerator
-    @Column(name = "coach_assignment_id", nullable = false, updatable = false)
-    private UUID coachAssignmentId;
+    @Column(name = "course_staff_assignment_id", nullable = false, updatable = false)
+    private UUID courseStaffAssignmentId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "coach_person_id", nullable = false)
-    private Person coach;
+    @JoinColumn(name = "staff_person_id", nullable = false)
+    private Person staffPerson;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
 
-    @Column(name = "assigned_date", nullable = false)
-    private LocalDate assignedDate;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "assignment_type", nullable = false, length = 30)
+    private AssignmentType assignmentType;
+
+    @Column(name = "start_date", nullable = false)
+    private LocalDate startDate;
 
     @Column(name = "end_date")
     private LocalDate endDate;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "coach_assignment_status", nullable = false, length = 20)
-    private CoachAssignmentStatus coachAssignmentStatus;
+    @Column(name = "assignment_status", nullable = false, length = 20)
+    private CourseStaffAssignmentStatus assignmentStatus;
 
     @Column(name = "note", length = 500)
     private String note;

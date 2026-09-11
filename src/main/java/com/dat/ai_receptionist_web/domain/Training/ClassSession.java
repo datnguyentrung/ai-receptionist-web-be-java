@@ -7,6 +7,7 @@ import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.UUID;
 
@@ -37,6 +38,9 @@ public class ClassSession {
 
     @Column(name = "is_attendance_closed", nullable = false)
     private boolean attendanceClosed;
+
+    @Column(name = "attendance_reopened_until")
+    private LocalDateTime attendanceReopenedUntil;
 
     @Column(name = "start_time", nullable = false)
     private LocalTime startTime;

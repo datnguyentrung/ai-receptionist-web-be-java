@@ -9,13 +9,12 @@ import org.mapstruct.MappingTarget;
 
 @Mapper(componentModel = "spring")
 public interface CoachTimesheetMapper {
-    @Mapping(target = "coachAssignmentId", source = "coachAssignment.coachAssignmentId")
+    @Mapping(target = "courseStaffAssignmentId", source = "courseStaffAssignment.courseStaffAssignmentId")
     @Mapping(target = "classSessionId", source = "classSession.classSessionId")
+    @Mapping(target = "allowedActions", expression = "java(com.dat.ai_receptionist_web.dto.Training.CoachTimesheetDTO.AllowedActions.none())")
     CoachTimesheetDTO.Response toResponse(CoachTimesheet entity);
 
     @BeanMapping(ignoreByDefault = true)
-    @Mapping(target = "coachAssignment", ignore = true)
-    @Mapping(target = "classSession", ignore = true)
     @Mapping(target = "checkInTime", source = "checkInTime")
     @Mapping(target = "checkOutTime", source = "checkOutTime")
     @Mapping(target = "note", source = "note")

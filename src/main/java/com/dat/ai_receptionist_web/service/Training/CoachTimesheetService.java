@@ -1,103 +1,180 @@
 package com.dat.ai_receptionist_web.service.Training;
 
 import com.dat.ai_receptionist_web.domain.Training.CoachTimesheet;
-import com.dat.ai_receptionist_web.dto.Training.CoachTimesheetDTO;
+import com.dat.ai_receptionist_web.domain.Training.CourseStaffAssignment;
 import com.dat.ai_receptionist_web.dto.PageResponse;
+import com.dat.ai_receptionist_web.dto.Training.CoachTimesheetDTO;
+import com.dat.ai_receptionist_web.enums.Security.PermissionDefinition;
 import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.code.TrainingErrorCode;
 import com.dat.ai_receptionist_web.mapper.Training.CoachTimesheetMapper;
-import com.dat.ai_receptionist_web.repository.Training.CoachTimesheetRepository;
-import com.dat.ai_receptionist_web.repository.Training.CoachAssignmentRepository;
 import com.dat.ai_receptionist_web.repository.Training.ClassSessionRepository;
+import com.dat.ai_receptionist_web.repository.Training.CoachTimesheetRepository;
+import com.dat.ai_receptionist_web.repository.Training.CourseStaffAssignmentRepository;
 import com.dat.ai_receptionist_web.service.Core.PersonCodePolicy;
-import java.util.UUID;
+import com.dat.ai_receptionist_web.service.Security.access.AccessContext;
+import com.dat.ai_receptionist_web.service.Security.access.CurrentAccessContextResolver;
+import com.dat.ai_receptionist_web.service.Training.access.CoachTimesheetAccessPolicy;
+import com.dat.ai_receptionist_web.service.Training.access.TrainingAccessScope;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class CoachTimesheetService {
     private final CoachTimesheetRepository repository;
     private final CoachTimesheetMapper mapper;
-    private final CoachAssignmentRepository coachAssignmentRepository;
+    private final CourseStaffAssignmentRepository courseStaffAssignmentRepository;
     private final ClassSessionRepository classSessionRepository;
     private final PersonCodePolicy personCodePolicy;
+    private final CurrentAccessContextResolver currentAccessContextResolver;
+    private final CoachTimesheetAccessPolicy accessPolicy;
 
-    /**
-     * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
-     * Input: Nhận Pageable pageable từ caller hoặc request.
-     * Output: Trả về PageResponse<CoachTimesheetDTO.Response> theo kết quả xử lý.
-     */
     @Transactional(readOnly = true)
-    public PageResponse<CoachTimesheetDTO.Response> list(Pageable pageable) {
-        return PageResponse.of(repository.findAll(pageable), mapper::toResponse);
+    public PageResponse<CoachTimesheetDTO.Response> list(
+            LocalDate fromDate,
+            LocalDate toDate,
+            UUID courseId,
+            Pageable pageable
+    ) {
+        AccessContext context = currentAccessContextResolver.current();
+        TrainingAccessScope scope = accessPolicy.resolveReadScope(context);
+        return PageResponse.of(repository.findAccessible(
+                context.activePersonId(),
+                scope.unrestricted(),
+                scope.self(),
+                scope.managedCourses(),
+                fromDate,
+                toDate,
+                courseId,
+                pageable
+        ), entity -> toResponse(entity, context));
     }
 
-    /**
-     * Tác dụng: Lấy chi tiết một bản ghi theo khóa định danh.
-     * Input: Nhận UUID id từ caller hoặc request.
-     * Output: Trả về CoachTimesheetDTO.Response theo kết quả xử lý.
-     */
     @Transactional(readOnly = true)
     public CoachTimesheetDTO.Response get(UUID id) {
-        return mapper.toResponse(find(id));
+        AccessContext context = currentAccessContextResolver.current();
+        return toResponse(findAccessible(id, context), context);
     }
 
-    /**
-     * Tác dụng: Tạo mới bản ghi và trả về dữ liệu sau khi tạo.
-     * Input: Nhận CoachTimesheetDTO.CreateRequest request từ caller hoặc request.
-     * Output: Trả về CoachTimesheetDTO.Response theo kết quả xử lý.
-     */
     @Transactional
     public CoachTimesheetDTO.Response create(CoachTimesheetDTO.CreateRequest request) {
+        AccessContext context = currentAccessContextResolver.current();
         CoachTimesheet entity = new CoachTimesheet();
-        var coachAssignment = coachAssignmentRepository.findById(request.coachAssignmentId()).orElseThrow(() -> new ApiException(TrainingErrorCode.COACH_ASSIGNMENT_NOT_FOUND));
-        personCodePolicy.requireSystemEmployee(coachAssignment.getCoach());
-        entity.setCoachAssignment(coachAssignment);
-        entity.setClassSession(classSessionRepository.findById(request.classSessionId()).orElseThrow(() -> new ApiException(TrainingErrorCode.CLASS_SESSION_NOT_FOUND)));
+        var session = classSessionRepository.findById(request.classSessionId())
+                .orElseThrow(() -> new ApiException(TrainingErrorCode.CLASS_SESSION_NOT_FOUND));
+        CourseStaffAssignment assignment = resolveAssignment(context, session.getCourse().getCourseId(),
+                session.getSessionDate());
+        personCodePolicy.requireSystemEmployee(assignment.getStaffPerson());
+        accessPolicy.requireCanCreate(context, session, assignment);
+        entity.setCourseStaffAssignment(assignment);
+        entity.setClassSession(session);
         entity.setCheckInTime(request.checkInTime());
         entity.setCheckOutTime(request.checkOutTime());
         entity.setNote(request.note());
-        return mapper.toResponse(repository.save(entity));
+        return toResponse(repository.save(entity), context);
     }
 
-    /**
-     * Tác dụng: Cập nhật bản ghi hiện có và trả về dữ liệu sau khi cập nhật.
-     * Input: Nhận UUID id, CoachTimesheetDTO.UpdateRequest request từ caller hoặc request.
-     * Output: Trả về CoachTimesheetDTO.Response theo kết quả xử lý.
-     */
     @Transactional
     public CoachTimesheetDTO.Response update(UUID id, CoachTimesheetDTO.UpdateRequest request) {
-        var entity = find(id);
-        var coachAssignment = coachAssignmentRepository.findById(request.coachAssignmentId()).orElseThrow(() -> new ApiException(TrainingErrorCode.COACH_ASSIGNMENT_NOT_FOUND));
-        personCodePolicy.requireSystemEmployee(coachAssignment.getCoach());
-        entity.setCoachAssignment(coachAssignment);
-        entity.setClassSession(classSessionRepository.findById(request.classSessionId()).orElseThrow(() -> new ApiException(TrainingErrorCode.CLASS_SESSION_NOT_FOUND)));
+        AccessContext context = currentAccessContextResolver.current();
+        var entity = findManageable(id, context);
+        accessPolicy.requireCanUpdate(context, entity);
         mapper.updateEntity(request, entity);
-        return mapper.toResponse(repository.save(entity));
+        return toResponse(repository.save(entity), context);
     }
 
-    /**
-     * Tác dụng: Xóa hoặc vô hiệu hóa bản ghi theo định danh đầu vào.
-     * Input: Nhận UUID id từ caller hoặc request.
-     * Output: Không trả về dữ liệu; cập nhật trạng thái hoặc ném lỗi khi xử lý thất bại.
-     */
     @Transactional
     public void delete(UUID id) {
-        var entity = find(id);
+        AccessContext context = currentAccessContextResolver.current();
+        var entity = findManageable(id, context);
+        accessPolicy.requireCanDelete(context, entity);
         repository.delete(entity);
     }
 
-    /**
-     * Tác dụng: Tìm và trả về dữ liệu nội bộ theo điều kiện đầu vào.
-     * Input: Nhận UUID id từ caller hoặc request.
-     * Output: Trả về CoachTimesheet theo kết quả xử lý.
-     */
-    private CoachTimesheet find(UUID id) {
-        return repository.findById(id).orElseThrow(() -> new ApiException(TrainingErrorCode.COACH_TIMESHEET_NOT_FOUND));
+    private CoachTimesheet findAccessible(UUID id, AccessContext context) {
+        TrainingAccessScope scope = accessPolicy.resolveReadScope(context);
+        return repository.findAccessibleById(
+                id,
+                context.activePersonId(),
+                scope.unrestricted(),
+                scope.self(),
+                scope.managedCourses()
+        ).orElseThrow(() -> new ApiException(TrainingErrorCode.COACH_TIMESHEET_NOT_FOUND));
+    }
+
+    private CoachTimesheet findManageable(UUID id, AccessContext context) {
+        TrainingAccessScope scope = accessPolicy.resolveWriteScope(context);
+        return repository.findAccessibleById(
+                id,
+                context.activePersonId(),
+                scope.unrestricted(),
+                scope.self(),
+                false
+        ).orElseThrow(() -> new ApiException(TrainingErrorCode.COACH_TIMESHEET_NOT_FOUND));
+    }
+
+    private CourseStaffAssignment resolveAssignment(AccessContext context, UUID courseId, LocalDate sessionDate) {
+        if (context.activePersonId() == null) {
+            throw new ApiException(TrainingErrorCode.COURSE_STAFF_ASSIGNMENT_NOT_EFFECTIVE);
+        }
+        var assignments = courseStaffAssignmentRepository.findEffectiveAssignmentsForStaffCourseOnDate(
+                context.activePersonId(),
+                courseId,
+                sessionDate
+        );
+        if (assignments.isEmpty()) {
+            throw new ApiException(TrainingErrorCode.COURSE_STAFF_ASSIGNMENT_NOT_EFFECTIVE);
+        }
+        if (assignments.size() > 1) {
+            throw new ApiException(TrainingErrorCode.COURSE_STAFF_ASSIGNMENT_AMBIGUOUS);
+        }
+        return assignments.getFirst();
+    }
+
+    private CoachTimesheetDTO.Response toResponse(CoachTimesheet entity, AccessContext context) {
+        CoachTimesheetDTO.Response base = mapper.toResponse(entity);
+        return new CoachTimesheetDTO.Response(
+                base.coachTimesheetId(),
+                base.courseStaffAssignmentId(),
+                base.classSessionId(),
+                base.checkInTime(),
+                base.checkOutTime(),
+                base.note(),
+                allowedActions(entity, context),
+                base.createdAt(),
+                base.updatedAt()
+        );
+    }
+
+    private CoachTimesheetDTO.AllowedActions allowedActions(CoachTimesheet entity, AccessContext context) {
+        boolean update = context.hasPermission(PermissionDefinition.COACH_TIMESHEET_UPDATE.getCode())
+                && canUpdate(entity, context);
+        boolean delete = context.hasPermission(PermissionDefinition.COACH_TIMESHEET_DELETE.getCode())
+                && canDelete(entity, context);
+        return new CoachTimesheetDTO.AllowedActions(update, delete);
+    }
+
+    private boolean canUpdate(CoachTimesheet entity, AccessContext context) {
+        try {
+            accessPolicy.requireCanUpdate(context, entity);
+            return true;
+        } catch (ApiException ex) {
+            return false;
+        }
+    }
+
+    private boolean canDelete(CoachTimesheet entity, AccessContext context) {
+        try {
+            accessPolicy.requireCanDelete(context, entity);
+            return true;
+        } catch (ApiException ex) {
+            return false;
+        }
     }
 }
-
-

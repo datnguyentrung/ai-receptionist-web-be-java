@@ -58,7 +58,7 @@ public class SecurityUtil {
                 .filter(Objects::nonNull).map(UUID::fromString);
     }
 
-    private static Optional<Jwt> getJwt() {
+    public static Optional<Jwt> getJwt() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return authentication != null && authentication.getPrincipal() instanceof Jwt jwt
                 ? Optional.of(jwt) : Optional.empty();

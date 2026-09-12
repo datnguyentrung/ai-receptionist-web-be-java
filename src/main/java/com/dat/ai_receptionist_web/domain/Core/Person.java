@@ -81,4 +81,8 @@ public class Person {
 
     @Column(name = "start_date")
     private LocalDate startDate;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "position_id")
+    private Position position;
 }

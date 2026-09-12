@@ -22,5 +22,6 @@ public class Role {
     private String description;
 
     @Column(name = "permission_version", nullable = false)
+    @Builder.Default
     private long permissionVersion = 1;
 }

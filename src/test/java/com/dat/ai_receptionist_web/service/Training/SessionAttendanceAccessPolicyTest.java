@@ -11,108 +11,105 @@ import com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus;
 import com.dat.ai_receptionist_web.enums.Training.SessionStatus;
 import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.code.TrainingErrorCode;
-import com.dat.ai_receptionist_web.service.Security.access.AccessContext;
-import com.dat.ai_receptionist_web.service.Training.access.StudentAttendanceAccessPolicy;
+import com.dat.ai_receptionist_web.service.Training.access.SessionAttendanceAccessPolicy;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class StudentAttendanceAccessPolicyTest {
-    private final StudentAttendanceAccessPolicy policy = new StudentAttendanceAccessPolicy();
+class SessionAttendanceAccessPolicyTest {
+    private final SessionAttendanceAccessPolicy policy = new SessionAttendanceAccessPolicy();
 
     @Test
-    void assignmentEffectiveOnHistoricalSessionAllowsCreate() {
+    void effectiveStudentEnrollmentAllowsCreate() {
         UUID courseId = UUID.randomUUID();
-        UUID staffPersonId = UUID.randomUUID();
         ClassSession session = session(courseId, LocalDate.of(2026, 3, 15), false, null);
         StudentEnrollment enrollment = enrollment(courseId, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
-        CourseStaffAssignment assignment = assignment(staffPersonId, courseId,
-                LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
 
-        assertThatCode(() -> policy.requireCanCreate(context(staffPersonId), session, enrollment, assignment))
+        assertThatCode(() -> policy.requireCanCreate(session, enrollment, null))
                 .doesNotThrowAnyException();
     }
 
     @Test
-    void assignmentOutsideSessionDateDeniesCreate() {
+    void enrollmentOutsideSessionDateDeniesCreate() {
         UUID courseId = UUID.randomUUID();
-        UUID staffPersonId = UUID.randomUUID();
         ClassSession session = session(courseId, LocalDate.of(2026, 4, 15), false, null);
-        StudentEnrollment enrollment = enrollment(courseId, LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30));
-        CourseStaffAssignment assignment = assignment(staffPersonId, courseId,
-                LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
+        StudentEnrollment enrollment = enrollment(courseId, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
 
-        assertThatThrownBy(() -> policy.requireCanCreate(context(staffPersonId), session, enrollment, assignment))
+        assertThatThrownBy(() -> policy.requireCanCreate(session, enrollment, null))
                 .isInstanceOf(ApiException.class)
                 .extracting("errorCode")
-                .isEqualTo(TrainingErrorCode.COURSE_STAFF_ASSIGNMENT_NOT_EFFECTIVE);
+                .isEqualTo(TrainingErrorCode.STUDENT_ENROLLMENT_NOT_EFFECTIVE);
     }
 
     @Test
     void closedAttendanceDeniesUnlessReopened() {
         UUID courseId = UUID.randomUUID();
-        UUID staffPersonId = UUID.randomUUID();
         StudentEnrollment enrollment = enrollment(courseId, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
-        CourseStaffAssignment assignment = assignment(staffPersonId, courseId,
-                LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
 
         assertThatThrownBy(() -> policy.requireCanCreate(
-                context(staffPersonId),
                 session(courseId, LocalDate.of(2026, 3, 15), true, LocalDateTime.now().minusMinutes(1)),
                 enrollment,
-                assignment
+                null
         ))
                 .isInstanceOf(ApiException.class)
                 .extracting("errorCode")
                 .isEqualTo(TrainingErrorCode.ATTENDANCE_CLOSED);
 
         assertThatCode(() -> policy.requireCanCreate(
-                context(staffPersonId),
                 session(courseId, LocalDate.of(2026, 3, 15), true, LocalDateTime.now().plusMinutes(30)),
                 enrollment,
-                assignment
+                null
         )).doesNotThrowAnyException();
     }
 
     @Test
-    void pendingSuspendedAndCancelledAssignmentsDoNotGrantAccess() {
+    void pendingSuspendedAndCancelledAssistantParticipantsCannotHaveSessionAttendance() {
         UUID courseId = UUID.randomUUID();
-        UUID staffPersonId = UUID.randomUUID();
         ClassSession session = session(courseId, LocalDate.of(2026, 3, 15), false, null);
-        StudentEnrollment enrollment = enrollment(courseId, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
 
         for (CourseStaffAssignmentStatus status : new CourseStaffAssignmentStatus[]{
                 CourseStaffAssignmentStatus.PENDING,
                 CourseStaffAssignmentStatus.SUSPENDED,
                 CourseStaffAssignmentStatus.CANCELLED
         }) {
-            CourseStaffAssignment assignment = assignment(staffPersonId, courseId,
+            CourseStaffAssignment assignment = assignment(UUID.randomUUID(), courseId,
                     LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
+            assignment.setAssignmentType(AssignmentType.ASSISTANT_COACH);
             assignment.setAssignmentStatus(status);
 
-            assertThatThrownBy(() -> policy.requireCanCreate(context(staffPersonId), session, enrollment, assignment))
+            assertThatThrownBy(() -> policy.requireCanCreate(session, null, assignment))
                     .isInstanceOf(ApiException.class)
                     .extracting("errorCode")
                     .isEqualTo(TrainingErrorCode.COURSE_STAFF_ASSIGNMENT_NOT_EFFECTIVE);
         }
     }
 
-    private AccessContext context(UUID activePersonId) {
-        return new AccessContext(
-                UUID.randomUUID(),
-                UUID.randomUUID(),
-                activePersonId,
-                null,
-                Set.of(),
-                Set.of()
-        );
+    @Test
+    void onlyAssistantCoachParticipantCanHaveSessionAttendance() {
+        UUID courseId = UUID.randomUUID();
+        ClassSession session = session(courseId, LocalDate.of(2026, 3, 15), false, null);
+        CourseStaffAssignment assistantParticipant = assignment(UUID.randomUUID(), courseId,
+                LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
+        assistantParticipant.setAssignmentType(AssignmentType.ASSISTANT_COACH);
+        CourseStaffAssignment teachingAssistantParticipant = assignment(UUID.randomUUID(), courseId,
+                LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
+        teachingAssistantParticipant.setAssignmentType(AssignmentType.TEACHING_ASSISTANT);
+
+        assertThatCode(() -> policy.requireCanCreate(
+                session, null, assistantParticipant))
+                .doesNotThrowAnyException();
+
+        assertThatThrownBy(() -> policy.requireCanCreate(
+                session, null, teachingAssistantParticipant))
+                .isInstanceOf(ApiException.class)
+                .extracting("errorCode")
+                .isEqualTo(TrainingErrorCode.COURSE_STAFF_ASSIGNMENT_NOT_EFFECTIVE);
     }
 
     private ClassSession session(

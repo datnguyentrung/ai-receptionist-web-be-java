@@ -2,12 +2,13 @@ package com.dat.ai_receptionist_web.service.Training;
 
 import com.dat.ai_receptionist_web.domain.Catalog.Course;
 import com.dat.ai_receptionist_web.domain.Training.ClassSession;
-import com.dat.ai_receptionist_web.domain.Training.StudentAttendance;
+import com.dat.ai_receptionist_web.domain.Training.SessionAttendance;
 import com.dat.ai_receptionist_web.domain.Training.StudentEnrollment;
 import com.dat.ai_receptionist_web.enums.Training.AttendanceStatus;
 import com.dat.ai_receptionist_web.enums.Training.SessionStatus;
 import com.dat.ai_receptionist_web.repository.Training.ClassSessionRepository;
-import com.dat.ai_receptionist_web.repository.Training.StudentAttendanceRepository;
+import com.dat.ai_receptionist_web.repository.Training.CourseStaffAssignmentRepository;
+import com.dat.ai_receptionist_web.repository.Training.SessionAttendanceRepository;
 import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentRepository;
 import com.dat.ai_receptionist_web.service.Training.session.ClassSessionLifecycleService;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,7 +30,8 @@ import static org.mockito.Mockito.*;
 class ClassSessionLifecycleServiceTest {
     private ClassSessionRepository classSessionRepository;
     private StudentEnrollmentRepository enrollmentRepository;
-    private StudentAttendanceRepository attendanceRepository;
+    private SessionAttendanceRepository attendanceRepository;
+    private CourseStaffAssignmentRepository assignmentRepository;
     private TransactionTemplate transactionTemplate;
     private ClassSessionLifecycleService service;
 
@@ -37,7 +39,8 @@ class ClassSessionLifecycleServiceTest {
     void setUp() {
         classSessionRepository = mock(ClassSessionRepository.class);
         enrollmentRepository = mock(StudentEnrollmentRepository.class);
-        attendanceRepository = mock(StudentAttendanceRepository.class);
+        attendanceRepository = mock(SessionAttendanceRepository.class);
+        assignmentRepository = mock(CourseStaffAssignmentRepository.class);
         transactionTemplate = mock(TransactionTemplate.class);
         when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
             TransactionCallback<?> callback = invocation.getArgument(0);
@@ -45,7 +48,7 @@ class ClassSessionLifecycleServiceTest {
         });
         service = new ClassSessionLifecycleService(
                 classSessionRepository, enrollmentRepository, attendanceRepository,
-                transactionTemplate);
+                assignmentRepository, transactionTemplate);
     }
 
     @Test
@@ -88,7 +91,7 @@ class ClassSessionLifecycleServiceTest {
                 .studentEnrollmentId(UUID.randomUUID()).build();
         StudentEnrollment missing = StudentEnrollment.builder()
                 .studentEnrollmentId(UUID.randomUUID()).build();
-        StudentAttendance existing = StudentAttendance.builder()
+        SessionAttendance existing = SessionAttendance.builder()
                 .classSession(session).studentEnrollment(enrolled)
                 .attendanceStatus(AttendanceStatus.PRESENT).build();
 
@@ -97,13 +100,15 @@ class ClassSessionLifecycleServiceTest {
                 .thenReturn(Optional.of(session));
         when(enrollmentRepository.findActiveEnrollmentsForCourseOnDate(
                 course.getCourseId(), today)).thenReturn(List.of(enrolled, missing));
+        when(assignmentRepository.findEffectiveAssistantAssignmentsForCourseOnDate(
+                course.getCourseId(), today)).thenReturn(List.of());
         when(attendanceRepository.findByClassSession_ClassSessionId(
                 session.getClassSessionId())).thenReturn(List.of(existing));
 
         int closed = service.closeDueSessions();
 
         assertThat(closed).isEqualTo(1);
-        ArgumentCaptor<List<StudentAttendance>> captor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<SessionAttendance>> captor = ArgumentCaptor.forClass(List.class);
         verify(attendanceRepository).saveAll(captor.capture());
         assertThat(captor.getValue()).hasSize(1);
         assertThat(captor.getValue().get(0).getStudentEnrollment().getStudentEnrollmentId())

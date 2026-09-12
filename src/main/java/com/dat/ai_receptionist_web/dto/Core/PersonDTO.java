@@ -20,7 +20,8 @@ public final class PersonDTO {
             String faceImagePath,
             @NotNull Belt currentBelt,
             @NotNull PersonStatus status,
-            @NotNull LocalDate startDate
+            @NotNull LocalDate startDate,
+            UUID positionId
     ) {
     }
 
@@ -34,7 +35,8 @@ public final class PersonDTO {
             String personCode,
             @NotNull Belt currentBelt,
             @NotNull PersonStatus status,
-            @NotNull LocalDate startDate) {
+            @NotNull LocalDate startDate,
+            UUID positionId) {
     }
 
     public record Response(
@@ -48,6 +50,7 @@ public final class PersonDTO {
             Belt currentBelt,
             PersonStatus status,
             LocalDate startDate,
+            UUID positionId,
             String faceImagePath,
             LocalDateTime createdAt,
             LocalDateTime updatedAt) {

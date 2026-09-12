@@ -76,4 +76,23 @@ class SchemaMigrationContractTest {
                 .contains("idx_course_staff_assignment_person_course_period")
                 .contains("idx_user_person_user_relationship_person_active");
     }
+
+    @Test
+    void v9AddsPositionAndGeneralSessionAttendance() throws Exception {
+        String sql = Files.readString(Path.of(
+                "src/main/resources/db/migration/V9__position_and_session_attendance.sql"));
+
+        assertThat(sql)
+                .contains("CREATE TABLE core.position")
+                .contains("COACH_JUNIOR", "ASSISTANT_1", "MANAGER_1")
+                .contains("ADD COLUMN position_id UUID REFERENCES core.position(position_id)")
+                .contains("uk_course_staff_assignment_course_staff_type")
+                .contains("RENAME TO session_attendance")
+                .contains("RENAME COLUMN student_attendance_id TO session_attendance_id")
+                .contains("ALTER COLUMN student_enrollment_id DROP NOT NULL")
+                .contains("ck_session_attendance_exactly_one_participant")
+                .contains("uk_session_attendance_session_staff_assignment")
+                .contains("idx_session_attendance_course_staff_assignment")
+                .contains("STUDENT_ATTENDANCE", "SESSION_ATTENDANCE");
+    }
 }

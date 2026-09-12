@@ -3,7 +3,7 @@ package com.dat.ai_receptionist_web.service.Training;
 import com.dat.ai_receptionist_web.domain.Security.User;
 import com.dat.ai_receptionist_web.domain.Training.ClassSession;
 import com.dat.ai_receptionist_web.domain.Training.LeaveRequest;
-import com.dat.ai_receptionist_web.domain.Training.StudentAttendance;
+import com.dat.ai_receptionist_web.domain.Training.SessionAttendance;
 import com.dat.ai_receptionist_web.domain.Training.StudentEnrollment;
 import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.dto.Training.LeaveRequestDTO;
@@ -21,7 +21,7 @@ import com.dat.ai_receptionist_web.repository.Core.PersonRepository;
 import com.dat.ai_receptionist_web.repository.Security.UserRepository;
 import com.dat.ai_receptionist_web.repository.Training.ClassSessionRepository;
 import com.dat.ai_receptionist_web.repository.Training.LeaveRequestRepository;
-import com.dat.ai_receptionist_web.repository.Training.StudentAttendanceRepository;
+import com.dat.ai_receptionist_web.repository.Training.SessionAttendanceRepository;
 import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentRepository;
 import com.dat.ai_receptionist_web.util.SecurityUtil;
 import lombok.RequiredArgsConstructor;
@@ -46,7 +46,7 @@ public class LeaveRequestService {
     private final UserRepository userRepository;
     private final ClassSessionRepository classSessionRepository;
     private final StudentEnrollmentRepository enrollmentRepository;
-    private final StudentAttendanceRepository attendanceRepository;
+    private final SessionAttendanceRepository attendanceRepository;
 
     @Transactional(readOnly = true)
     public PageResponse<LeaveRequestDTO.Response> list(Pageable pageable) {
@@ -93,7 +93,7 @@ public class LeaveRequestService {
         request.setReviewedAt(LocalDateTime.now());
         request.setReviewNote(reviewNote);
         if (request.getRequesterType() == RequesterType.STUDENT) {
-            applyStudentAttendance(request);
+            applySessionAttendance(request);
         }
         return mapper.toResponse(request);
     }
@@ -116,7 +116,7 @@ public class LeaveRequestService {
         return mapper.toResponse(request);
     }
 
-    private void applyStudentAttendance(LeaveRequest request) {
+    private void applySessionAttendance(LeaveRequest request) {
         ClassSession leaveSession = request.getLeaveClassSession();
         ClassSession makeupSession = request.getMakeupClassSession();
         requireSameCourse(leaveSession, makeupSession);
@@ -136,7 +136,7 @@ public class LeaveRequestService {
                 session.getClassSessionId(), enrollment.getStudentEnrollmentId())) {
             return;
         }
-        attendanceRepository.save(StudentAttendance.builder()
+        attendanceRepository.save(SessionAttendance.builder()
                 .classSession(session)
                 .studentEnrollment(enrollment)
                 .attendanceStatus(status)

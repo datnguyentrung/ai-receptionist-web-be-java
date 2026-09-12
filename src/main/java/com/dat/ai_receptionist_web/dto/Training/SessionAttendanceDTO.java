@@ -2,23 +2,29 @@ package com.dat.ai_receptionist_web.dto.Training;
 
 import com.dat.ai_receptionist_web.enums.Training.AttendanceStatus;
 import com.dat.ai_receptionist_web.enums.Training.EvaluationStatus;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-public final class StudentAttendanceDTO {
-    private StudentAttendanceDTO() {
+public final class SessionAttendanceDTO {
+    private SessionAttendanceDTO() {
     }
 
     public record CreateRequest(
             @NotNull UUID classSessionId,
-            @NotNull UUID studentEnrollmentId,
+            UUID studentEnrollmentId,
+            UUID courseStaffAssignmentId,
             @NotNull LocalDateTime checkInTime,
             @NotNull AttendanceStatus attendanceStatus,
             @NotNull EvaluationStatus evaluationStatus,
             @NotNull String note
     ) {
+        @AssertTrue(message = "Exactly one attendance participant is required")
+        public boolean isExactlyOneParticipant() {
+            return (studentEnrollmentId != null) ^ (courseStaffAssignmentId != null);
+        }
     }
 
     public record UpdateRequest(
@@ -36,7 +42,7 @@ public final class StudentAttendanceDTO {
     }
 
     public record Response(
-            UUID studentAttendanceId,
+            UUID sessionAttendanceId,
             UUID classSessionId,
             UUID studentEnrollmentId,
             UUID courseStaffAssignmentId,

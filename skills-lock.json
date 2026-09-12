@@ -13,6 +13,18 @@
       "skillPath": "skills/engineering/codebase-design/SKILL.md",
       "computedHash": "caea3cb8a8281ff829fd1a2b985044e77601b62f301adf43f689ccfc74c15f6f"
     },
+    "database-architect": {
+      "source": "rmyndharis/antigravity-skills",
+      "sourceType": "github",
+      "skillPath": "skills/database-architect/SKILL.md",
+      "computedHash": "4200c80bbaa1c1ec1ef77363c99a87c3fe74c9768739e22ee41662c4d9621c02"
+    },
+    "database-schema-design": {
+      "source": "mohitagw15856/pm-claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/database-schema-design/SKILL.md",
+      "computedHash": "4905519fb7edbf4ab636627f3691e278533f9090c9a48072a5c4d77d9bbe34fa"
+    },
     "firebase-basics": {
       "source": "firebase/agent-skills",
       "sourceType": "github",

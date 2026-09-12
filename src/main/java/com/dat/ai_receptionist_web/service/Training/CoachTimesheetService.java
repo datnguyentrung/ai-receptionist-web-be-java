@@ -4,6 +4,7 @@ import com.dat.ai_receptionist_web.domain.Training.CoachTimesheet;
 import com.dat.ai_receptionist_web.domain.Training.CourseStaffAssignment;
 import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.dto.Training.CoachTimesheetDTO;
+import com.dat.ai_receptionist_web.enums.Training.AssignmentType;
 import com.dat.ai_receptionist_web.enums.Security.PermissionDefinition;
 import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.code.TrainingErrorCode;
@@ -123,9 +124,10 @@ public class CoachTimesheetService {
         if (context.activePersonId() == null) {
             throw new ApiException(TrainingErrorCode.COURSE_STAFF_ASSIGNMENT_NOT_EFFECTIVE);
         }
-        var assignments = courseStaffAssignmentRepository.findEffectiveAssignmentsForStaffCourseOnDate(
+        var assignments = courseStaffAssignmentRepository.findEffectiveAssignmentsForStaffCourseTypeOnDate(
                 context.activePersonId(),
                 courseId,
+                AssignmentType.PRIMARY_COACH,
                 sessionDate
         );
         if (assignments.isEmpty()) {

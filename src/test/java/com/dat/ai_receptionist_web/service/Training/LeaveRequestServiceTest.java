@@ -5,7 +5,7 @@ import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.domain.Security.User;
 import com.dat.ai_receptionist_web.domain.Training.ClassSession;
 import com.dat.ai_receptionist_web.domain.Training.LeaveRequest;
-import com.dat.ai_receptionist_web.domain.Training.StudentAttendance;
+import com.dat.ai_receptionist_web.domain.Training.SessionAttendance;
 import com.dat.ai_receptionist_web.domain.Training.StudentEnrollment;
 import com.dat.ai_receptionist_web.dto.Training.LeaveRequestDTO;
 import com.dat.ai_receptionist_web.enums.Training.AttendanceStatus;
@@ -19,7 +19,7 @@ import com.dat.ai_receptionist_web.repository.Core.PersonRepository;
 import com.dat.ai_receptionist_web.repository.Security.UserRepository;
 import com.dat.ai_receptionist_web.repository.Training.ClassSessionRepository;
 import com.dat.ai_receptionist_web.repository.Training.LeaveRequestRepository;
-import com.dat.ai_receptionist_web.repository.Training.StudentAttendanceRepository;
+import com.dat.ai_receptionist_web.repository.Training.SessionAttendanceRepository;
 import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,7 +45,7 @@ class LeaveRequestServiceTest {
     private UserRepository userRepository;
     private ClassSessionRepository classSessionRepository;
     private StudentEnrollmentRepository enrollmentRepository;
-    private StudentAttendanceRepository attendanceRepository;
+    private SessionAttendanceRepository attendanceRepository;
     private LeaveRequestService service;
 
     private UUID userId;
@@ -57,7 +57,7 @@ class LeaveRequestServiceTest {
         userRepository = mock(UserRepository.class);
         classSessionRepository = mock(ClassSessionRepository.class);
         enrollmentRepository = mock(StudentEnrollmentRepository.class);
-        attendanceRepository = mock(StudentAttendanceRepository.class);
+        attendanceRepository = mock(SessionAttendanceRepository.class);
         service = new LeaveRequestService(
                 repository, mock(LeaveRequestMapper.class), personRepository, userRepository,
                 classSessionRepository, enrollmentRepository, attendanceRepository);
@@ -104,10 +104,10 @@ class LeaveRequestServiceTest {
         assertThat(request.getStatus()).isEqualTo(LeaveRequestStatus.APPROVED);
         assertThat(request.getReviewedByUser()).isNotNull();
         assertThat(request.getReviewedAt()).isNotNull();
-        ArgumentCaptor<StudentAttendance> captor = ArgumentCaptor.forClass(StudentAttendance.class);
+        ArgumentCaptor<SessionAttendance> captor = ArgumentCaptor.forClass(SessionAttendance.class);
         verify(attendanceRepository, times(2)).save(captor.capture());
         assertThat(captor.getAllValues())
-                .extracting(StudentAttendance::getAttendanceStatus)
+                .extracting(SessionAttendance::getAttendanceStatus)
                 .containsExactlyInAnyOrder(AttendanceStatus.EXCUSED, AttendanceStatus.MAKEUP);
     }
 

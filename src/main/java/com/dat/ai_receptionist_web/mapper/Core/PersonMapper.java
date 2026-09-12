@@ -10,6 +10,7 @@ import org.mapstruct.MappingTarget;
 @Mapper(componentModel = "spring")
 public interface PersonMapper {
     @Mapping(target = "personId", source = "personId")
+    @Mapping(target = "positionId", source = "position.positionId")
     PersonDTO.Response toResponse(Person entity);
 
     @BeanMapping(ignoreByDefault = true)
@@ -23,5 +24,6 @@ public interface PersonMapper {
     @Mapping(target = "currentBelt", source = "currentBelt")
     @Mapping(target = "status", source = "status")
     @Mapping(target = "startDate", source = "startDate")
+    @Mapping(target = "position", ignore = true)
     void updateEntity(PersonDTO.UpdateRequest request, @MappingTarget Person entity);
 }

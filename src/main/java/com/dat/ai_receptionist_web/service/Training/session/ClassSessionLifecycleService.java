@@ -1,11 +1,13 @@
 package com.dat.ai_receptionist_web.service.Training.session;
 
 import com.dat.ai_receptionist_web.domain.Training.ClassSession;
-import com.dat.ai_receptionist_web.domain.Training.StudentAttendance;
+import com.dat.ai_receptionist_web.domain.Training.CourseStaffAssignment;
+import com.dat.ai_receptionist_web.domain.Training.SessionAttendance;
 import com.dat.ai_receptionist_web.domain.Training.StudentEnrollment;
 import com.dat.ai_receptionist_web.enums.Training.AttendanceStatus;
 import com.dat.ai_receptionist_web.repository.Training.ClassSessionRepository;
-import com.dat.ai_receptionist_web.repository.Training.StudentAttendanceRepository;
+import com.dat.ai_receptionist_web.repository.Training.CourseStaffAssignmentRepository;
+import com.dat.ai_receptionist_web.repository.Training.SessionAttendanceRepository;
 import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +19,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -25,7 +28,7 @@ import java.util.stream.Collectors;
 /**
  * Vòng đời session: SCHEDULED -> ACTIVE -> (đóng điểm danh) -> COMPLETED.
  * Chỉ sở hữu lifecycle orchestration của ClassSession; không hấp thụ nghiệp vụ
- * StudentAttendance độc lập (check-in, CRUD attendance, evaluation).
+ * SessionAttendance độc lập (check-in, CRUD attendance, evaluation).
  */
 @Service
 @RequiredArgsConstructor
@@ -33,7 +36,8 @@ import java.util.stream.Collectors;
 public class ClassSessionLifecycleService {
     private final ClassSessionRepository classSessionRepository;
     private final StudentEnrollmentRepository enrollmentRepository;
-    private final StudentAttendanceRepository attendanceRepository;
+    private final SessionAttendanceRepository attendanceRepository;
+    private final CourseStaffAssignmentRepository assignmentRepository;
     private final TransactionTemplate transactionTemplate;
 
     @Value("${ATTENDANCE_GRACE_PERIOD_MINUTES:30}")
@@ -137,21 +141,44 @@ public class ClassSessionLifecycleService {
         List<StudentEnrollment> enrollments = enrollmentRepository
                 .findActiveEnrollmentsForCourseOnDate(
                         session.getCourse().getCourseId(), session.getSessionDate());
-        Set<UUID> presentEnrollmentIds = attendanceRepository
-                .findByClassSession_ClassSessionId(sessionId)
+        List<CourseStaffAssignment> assistantAssignments = assignmentRepository
+                .findEffectiveAssistantAssignmentsForCourseOnDate(
+                        session.getCourse().getCourseId(), session.getSessionDate());
+        List<SessionAttendance> existingAttendances = attendanceRepository
+                .findByClassSession_ClassSessionId(sessionId);
+        Set<UUID> presentEnrollmentIds = existingAttendances
                 .stream()
+                .filter(attendance -> attendance.getStudentEnrollment() != null)
                 .map(attendance -> attendance.getStudentEnrollment().getStudentEnrollmentId())
                 .collect(Collectors.toSet());
+        Set<UUID> presentAssignmentIds = existingAttendances
+                .stream()
+                .filter(attendance -> attendance.getCourseStaffAssignment() != null)
+                .map(attendance -> attendance.getCourseStaffAssignment().getCourseStaffAssignmentId())
+                .collect(Collectors.toSet());
 
-        List<StudentAttendance> missing = enrollments.stream()
+        List<SessionAttendance> missingEnrollmentAttendances = enrollments.stream()
                 .filter(enrollment -> !presentEnrollmentIds.contains(
                         enrollment.getStudentEnrollmentId()))
-                .map(enrollment -> StudentAttendance.builder()
+                .map(enrollment -> SessionAttendance.builder()
                         .classSession(session)
                         .studentEnrollment(enrollment)
                         .attendanceStatus(AttendanceStatus.ABSENT)
                         .build())
                 .toList();
+        List<SessionAttendance> missingAssistantAttendances = assistantAssignments.stream()
+                .filter(assignment -> !presentAssignmentIds.contains(
+                        assignment.getCourseStaffAssignmentId()))
+                .map(assignment -> SessionAttendance.builder()
+                        .classSession(session)
+                        .courseStaffAssignment(assignment)
+                        .attendanceStatus(AttendanceStatus.ABSENT)
+                        .build())
+                .toList();
+        List<SessionAttendance> missing = new ArrayList<>(
+                missingEnrollmentAttendances.size() + missingAssistantAttendances.size());
+        missing.addAll(missingEnrollmentAttendances);
+        missing.addAll(missingAssistantAttendances);
         attendanceRepository.saveAll(missing);
         session.setAttendanceClosed(true);
         classSessionRepository.save(session);

@@ -19,21 +19,25 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "student_attendance", schema = "training", uniqueConstraints =
-        @UniqueConstraint(name = "uk_attendance_session_enrollment", columnNames = {"class_session_id", "student_enrollment_id"}))
-public class StudentAttendance {
+@Table(name = "session_attendance", schema = "training", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_session_attendance_session_enrollment",
+                columnNames = {"class_session_id", "student_enrollment_id"}),
+        @UniqueConstraint(name = "uk_session_attendance_session_staff_assignment",
+                columnNames = {"class_session_id", "course_staff_assignment_id"})
+})
+public class SessionAttendance {
     @Id
     @GeneratedValue
     @UuidGenerator
-    @Column(name = "student_attendance_id", nullable = false, updatable = false)
-    private UUID studentAttendanceId;
+    @Column(name = "session_attendance_id", nullable = false, updatable = false)
+    private UUID sessionAttendanceId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "class_session_id", nullable = false)
     private ClassSession classSession;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "student_enrollment_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "student_enrollment_id")
     private StudentEnrollment studentEnrollment;
 
     @Column(name = "check_in_time")

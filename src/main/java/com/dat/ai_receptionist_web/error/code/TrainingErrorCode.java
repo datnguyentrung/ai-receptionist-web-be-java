@@ -16,8 +16,8 @@ public enum TrainingErrorCode implements ErrorCode {
             "Belt exam not found", "Belt exam not found"),
     LEAVE_REQUEST_NOT_FOUND("LEAVE_REQUEST_NOT_FOUND", HttpStatus.NOT_FOUND,
             "Leave request not found", "Leave request not found"),
-    STUDENT_ATTENDANCE_NOT_FOUND("STUDENT_ATTENDANCE_NOT_FOUND", HttpStatus.NOT_FOUND,
-            "Student attendance not found", "Student attendance not found"),
+    SESSION_ATTENDANCE_NOT_FOUND("SESSION_ATTENDANCE_NOT_FOUND", HttpStatus.NOT_FOUND,
+            "Session attendance not found", "Session attendance not found"),
     STUDENT_ENROLLMENT_NOT_FOUND("STUDENT_ENROLLMENT_NOT_FOUND", HttpStatus.NOT_FOUND,
             "Student enrollment not found", "Student enrollment not found"),
     CLASS_SESSION_IMMUTABLE("CLASS_SESSION_IMMUTABLE", HttpStatus.CONFLICT,
@@ -45,6 +45,8 @@ public enum TrainingErrorCode implements ErrorCode {
             "Course staff assignment not effective", "Course staff assignment is not effective for this session"),
     COURSE_STAFF_ASSIGNMENT_AMBIGUOUS("COURSE_STAFF_ASSIGNMENT_AMBIGUOUS", HttpStatus.CONFLICT,
             "Course staff assignment ambiguous", "Multiple effective staff assignments match the same course and date"),
+    SESSION_ATTENDANCE_PARTICIPANT_INVALID("SESSION_ATTENDANCE_PARTICIPANT_INVALID", HttpStatus.BAD_REQUEST,
+            "Session attendance participant invalid", "Exactly one session attendance participant is required"),
     STUDENT_ENROLLMENT_NOT_EFFECTIVE("STUDENT_ENROLLMENT_NOT_EFFECTIVE", HttpStatus.UNPROCESSABLE_ENTITY,
             "Student enrollment not effective", "Student enrollment is not effective for this session");
 

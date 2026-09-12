@@ -36,18 +36,39 @@ public interface CourseStaffAssignmentRepository extends JpaRepository<CourseSta
         select a
         from CourseStaffAssignment a
         where a.staffPerson.personId = :staffPersonId
-          and a.startDate <= :toDate
-          and (a.endDate is null or a.endDate >= :fromDate)
+          and a.course.courseId = :courseId
+          and a.assignmentType = :assignmentType
+          and a.startDate <= :sessionDate
+          and (a.endDate is null or a.endDate >= :sessionDate)
           and a.assignmentStatus in (
               com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ACTIVE,
               com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ENDED
           )
-        order by a.course.courseId, a.startDate desc, a.courseStaffAssignmentId
+        order by a.startDate desc, a.courseStaffAssignmentId
     """)
-    List<CourseStaffAssignment> findPolicyAssignmentsForStaffPeriod(
+    List<CourseStaffAssignment> findEffectiveAssignmentsForStaffCourseTypeOnDate(
             @Param("staffPersonId") UUID staffPersonId,
-            @Param("fromDate") LocalDate fromDate,
-            @Param("toDate") LocalDate toDate
+            @Param("courseId") UUID courseId,
+            @Param("assignmentType") com.dat.ai_receptionist_web.enums.Training.AssignmentType assignmentType,
+            @Param("sessionDate") LocalDate sessionDate
+    );
+
+    @Query("""
+        select a
+        from CourseStaffAssignment a
+        where a.course.courseId = :courseId
+          and a.assignmentType = com.dat.ai_receptionist_web.enums.Training.AssignmentType.ASSISTANT_COACH
+          and a.startDate <= :sessionDate
+          and (a.endDate is null or a.endDate >= :sessionDate)
+          and a.assignmentStatus in (
+              com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ACTIVE,
+              com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ENDED
+          )
+        order by a.staffPerson.personId, a.startDate desc, a.courseStaffAssignmentId
+    """)
+    List<CourseStaffAssignment> findEffectiveAssistantAssignmentsForCourseOnDate(
+            @Param("courseId") UUID courseId,
+            @Param("sessionDate") LocalDate sessionDate
     );
 
     @Query("""

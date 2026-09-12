@@ -11,8 +11,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class TrainingPolicyRepositoryContractTest {
     @Test
-    void studentAttendanceAccessibleQueriesUseDbScopedPolicyPaths() throws Exception {
-        Query listQuery = StudentAttendanceRepository.class
+    void sessionAttendanceAccessibleQueriesUseDbScopedPolicyPaths() throws Exception {
+        Query listQuery = SessionAttendanceRepository.class
                 .getMethod(
                         "findAccessible",
                         UUID.class,
@@ -25,10 +25,11 @@ class TrainingPolicyRepositoryContractTest {
                         LocalDate.class,
                         UUID.class,
                         UUID.class,
+                        UUID.class,
                         Pageable.class
                 )
                 .getAnnotation(Query.class);
-        Query detailQuery = StudentAttendanceRepository.class
+        Query detailQuery = SessionAttendanceRepository.class
                 .getMethod(
                         "findAccessibleById",
                         UUID.class,

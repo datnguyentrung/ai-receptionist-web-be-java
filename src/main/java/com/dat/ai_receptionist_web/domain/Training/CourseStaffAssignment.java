@@ -22,7 +22,9 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "course_staff_assignment", schema = "training")
+@Table(name = "course_staff_assignment", schema = "training", uniqueConstraints =
+        @UniqueConstraint(name = "uk_course_staff_assignment_course_staff_type",
+                columnNames = {"course_id", "staff_person_id", "assignment_type"}))
 public class CourseStaffAssignment {
     @Id
     @GeneratedValue

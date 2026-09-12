@@ -3,12 +3,12 @@ package com.dat.ai_receptionist_web.security;
 import com.dat.ai_receptionist_web.controller.Training.ClassSessionController;
 import com.dat.ai_receptionist_web.controller.Training.CoachTimesheetController;
 import com.dat.ai_receptionist_web.controller.Training.CourseStaffAssignmentController;
-import com.dat.ai_receptionist_web.controller.Training.StudentAttendanceController;
+import com.dat.ai_receptionist_web.controller.Training.SessionAttendanceController;
 import com.dat.ai_receptionist_web.controller.Training.StudentEnrollmentController;
 import com.dat.ai_receptionist_web.dto.Training.ClassSessionDTO;
 import com.dat.ai_receptionist_web.dto.Training.CoachTimesheetDTO;
 import com.dat.ai_receptionist_web.dto.Training.CourseStaffAssignmentDTO;
-import com.dat.ai_receptionist_web.dto.Training.StudentAttendanceDTO;
+import com.dat.ai_receptionist_web.dto.Training.SessionAttendanceDTO;
 import com.dat.ai_receptionist_web.dto.Training.StudentEnrollmentDTO;
 import com.dat.ai_receptionist_web.enums.Security.PermissionDefinition;
 import org.junit.jupiter.api.Test;
@@ -35,13 +35,13 @@ class TrainingAuthorizationContractTest {
         assertPermission(ClassSessionController.class, "reopenAttendance", PermissionDefinition.CLASS_SESSION_UPDATE,
                 UUID.class, ClassSessionDTO.ReopenAttendanceRequest.class);
 
-        assertPermission(StudentAttendanceController.class, "get", PermissionDefinition.STUDENT_ATTENDANCE_READ,
+        assertPermission(SessionAttendanceController.class, "get", PermissionDefinition.SESSION_ATTENDANCE_READ,
                 UUID.class);
-        assertPermission(StudentAttendanceController.class, "create", PermissionDefinition.STUDENT_ATTENDANCE_CREATE,
-                StudentAttendanceDTO.CreateRequest.class);
-        assertPermission(StudentAttendanceController.class, "update", PermissionDefinition.STUDENT_ATTENDANCE_UPDATE,
-                UUID.class, StudentAttendanceDTO.UpdateRequest.class);
-        assertPermission(StudentAttendanceController.class, "delete", PermissionDefinition.STUDENT_ATTENDANCE_DELETE,
+        assertPermission(SessionAttendanceController.class, "create", PermissionDefinition.SESSION_ATTENDANCE_CREATE,
+                SessionAttendanceDTO.CreateRequest.class);
+        assertPermission(SessionAttendanceController.class, "update", PermissionDefinition.SESSION_ATTENDANCE_UPDATE,
+                UUID.class, SessionAttendanceDTO.UpdateRequest.class);
+        assertPermission(SessionAttendanceController.class, "delete", PermissionDefinition.SESSION_ATTENDANCE_DELETE,
                 UUID.class);
 
         assertPermission(StudentEnrollmentController.class, "get", PermissionDefinition.STUDENT_ENROLLMENT_READ,
@@ -75,9 +75,9 @@ class TrainingAuthorizationContractTest {
     @Test
     void outOfScopeDetailReadsUseAccessibleByIdAndNotFoundErrors() throws Exception {
         assertOutOfScopeReturnsNotFound(
-                "src/main/java/com/dat/ai_receptionist_web/service/Training/StudentAttendanceService.java",
+                "src/main/java/com/dat/ai_receptionist_web/service/Training/SessionAttendanceService.java",
                 "repository.findAccessibleById",
-                "TrainingErrorCode.STUDENT_ATTENDANCE_NOT_FOUND"
+                "TrainingErrorCode.SESSION_ATTENDANCE_NOT_FOUND"
         );
         assertOutOfScopeReturnsNotFound(
                 "src/main/java/com/dat/ai_receptionist_web/service/Training/StudentEnrollmentService.java",
@@ -104,11 +104,12 @@ class TrainingAuthorizationContractTest {
     @Test
     void listEndpointsUseScopedServiceFiltersWherePolicyRequiresDateScope() throws Exception {
         assertPermission(
-                StudentAttendanceController.class,
+                SessionAttendanceController.class,
                 "list",
-                PermissionDefinition.STUDENT_ATTENDANCE_READ,
+                PermissionDefinition.SESSION_ATTENDANCE_READ,
                 LocalDate.class,
                 LocalDate.class,
+                UUID.class,
                 UUID.class,
                 UUID.class,
                 Pageable.class

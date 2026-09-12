@@ -1,6 +1,6 @@
 package com.dat.ai_receptionist_web.repository.Training;
 
-import com.dat.ai_receptionist_web.domain.Training.StudentAttendance;
+import com.dat.ai_receptionist_web.domain.Training.SessionAttendance;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,23 +12,30 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface StudentAttendanceRepository extends JpaRepository<StudentAttendance, UUID> {
+public interface SessionAttendanceRepository extends JpaRepository<SessionAttendance, UUID> {
     boolean existsByClassSession_ClassSessionIdAndStudentEnrollment_StudentEnrollmentId(
             UUID classSessionId, UUID studentEnrollmentId);
 
-    List<StudentAttendance> findByClassSession_ClassSessionId(UUID classSessionId);
+    boolean existsByClassSession_ClassSessionIdAndCourseStaffAssignment_CourseStaffAssignmentId(
+            UUID classSessionId, UUID courseStaffAssignmentId);
+
+    List<SessionAttendance> findByClassSession_ClassSessionId(UUID classSessionId);
 
     @Query("""
         select a
-        from StudentAttendance a
+        from SessionAttendance a
         join a.classSession cs
-        join a.studentEnrollment e
+        left join a.studentEnrollment e
+        left join a.courseStaffAssignment participantAssignment
         where cs.sessionDate between :fromDate and :toDate
           and (:courseId is null or cs.course.courseId = :courseId)
-          and (:studentPersonId is null or e.studentPerson.personId = :studentPersonId)
+          and (:studentPersonId is null and :staffPersonId is null
+               or :studentPersonId is not null and e.studentPerson.personId = :studentPersonId
+               or :staffPersonId is not null and participantAssignment.staffPerson.personId = :staffPersonId)
           and (
               :unrestricted = true
               or (:self = true and e.studentPerson.personId = :activePersonId)
+              or (:self = true and participantAssignment.staffPerson.personId = :activePersonId)
               or (
                   :dependents = true
                   and exists (
@@ -54,7 +61,7 @@ public interface StudentAttendanceRepository extends JpaRepository<StudentAttend
               )
           )
     """)
-    Page<StudentAttendance> findAccessible(
+    Page<SessionAttendance> findAccessible(
             @Param("userId") UUID userId,
             @Param("activePersonId") UUID activePersonId,
             @Param("unrestricted") boolean unrestricted,
@@ -65,18 +72,21 @@ public interface StudentAttendanceRepository extends JpaRepository<StudentAttend
             @Param("toDate") LocalDate toDate,
             @Param("courseId") UUID courseId,
             @Param("studentPersonId") UUID studentPersonId,
+            @Param("staffPersonId") UUID staffPersonId,
             Pageable pageable
     );
 
     @Query("""
         select a
-        from StudentAttendance a
+        from SessionAttendance a
         join a.classSession cs
-        join a.studentEnrollment e
-        where a.studentAttendanceId = :id
+        left join a.studentEnrollment e
+        left join a.courseStaffAssignment participantAssignment
+        where a.sessionAttendanceId = :id
           and (
               :unrestricted = true
               or (:self = true and e.studentPerson.personId = :activePersonId)
+              or (:self = true and participantAssignment.staffPerson.personId = :activePersonId)
               or (
                   :dependents = true
                   and exists (
@@ -102,7 +112,7 @@ public interface StudentAttendanceRepository extends JpaRepository<StudentAttend
               )
           )
     """)
-    Optional<StudentAttendance> findAccessibleById(
+    Optional<SessionAttendance> findAccessibleById(
             @Param("id") UUID id,
             @Param("userId") UUID userId,
             @Param("activePersonId") UUID activePersonId,

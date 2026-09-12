@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.service.Core;
 
 import com.dat.ai_receptionist_web.domain.Core.Person;
+import com.dat.ai_receptionist_web.domain.Core.Position;
 import com.dat.ai_receptionist_web.domain.Finance.Wallet;
 import com.dat.ai_receptionist_web.dto.Core.PersonDTO;
 import com.dat.ai_receptionist_web.dto.PageResponse;
@@ -10,6 +11,7 @@ import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.code.CoreErrorCode;
 import com.dat.ai_receptionist_web.mapper.Core.PersonMapper;
 import com.dat.ai_receptionist_web.repository.Core.PersonRepository;
+import com.dat.ai_receptionist_web.repository.Core.PositionRepository;
 import com.dat.ai_receptionist_web.repository.Finance.WalletRepository;
 import com.dat.ai_receptionist_web.util.AccountUtil;
 import com.dat.ai_receptionist_web.util.converter.NameConverter;
@@ -28,6 +30,7 @@ public class PersonService {
     private final WalletRepository walletRepository;
     private final PersonMapper personMapper;
     private final PersonCodePolicy personCodePolicy;
+    private final PositionRepository positionRepository;
 
     /**
      * Tác dụng: Tạo mới bản ghi và trả về dữ liệu sau khi tạo.
@@ -44,6 +47,7 @@ public class PersonService {
             throw new ApiException(
                     CoreErrorCode.PERSON_CODE_ALREADY_EXISTS);
         }
+        Position position = resolvePosition(request.positionId());
         Person person = personRepository.save(Person.builder()
                 .fullName(NameConverter.formatVietnameseName(request.fullName()))
                 .gender(request.gender())
@@ -54,6 +58,7 @@ public class PersonService {
                 .currentBelt(request.currentBelt())
                 .status(request.status())
                 .startDate(request.startDate())
+                .position(position)
                 .build());
         walletRepository.save(Wallet.builder()
                 .person(person)
@@ -109,6 +114,7 @@ public class PersonService {
         if (request.personCode() != null && !request.personCode().isBlank()) {
             personCodePolicy.validateFormat(request.personCode());
         }
+        person.setPosition(resolvePosition(request.positionId()));
         personMapper.updateEntity(request, person);
         return personMapper.toResponse(personRepository.save(person));
     }
@@ -142,8 +148,18 @@ public class PersonService {
     private PersonDTO.Response toResponse(Person value) {
         return new PersonDTO.Response(value.getPersonId(), value.getFullName(), value.getGender(),
                 value.getBirthDate(), value.getEmail(), value.getNationalCode(), value.getPersonCode(),
-                value.getCurrentBelt(), value.getStatus(), value.getStartDate(), value.getFaceImagePath(),
+                value.getCurrentBelt(), value.getStatus(), value.getStartDate(),
+                value.getPosition() == null ? null : value.getPosition().getPositionId(),
+                value.getFaceImagePath(),
                 value.getCreatedAt(), value.getUpdatedAt());
+    }
+
+    private Position resolvePosition(UUID positionId) {
+        if (positionId == null) {
+            return null;
+        }
+        return positionRepository.findById(positionId)
+                .orElseThrow(() -> new ApiException(CoreErrorCode.POSITION_NOT_FOUND));
     }
 }
 

@@ -14,4 +14,7 @@ public final class RoleDTO {
 
     public record Response(String code, String name, String description, long permissionVersion) {
     }
+
+    public record SimpleResponse(String code, String name, long permissionVersion) {
+    }
 }

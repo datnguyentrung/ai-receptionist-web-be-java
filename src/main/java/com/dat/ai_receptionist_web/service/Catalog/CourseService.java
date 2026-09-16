@@ -26,8 +26,8 @@ public class CourseService {
     private final CourseSessionPlanningService planningService;
 
     @Transactional(readOnly = true)
-    public PageResponse<CourseDTO.Response> list(Pageable pageable) {
-        return PageResponse.of(repository.findAll(pageable), mapper::toResponse);
+    public PageResponse<CourseDTO.SimpleResponse> list(Pageable pageable) {
+        return PageResponse.of(repository.findAll(pageable), mapper::toSimpleResponse);
     }
 
     @Transactional(readOnly = true)

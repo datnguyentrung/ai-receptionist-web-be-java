@@ -1,5 +1,7 @@
 package com.dat.ai_receptionist_web.dto.Training;
 
+import com.dat.ai_receptionist_web.dto.Catalog.CourseDTO;
+import com.dat.ai_receptionist_web.dto.Core.PersonDTO;
 import com.dat.ai_receptionist_web.enums.Training.AssignmentType;
 import com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus;
 import jakarta.validation.constraints.NotNull;
@@ -36,8 +38,8 @@ public final class CourseStaffAssignmentDTO {
 
     public record Response(
             UUID courseStaffAssignmentId,
-            UUID staffPersonId,
-            UUID courseId,
+            PersonDTO.Response staffPerson,
+            CourseDTO.Response course,
             AssignmentType assignmentType,
             LocalDate startDate,
             LocalDate endDate,
@@ -45,6 +47,17 @@ public final class CourseStaffAssignmentDTO {
             String note,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
+    ) {
+    }
+
+    public record SimpleResponse(
+            UUID courseStaffAssignmentId,
+            PersonDTO.SimpleResponse staffPerson,
+            CourseDTO.SimpleResponse course,
+            AssignmentType assignmentType,
+            LocalDate startDate,
+            LocalDate endDate,
+            CourseStaffAssignmentStatus assignmentStatus
     ) {
     }
 }

@@ -17,4 +17,5 @@ public class UserRoleDTO {
     }
     public record Response(UUID userId, Set<String> roleCodes) {}
     public record ItemResponse(UUID userId, String roleCode) {}
+    public record SimpleResponse(UUID userId, String roleCode) {}
 }

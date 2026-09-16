@@ -31,11 +31,11 @@ public class RolePermissionService {
     /**
      * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
      * Input: Nhận Pageable pageable từ caller hoặc request.
-     * Output: Trả về PageResponse<RolePermissionDTO.ItemResponse> theo kết quả xử lý.
+     * Output: Trả về PageResponse<RolePermissionDTO.SimpleResponse> theo kết quả xử lý.
      */
     @Transactional(readOnly = true)
-    public PageResponse<RolePermissionDTO.ItemResponse> list(Pageable pageable) {
-        return PageResponse.of(rolePermissionRepository.findAll(pageable), rolePermissionMapper::toResponse);
+    public PageResponse<RolePermissionDTO.SimpleResponse> list(Pageable pageable) {
+        return PageResponse.of(rolePermissionRepository.findAll(pageable), rolePermissionMapper::toSimpleResponse);
     }
 
     /**
@@ -85,7 +85,7 @@ public class RolePermissionService {
     @Transactional
     public RolePermissionDTO.Response replace(String roleCode, Set<String> requestedCodes) {
         SyncResult result = replaceInternal(roleCode, requestedCodes);
-        return new RolePermissionDTO.Response(
+        return rolePermissionMapper.toResponse(
                 result.roleCode(),
                 result.permissionVersion(),
                 result.permissionCodes()

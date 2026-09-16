@@ -65,7 +65,7 @@ public final class PersonDTO {
             Belt currentBelt,
             PersonStatus status,
             LocalDate startDate,
-            UUID positionId,
+            PositionDTO.SimpleResponse position,
             String faceImagePath,
             LocalDateTime createdAt,
             LocalDateTime updatedAt

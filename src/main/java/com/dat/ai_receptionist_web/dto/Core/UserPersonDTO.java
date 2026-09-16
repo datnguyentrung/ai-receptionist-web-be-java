@@ -27,12 +27,21 @@ public final class UserPersonDTO {
 
     public record Response(
             UUID userPersonId,
-            UUID userId,
-            UUID personId,
+            com.dat.ai_receptionist_web.dto.Security.UserDTO.SimpleResponse user,
+            PersonDTO.Response person,
             RelationshipType relationshipType,
             boolean active,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
+    ) {
+    }
+
+    public record SimpleResponse(
+            UUID userPersonId,
+            com.dat.ai_receptionist_web.dto.Security.UserDTO.SimpleResponse user,
+            PersonDTO.SimpleResponse person,
+            RelationshipType relationshipType,
+            boolean active
     ) {
     }
 }

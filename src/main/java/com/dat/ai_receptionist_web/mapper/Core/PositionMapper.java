@@ -11,6 +11,8 @@ import org.mapstruct.MappingTarget;
 public interface PositionMapper {
     PositionDTO.Response toResponse(Position entity);
 
+    PositionDTO.SimpleResponse toSimpleResponse(Position entity);
+
     @Mapping(target = "positionId", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)

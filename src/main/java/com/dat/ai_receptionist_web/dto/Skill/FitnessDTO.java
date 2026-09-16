@@ -15,4 +15,7 @@ public final class FitnessDTO {
 
     public record Response(Long fitnessId, ScheduleLevel scheduleLevel, int amount, int duration) {
     }
+
+    public record SimpleResponse(Long fitnessId, ScheduleLevel scheduleLevel, int amount, int duration) {
+    }
 }

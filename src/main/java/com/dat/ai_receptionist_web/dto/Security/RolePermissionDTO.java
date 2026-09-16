@@ -10,4 +10,5 @@ public final class RolePermissionDTO {
     public record ReplaceRequest(@NotEmpty Set<@NotBlank String> permissionCodes) {}
     public record Response(String roleCode, long permissionVersion, Set<String> permissionCodes) {}
     public record ItemResponse(String roleCode, Integer permissionId, String permissionCode) {}
+    public record SimpleResponse(String roleCode, Integer permissionId, String permissionCode) {}
 }

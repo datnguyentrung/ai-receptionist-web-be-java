@@ -56,7 +56,7 @@ class SessionAttendanceServiceTest {
                 any(), any(), any(), any(), any(), any()
         )).thenAnswer(invocation -> new PageImpl<>(List.of(), invocation.getArgument(11), 0));
 
-        PageResponse<SessionAttendanceDTO.Response> ignored = service.list(
+        PageResponse<SessionAttendanceDTO.SimpleResponse> ignored = service.list(
                 LocalDate.of(2026, 7, 1),
                 LocalDate.of(2026, 9, 30),
                 null,

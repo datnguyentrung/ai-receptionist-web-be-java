@@ -49,10 +49,20 @@ public final class CoursePriceDTO {
 
     public record Response(
             UUID coursePriceId,
-            UUID courseId,
+            CourseDTO.Response course,
             int durationMonths,
             int sessionCount,
             BigDecimal basePrice,
+            BigDecimal finalPrice,
+            CoursePriceStatus status
+    ) {
+    }
+
+    public record SimpleResponse(
+            UUID coursePriceId,
+            CourseDTO.SimpleResponse course,
+            int durationMonths,
+            int sessionCount,
             BigDecimal finalPrice,
             CoursePriceStatus status
     ) {

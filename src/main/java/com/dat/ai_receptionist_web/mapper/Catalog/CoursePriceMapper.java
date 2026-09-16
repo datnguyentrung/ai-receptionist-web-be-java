@@ -7,10 +7,11 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = CourseMapper.class)
 public interface CoursePriceMapper {
-    @Mapping(target = "courseId", source = "course.courseId")
     CoursePriceDTO.Response toResponse(CoursePrice entity);
+
+    CoursePriceDTO.SimpleResponse toSimpleResponse(CoursePrice entity);
 
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "course", ignore = true)

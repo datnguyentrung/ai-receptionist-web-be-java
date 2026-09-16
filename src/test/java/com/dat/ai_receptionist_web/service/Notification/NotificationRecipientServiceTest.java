@@ -58,7 +58,7 @@ class NotificationRecipientServiceTest {
         userPersonRepository = mock(UserPersonRepository.class);
         eligibilityPolicy = mock(NotificationRecipientEligibilityPolicy.class);
         currentAccessContextResolver = mock(CurrentAccessContextResolver.class);
-        mapper = mock(NotificationRecipientMapper.class);
+        mapper = mock(NotificationRecipientMapper.class, CALLS_REAL_METHODS);
         service = new NotificationRecipientService(
                 repository,
                 mapper,
@@ -168,7 +168,7 @@ class NotificationRecipientServiceTest {
         Pageable pageable = PageRequest.of(0, 30);
         when(currentAccessContextResolver.current()).thenReturn(new AccessContext(
                 userId, UUID.randomUUID(), activePersonId, RelationshipType.OWNER, Set.of(), Set.of()));
-        when(repository.findMine(userId, activePersonId, true, NotificationType.TUITION, "abc", pageable))
+        when(repository.findMine(userId, activePersonId, true, NotificationType.TUITION, "%abc%", pageable))
                 .thenReturn(Page.<NotificationRecipient>empty(pageable));
         when(repository.findMine(userId, activePersonId, null, null, null, pageable))
                 .thenReturn(Page.<NotificationRecipient>empty(pageable));
@@ -176,7 +176,7 @@ class NotificationRecipientServiceTest {
         service.listMine(true, NotificationType.TUITION, "  abc  ", pageable);
         service.listMine(null, null, "   ", pageable);
 
-        verify(repository).findMine(userId, activePersonId, true, NotificationType.TUITION, "abc", pageable);
+        verify(repository).findMine(userId, activePersonId, true, NotificationType.TUITION, "%abc%", pageable);
         verify(repository).findMine(userId, activePersonId, null, null, null, pageable);
     }
 

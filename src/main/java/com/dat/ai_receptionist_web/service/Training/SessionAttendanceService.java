@@ -47,7 +47,7 @@ public class SessionAttendanceService {
     private final SessionAttendanceAccessPolicy accessPolicy;
 
     @Transactional(readOnly = true)
-    public PageResponse<SessionAttendanceDTO.Response> list(
+    public PageResponse<SessionAttendanceDTO.SimpleResponse> list(
             LocalDate fromDate,
             LocalDate toDate,
             UUID courseId,
@@ -72,13 +72,14 @@ public class SessionAttendanceService {
                 staffPersonId,
                 effectivePageable
         );
-        return PageResponse.of(page, entity -> toResponse(entity, context));
+        return PageResponse.of(page, mapper::toSimpleResponse);
     }
 
     @Transactional(readOnly = true)
     public SessionAttendanceDTO.Response get(UUID id) {
         AccessContext context = currentAccessContextResolver.current();
-        return toResponse(findReadable(id, context), context);
+        SessionAttendance entity = findReadable(id, context);
+        return mapper.toResponse(entity, allowedActions(entity, context));
     }
 
     @Transactional
@@ -105,7 +106,8 @@ public class SessionAttendanceService {
         entity.setAttendanceStatus(request.attendanceStatus());
         entity.setEvaluationStatus(request.evaluationStatus());
         entity.setNote(request.note());
-        return toResponse(repository.save(entity), context);
+        SessionAttendance saved = repository.save(entity);
+        return mapper.toResponse(saved, allowedActions(saved, context));
     }
 
     @Transactional
@@ -114,7 +116,8 @@ public class SessionAttendanceService {
         SessionAttendance entity = findManageable(id);
         accessPolicy.requireCanUpdate(entity);
         mapper.updateEntity(request, entity);
-        return toResponse(repository.save(entity), context);
+        SessionAttendance saved = repository.save(entity);
+        return mapper.toResponse(saved, allowedActions(saved, context));
     }
 
     @Transactional
@@ -162,29 +165,12 @@ public class SessionAttendanceService {
         return assignment;
     }
 
-    private SessionAttendanceDTO.Response toResponse(SessionAttendance entity, AccessContext context) {
-        SessionAttendanceDTO.Response base = mapper.toResponse(entity);
-        return new SessionAttendanceDTO.Response(
-                base.sessionAttendanceId(),
-                base.classSessionId(),
-                base.studentEnrollmentId(),
-                base.courseStaffAssignmentId(),
-                base.checkInTime(),
-                base.attendanceStatus(),
-                base.evaluationStatus(),
-                base.note(),
-                allowedActions(entity, context),
-                base.createdAt(),
-                base.updatedAt()
-        );
-    }
-
     private SessionAttendanceDTO.AllowedActions allowedActions(SessionAttendance entity, AccessContext context) {
         boolean update = context.hasPermission(PermissionDefinition.SESSION_ATTENDANCE_UPDATE.getCode())
                 && canUpdate(entity);
         boolean delete = context.hasPermission(PermissionDefinition.SESSION_ATTENDANCE_DELETE.getCode())
                 && canDelete(entity);
-        return new SessionAttendanceDTO.AllowedActions(update, delete);
+        return mapper.toAllowedActions(update, delete);
     }
 
     private boolean canUpdate(SessionAttendance entity) {

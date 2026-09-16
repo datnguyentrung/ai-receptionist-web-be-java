@@ -18,11 +18,11 @@ public class RolePermissionController {
     /**
      * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
      * Input: Nhận Pageable pageable từ caller hoặc request.
-     * Output: Trả về PageResponse<RolePermissionDTO.ItemResponse> theo kết quả xử lý.
+     * Output: Trả về PageResponse<RolePermissionDTO.SimpleResponse> theo kết quả xử lý.
      */
     @GetMapping("/api/v1/role-permissions")
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).ROLE_PERMISSION_READ.getCode())")
-    public PageResponse<RolePermissionDTO.ItemResponse> list(Pageable pageable) { return rolePermissionService.list(pageable); }
+    public PageResponse<RolePermissionDTO.SimpleResponse> list(Pageable pageable) { return rolePermissionService.list(pageable); }
 
     /**
      * Tác dụng: Lấy chi tiết một bản ghi theo khóa định danh.

@@ -12,6 +12,9 @@ public interface PermissionMapper {
     @Mapping(target = "permissionId", source = "permissionId")
     PermissionDTO.Response toResponse(Permission entity);
 
+    @Mapping(target = "permissionId", source = "permissionId")
+    PermissionDTO.SimpleResponse toSimpleResponse(Permission entity);
+
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "code", source = "code")
     @Mapping(target = "model", source = "model")

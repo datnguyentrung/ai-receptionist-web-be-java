@@ -34,8 +34,8 @@ public final class CourseDTO {
 
     public record Response(
             UUID courseId,
-            UUID classScheduleId,
-            UUID nextClassScheduleId,
+            ClassScheduleDTO.Response classSchedule,
+            ClassScheduleDTO.SimpleResponse nextClassSchedule,
             LocalDate nextScheduleEffectiveFrom,
             String name,
             int capacity,
@@ -43,6 +43,16 @@ public final class CourseDTO {
             LocalDate classSessionGeneratedUntil,
             LocalDateTime createdAt,
             LocalDateTime updatedAt) {
+    }
+
+    public record SimpleResponse(
+            UUID courseId,
+            ClassScheduleDTO.SimpleResponse classSchedule,
+            ClassScheduleDTO.SimpleResponse nextClassSchedule,
+            LocalDate nextScheduleEffectiveFrom,
+            String name,
+            int capacity,
+            CourseStatus status) {
     }
 
     public record ScheduleChangeRequest(

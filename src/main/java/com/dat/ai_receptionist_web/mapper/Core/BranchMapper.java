@@ -14,6 +14,9 @@ public interface BranchMapper {
     @Mapping(target = "branchId", source = "branchId")
     BranchDTO.Response toResponse(Branch entity);
 
+    @Mapping(target = "branchId", source = "branchId")
+    BranchDTO.SimpleResponse toSimpleResponse(Branch entity);
+
     @Mapping(target = "branchId", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)

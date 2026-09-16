@@ -8,6 +8,7 @@ import com.dat.ai_receptionist_web.dto.Security.LoginRes;
 import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.code.CoreErrorCode;
 import com.dat.ai_receptionist_web.error.code.SecurityErrorCode;
+import com.dat.ai_receptionist_web.mapper.Core.UserPersonMapper;
 import com.dat.ai_receptionist_web.mapper.Security.AuthSessionMapper;
 import com.dat.ai_receptionist_web.repository.Core.UserPersonRepository;
 import com.dat.ai_receptionist_web.repository.Security.*;
@@ -28,6 +29,7 @@ public class AuthSessionService {
     private final UserRepository userRepository;
     private final UserPersonRepository userPersonRepository;
     private final AuthSessionMapper authSessionMapper;
+    private final UserPersonMapper userPersonMapper;
 
     @Value("${jwt.refresh-token-validity-in-seconds}")
     private long refreshTokenValidity;
@@ -35,11 +37,11 @@ public class AuthSessionService {
     /**
      * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
      * Input: Nhận Pageable pageable từ caller hoặc request.
-     * Output: Trả về PageResponse<AuthSessionDTO.Response> theo kết quả xử lý.
+     * Output: Trả về PageResponse<AuthSessionDTO.SimpleResponse> theo kết quả xử lý.
      */
     @Transactional(readOnly = true)
-    public PageResponse<AuthSessionDTO.Response> list(Pageable pageable) {
-        return PageResponse.of(sessionRepository.findAll(pageable), authSessionMapper::toResponse);
+    public PageResponse<AuthSessionDTO.SimpleResponse> list(Pageable pageable) {
+        return PageResponse.of(sessionRepository.findAll(pageable), authSessionMapper::toSimpleResponse);
     }
 
     /**
@@ -192,7 +194,7 @@ public class AuthSessionService {
                 .orElseThrow(() -> new ApiException(SecurityErrorCode.PERSON_CONTEXT_NOT_OWNED));
         session.setActiveUserPerson(target);
         List<LoginRes.UserContextRes> available = contexts(userId);
-        return new ContextSwitchResult(toContext(target), available);
+        return new ContextSwitchResult(userPersonMapper.toLoginContext(target), available);
     }
 
     /**
@@ -203,7 +205,7 @@ public class AuthSessionService {
     @Transactional(readOnly = true)
     public List<LoginRes.UserContextRes> contexts(UUID userId) {
         return userPersonRepository.findAllByUser_UserIdAndActiveTrue(userId).stream()
-                .map(this::toContext).toList();
+                .map(userPersonMapper::toLoginContext).toList();
     }
 
     /**
@@ -263,16 +265,6 @@ public class AuthSessionService {
     private AuthSession find(UUID id) {
         return sessionRepository.findById(id)
                 .orElseThrow(() -> new ApiException(SecurityErrorCode.AUTH_SESSION_NOT_FOUND));
-    }
-
-    /**
-     * Tác dụng: Chuyển đổi dữ liệu sang kiểu kết quả phù hợp cho lớp đang xử lý.
-     * Input: Nhận UserPerson value từ caller hoặc request.
-     * Output: Trả về LoginRes.UserContextRes theo kết quả xử lý.
-     */
-    private LoginRes.UserContextRes toContext(UserPerson value) {
-        return new LoginRes.UserContextRes(value.getUserPersonId(), value.getPerson().getPersonId(),
-                value.getRelationshipType(), value.getPerson().getPersonCode(), value.getPerson().getFullName());
     }
 
     public record ContextSwitchResult(LoginRes.UserContextRes activeContext,

@@ -22,11 +22,11 @@ public class UserRoleController {
     /**
      * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
      * Input: Nhận Pageable pageable từ caller hoặc request.
-     * Output: Trả về PageResponse<UserRoleDTO.ItemResponse> theo kết quả xử lý.
+     * Output: Trả về PageResponse<UserRoleDTO.SimpleResponse> theo kết quả xử lý.
      */
     @GetMapping
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).USER_ROLE_READ.getCode())")
-    public PageResponse<UserRoleDTO.ItemResponse> list(Pageable pageable) { return Service.list(pageable); }
+    public PageResponse<UserRoleDTO.SimpleResponse> list(Pageable pageable) { return Service.list(pageable); }
 
     /**
      * Tác dụng: Lấy chi tiết một bản ghi theo khóa định danh.

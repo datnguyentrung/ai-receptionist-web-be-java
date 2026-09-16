@@ -20,7 +20,7 @@ public class LeaveRequestController {
 
     @GetMapping
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).LEAVE_REQUEST_READ.getCode())")
-    public PageResponse<LeaveRequestDTO.Response> list(Pageable pageable) {
+    public PageResponse<LeaveRequestDTO.SimpleResponse> list(Pageable pageable) {
         return service.list(pageable);
     }
 

@@ -1,5 +1,6 @@
 package com.dat.ai_receptionist_web.dto.Training;
 
+import com.dat.ai_receptionist_web.dto.Catalog.ClassScheduleDTO;
 import com.dat.ai_receptionist_web.dto.Core.PersonDTO;
 import com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus;
 import jakarta.validation.constraints.NotNull;
@@ -46,9 +47,9 @@ public final class StudentEnrollmentDTO {
 
     public record Response(
             UUID studentEnrollmentId,
-            PersonDTO.SimpleResponse studentPerson,
+            PersonDTO.Response studentPerson,
             UUID coursePurchaseId,
-            UUID classScheduleId,
+            ClassScheduleDTO.Response classSchedule,
             LocalDate startDate,
             LocalDate endDate,
             StudentEnrollmentStatus status,
@@ -61,7 +62,7 @@ public final class StudentEnrollmentDTO {
             UUID studentEnrollmentId,
             PersonDTO.SimpleResponse studentPerson,
             UUID coursePurchaseId,
-            UUID classScheduleId,
+            ClassScheduleDTO.SimpleResponse classSchedule,
             LocalDate startDate,
             LocalDate endDate,
             StudentEnrollmentStatus status

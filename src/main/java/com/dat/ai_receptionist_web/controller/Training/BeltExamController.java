@@ -20,7 +20,7 @@ public class BeltExamController {
 
     @GetMapping
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).BELT_EXAM_READ.getCode())")
-    public PageResponse<BeltExamDTO.Response> list(Pageable pageable) {
+    public PageResponse<BeltExamDTO.SimpleResponse> list(Pageable pageable) {
         return service.list(pageable);
     }
 

@@ -48,24 +48,17 @@ public class PersonService {
                     CoreErrorCode.PERSON_CODE_ALREADY_EXISTS);
         }
         Position position = resolvePosition(request.positionId());
-        Person person = personRepository.save(Person.builder()
-                .fullName(NameConverter.formatVietnameseName(request.fullName()))
-                .gender(request.gender())
-                .birthDate(request.birthDate())
-                .email(request.email())
-                .nationalCode(request.nationalCode())
-                .personCode(AccountUtil.getUserCode(request.fullName(), request.birthDate(), "VQ"))
-                .currentBelt(request.currentBelt())
-                .status(request.status())
-                .startDate(request.startDate())
-                .position(position)
-                .build());
+        Person person = personMapper.toEntity(request);
+        person.setFullName(NameConverter.formatVietnameseName(request.fullName()));
+        person.setPersonCode(AccountUtil.getUserCode(request.fullName(), request.birthDate(), "VQ"));
+        person.setPosition(position);
+        person = personRepository.save(person);
         walletRepository.save(Wallet.builder()
                 .person(person)
                 .balance(BigDecimal.ZERO)
                 .status(WalletStatus.ACTIVE)
                 .build());
-        return toResponse(person);
+        return personMapper.toResponse(person);
     }
 
     /**
@@ -79,17 +72,17 @@ public class PersonService {
                 ? personRepository.findAll(pageable)
                 : personRepository.findByFullNameContainingIgnoreCaseOrPersonCodeContainingIgnoreCase(
                         query.trim(), query.trim(), pageable);
-        return people.map(this::toResponse);
+        return people.map(personMapper::toResponse);
     }
 
     /**
      * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
      * Input: Nhận Pageable pageable từ caller hoặc request.
-     * Output: Trả về PageResponse<PersonDTO.Response> theo kết quả xử lý.
+     * Output: Trả về PageResponse<PersonDTO.SimpleResponse> theo kết quả xử lý.
      */
     @Transactional(readOnly = true)
-    public PageResponse<PersonDTO.Response> list(Pageable pageable) {
-        return PageResponse.of(personRepository.findAll(pageable), personMapper::toResponse);
+    public PageResponse<PersonDTO.SimpleResponse> list(Pageable pageable) {
+        return PageResponse.of(personRepository.findAll(pageable), personMapper::toSimpleResponse);
     }
 
     /**
@@ -99,7 +92,7 @@ public class PersonService {
      */
     @Transactional(readOnly = true)
     public PersonDTO.Response get(UUID id) {
-        return toResponse(personRepository.findById(id)
+        return personMapper.toResponse(personRepository.findById(id)
                 .orElseThrow(() -> new ApiException(CoreErrorCode.PERSON_NOT_FOUND)));
     }
 
@@ -138,20 +131,6 @@ public class PersonService {
     private Person find(UUID id) {
         return personRepository.findById(id)
                 .orElseThrow(() -> new ApiException(CoreErrorCode.PERSON_NOT_FOUND));
-    }
-
-    /**
-     * Tác dụng: Chuyển đổi dữ liệu sang kiểu kết quả phù hợp cho lớp đang xử lý.
-     * Input: Nhận Person value từ caller hoặc request.
-     * Output: Trả về PersonDTO.Response theo kết quả xử lý.
-     */
-    private PersonDTO.Response toResponse(Person value) {
-        return new PersonDTO.Response(value.getPersonId(), value.getFullName(), value.getGender(),
-                value.getBirthDate(), value.getEmail(), value.getNationalCode(), value.getPersonCode(),
-                value.getCurrentBelt(), value.getStatus(), value.getStartDate(),
-                value.getPosition() == null ? null : value.getPosition().getPositionId(),
-                value.getFaceImagePath(),
-                value.getCreatedAt(), value.getUpdatedAt());
     }
 
     private Position resolvePosition(UUID positionId) {

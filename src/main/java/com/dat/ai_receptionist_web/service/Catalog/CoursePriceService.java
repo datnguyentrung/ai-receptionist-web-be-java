@@ -25,11 +25,11 @@ public class CoursePriceService {
     /**
      * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
      * Input: Nhận Pageable pageable từ caller hoặc request.
-     * Output: Trả về PageResponse<CoursePriceDTO.Response> theo kết quả xử lý.
+     * Output: Trả về PageResponse<CoursePriceDTO.SimpleResponse> theo kết quả xử lý.
      */
     @Transactional(readOnly = true)
-    public PageResponse<CoursePriceDTO.Response> list(Pageable pageable) {
-        return PageResponse.of(repository.findAll(pageable), mapper::toResponse);
+    public PageResponse<CoursePriceDTO.SimpleResponse> list(Pageable pageable) {
+        return PageResponse.of(repository.findAll(pageable), mapper::toSimpleResponse);
     }
 
     /**

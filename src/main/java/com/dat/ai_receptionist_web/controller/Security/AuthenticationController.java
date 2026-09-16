@@ -5,6 +5,7 @@ import com.dat.ai_receptionist_web.dto.Security.*;
 import com.dat.ai_receptionist_web.enums.Security.UserStatus;
 import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.code.SecurityErrorCode;
+import com.dat.ai_receptionist_web.mapper.Security.AuthenticationMapper;
 import com.dat.ai_receptionist_web.service.Security.*;
 import com.dat.ai_receptionist_web.util.*;
 import jakarta.validation.Valid;
@@ -30,6 +31,7 @@ public class AuthenticationController {
     private final AuthorizationService authorizationService;
     private final AuthSessionService sessionService;
     private final SecurityUtil securityUtil;
+    private final AuthenticationMapper authenticationMapper;
 
     @Value("${jwt.refresh-token-validity-in-seconds}")
     private long refreshTokenExpiration;
@@ -60,7 +62,7 @@ public class AuthenticationController {
     public ResponseEntity<LoginRes.MobileResponse> mobileLogin(
             @Valid @RequestBody LoginReq.MobileLoginRequest request) {
         LoginBundle bundle = authenticate(request, request.getPlatform().toUpperCase(Locale.ROOT));
-        return ResponseEntity.ok(toMobile(bundle.response(), bundle.refreshToken()));
+        return ResponseEntity.ok(authenticationMapper.toMobileResponse(bundle.response(), bundle.refreshToken()));
     }
 
     /**
@@ -92,7 +94,7 @@ public class AuthenticationController {
             @Valid @RequestBody LoginReq.RefreshTokenRequest request) {
         try {
             LoginBundle bundle = refreshBundle(request.getRefreshToken());
-            return ResponseEntity.ok(toMobile(bundle.response(), bundle.refreshToken()));
+            return ResponseEntity.ok(authenticationMapper.toMobileResponse(bundle.response(), bundle.refreshToken()));
         } catch (RuntimeException exception) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -111,7 +113,7 @@ public class AuthenticationController {
         List<LoginRes.UserContextRes> contexts = sessionService.contexts(userId);
         LoginRes.UserContextRes active = contextById(contexts,
                 SecurityUtil.getCurrentActiveUserPersonId().orElse(null));
-        return response(null, null, snapshot, active, contexts);
+        return authenticationMapper.toResponse(null, null, snapshot, active, contexts);
     }
 
     /**
@@ -136,7 +138,7 @@ public class AuthenticationController {
         AuthSessionService.ContextSwitchResult switched =
                 sessionService.switchContext(userId, sessionId, request.getUserPersonId());
         AuthorizationSnapshot snapshot = authorizationService.loadSnapshot(userId);
-        return response(securityUtil.createAccessToken(sessionId, snapshot, request.getUserPersonId()),
+        return authenticationMapper.toResponse(securityUtil.createAccessToken(sessionId, snapshot, request.getUserPersonId()),
                 null, snapshot, switched.activeContext(), switched.availableContexts());
     }
 
@@ -223,7 +225,7 @@ public class AuthenticationController {
         userService.updateLastLogin(userId);
         String accessToken = securityUtil.createAccessToken(session.getAuthSessionId(), snapshot,
                 active == null ? null : active.userPersonId());
-        return new LoginBundle(response(accessToken, request.getIdDevice(), snapshot, active, contexts),
+        return new LoginBundle(authenticationMapper.toResponse(accessToken, request.getIdDevice(), snapshot, active, contexts),
                 rawRefreshToken);
     }
 
@@ -253,37 +255,8 @@ public class AuthenticationController {
             throw new ApiException(SecurityErrorCode.ACTIVE_CONTEXT_UNAVAILABLE);
         }
         String accessToken = securityUtil.createAccessToken(session.getAuthSessionId(), snapshot, activeId);
-        return new LoginBundle(response(accessToken, session.getDeviceInfo(), snapshot, active, contexts),
+        return new LoginBundle(authenticationMapper.toResponse(accessToken, session.getDeviceInfo(), snapshot, active, contexts),
                 nextRawToken);
-    }
-
-    /**
-     * Tác dụng: Thực hiện logic response của lớp hiện tại.
-     * Input: Nhận String token, String device, AuthorizationSnapshot snapshot, LoginRes.UserContextRes active, List<LoginRes.UserContextRes> contexts từ caller hoặc request.
-     * Output: Trả về LoginRes theo kết quả xử lý.
-     */
-    private LoginRes response(String token, String device, AuthorizationSnapshot snapshot,
-                              LoginRes.UserContextRes active, List<LoginRes.UserContextRes> contexts) {
-        LoginRes result = new LoginRes();
-        result.setAccessToken(token);
-        result.setIdDevice(device);
-        result.setUser(new LoginRes.UserLogin(snapshot.userId(), snapshot.phoneNumber(),
-                snapshot.userStatus(), snapshot.roleCodes(), snapshot.permissionCodes()));
-        result.setActiveContext(active);
-        result.setAvailableContexts(contexts);
-        result.setRequiresContextSelection(active == null);
-        return result;
-    }
-
-    /**
-     * Tác dụng: Chuyển đổi dữ liệu sang kiểu kết quả phù hợp cho lớp đang xử lý.
-     * Input: Nhận LoginRes response, String refreshToken từ caller hoặc request.
-     * Output: Trả về LoginRes.MobileResponse theo kết quả xử lý.
-     */
-    private LoginRes.MobileResponse toMobile(LoginRes response, String refreshToken) {
-        return new LoginRes.MobileResponse(response.getAccessToken(), refreshToken, response.getUser(),
-                response.getActiveContext(), response.getAvailableContexts(),
-                response.isRequiresContextSelection());
     }
 
     /**

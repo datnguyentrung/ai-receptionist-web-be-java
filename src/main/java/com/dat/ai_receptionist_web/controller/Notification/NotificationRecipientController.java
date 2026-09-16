@@ -21,11 +21,11 @@ public class NotificationRecipientController {
     /**
      * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
      * Input: Nhận Pageable pageable từ caller hoặc request.
-     * Output: Trả về PageResponse<NotificationRecipientDTO.Response> theo kết quả xử lý.
+     * Output: Trả về PageResponse<NotificationRecipientDTO.SimpleResponse> theo kết quả xử lý.
      */
     @GetMapping
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).NOTIFICATION_RECIPIENT_READ.getCode())")
-    public PageResponse<NotificationRecipientDTO.Response> list(Pageable pageable) { return service.list(pageable); }
+    public PageResponse<NotificationRecipientDTO.SimpleResponse> list(Pageable pageable) { return service.list(pageable); }
 
     @GetMapping("/mine")
     @PreAuthorize("isAuthenticated()")

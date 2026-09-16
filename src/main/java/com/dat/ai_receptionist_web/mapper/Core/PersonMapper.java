@@ -7,11 +7,21 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = PositionMapper.class)
 public interface PersonMapper {
     @Mapping(target = "personId", source = "personId")
-    @Mapping(target = "positionId", source = "position.positionId")
     PersonDTO.Response toResponse(Person entity);
+
+    @Mapping(target = "personId", source = "personId")
+    PersonDTO.SimpleResponse toSimpleResponse(Person entity);
+
+    @Mapping(target = "personId", ignore = true)
+    @Mapping(target = "personCode", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "position", ignore = true)
+    @Mapping(target = "faceEmbedding", ignore = true)
+    Person toEntity(PersonDTO.CreateRequest request);
 
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "fullName", source = "fullName")

@@ -1,5 +1,7 @@
 package com.dat.ai_receptionist_web.dto.Notification;
 
+import com.dat.ai_receptionist_web.dto.Core.PersonDTO;
+import com.dat.ai_receptionist_web.dto.Security.UserDTO;
 import jakarta.validation.constraints.*;
 import com.dat.ai_receptionist_web.enums.Training.NotificationRecipientStatus;
 import com.dat.ai_receptionist_web.enums.Training.NotificationType;
@@ -16,10 +18,16 @@ public final class NotificationRecipientDTO {
     public record UpdateRequest(boolean read, LocalDateTime deliveredAt, @NotNull NotificationRecipientStatus notificationRecipientStatus) {
     }
 
-    public record Response(UUID notificationRecipientId, UUID notificationId, UUID recipientUserId,
-                           UUID contextPersonId, boolean read, LocalDateTime readAt,
+    public record Response(UUID notificationRecipientId, NotificationDTO.Response notification, UserDTO.SimpleResponse recipientUser,
+                           PersonDTO.SimpleResponse contextPerson, boolean read, LocalDateTime readAt,
                            LocalDateTime deliveredAt, NotificationRecipientStatus notificationRecipientStatus,
                            LocalDateTime createdAt, LocalDateTime updatedAt) {
+    }
+
+    public record SimpleResponse(UUID notificationRecipientId, NotificationDTO.SimpleResponse notification, UserDTO.SimpleResponse recipientUser,
+                                 PersonDTO.SimpleResponse contextPerson, boolean read, LocalDateTime readAt,
+                                 LocalDateTime deliveredAt, NotificationRecipientStatus notificationRecipientStatus,
+                                 LocalDateTime createdAt) {
     }
 
     public record MineResponse(UUID notificationRecipientId, UUID notificationId, UUID contextPersonId,

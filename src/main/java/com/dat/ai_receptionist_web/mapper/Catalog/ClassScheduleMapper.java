@@ -1,16 +1,18 @@
 package com.dat.ai_receptionist_web.mapper.Catalog;
 
 import com.dat.ai_receptionist_web.domain.Catalog.ClassSchedule;
+import com.dat.ai_receptionist_web.mapper.Core.BranchMapper;
 import com.dat.ai_receptionist_web.dto.Catalog.ClassScheduleDTO;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = BranchMapper.class)
 public interface ClassScheduleMapper {
-    @Mapping(target = "branchId", source = "branch.branchId")
     ClassScheduleDTO.Response toResponse(ClassSchedule entity);
+
+    ClassScheduleDTO.SimpleResponse toSimpleResponse(ClassSchedule entity);
 
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "branch", ignore = true)

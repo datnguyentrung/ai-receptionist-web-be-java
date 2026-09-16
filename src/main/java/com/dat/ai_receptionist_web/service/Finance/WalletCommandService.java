@@ -18,6 +18,7 @@ import com.dat.ai_receptionist_web.error.ErrorCode;
 import com.dat.ai_receptionist_web.error.code.CatalogErrorCode;
 import com.dat.ai_receptionist_web.error.code.FinanceErrorCode;
 import com.dat.ai_receptionist_web.error.code.SecurityErrorCode;
+import com.dat.ai_receptionist_web.mapper.Finance.WalletCommandMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +38,7 @@ public class WalletCommandService {
     private final StudentEnrollmentRepository enrollmentRepository;
     private final UserRepository userRepository;
     private final PersonCodePolicy personCodePolicy;
+    private final WalletCommandMapper walletCommandMapper;
 
     /**
      * Tác dụng: Chuyển đổi dữ liệu sang kiểu kết quả phù hợp cho lớp đang xử lý.
@@ -53,7 +55,7 @@ public class WalletCommandService {
                 .orElse(null);
         if (existing != null) {
             assertSameOperation(existing, wallet, amount);
-            return response(existing, null, null);
+            return walletCommandMapper.toTransactionResponse(existing, null, null);
         }
         requireActive(wallet);
         User actor = user(actorUserId);
@@ -64,7 +66,7 @@ public class WalletCommandService {
                 request.externalReference(), actor, request.note());
         wallet.setBalance(after);
         transactionRepository.save(transaction);
-        return response(transaction, null, null);
+        return walletCommandMapper.toTransactionResponse(transaction, null, null);
     }
 
     /**
@@ -80,7 +82,9 @@ public class WalletCommandService {
                 .findByTypeAndExternalReference(WalletTransactionType.COURSE_PURCHASE,
                         request.externalReference()).orElse(null);
         if (existing != null) {
-            return existingCoursePurchase(existing, wallet, request);
+            ExistingCoursePurchase duplicate = existingCoursePurchase(existing, wallet, request);
+            return walletCommandMapper.toTransactionResponse(
+                    duplicate.transaction(), duplicate.purchase(), duplicate.enrollment());
         }
         personCodePolicy.requireStudent(wallet.getPerson());
         requireActive(wallet);
@@ -122,7 +126,7 @@ public class WalletCommandService {
                 .status(StudentEnrollmentStatus.ACTIVE)
                 .build());
         wallet.setBalance(after);
-        return response(transaction, purchase, enrollment);
+        return walletCommandMapper.toTransactionResponse(transaction, purchase, enrollment);
     }
 
     /**
@@ -148,7 +152,7 @@ public class WalletCommandService {
                 .findByTypeAndExternalReference(WalletTransactionType.REFUND, originalReference)
                 .orElse(null);
         if (existing != null) {
-            return response(existing, null, null);
+            return walletCommandMapper.toTransactionResponse(existing, null, null);
         }
         BigDecimal amount = original.getAmount();
         BigDecimal before = wallet.getBalance();
@@ -159,7 +163,7 @@ public class WalletCommandService {
                 amount, before, after, originalReference, actor, request.note()));
         revokeCourseEntitlement(original);
         wallet.setBalance(after);
-        return response(refund, null, null);
+        return walletCommandMapper.toTransactionResponse(refund, null, null);
     }
 
     /**
@@ -167,7 +171,7 @@ public class WalletCommandService {
      * Input: Nhận WalletTransaction existing, Wallet wallet, WalletCommandDTO.CoursePurchaseRequest request từ caller hoặc request.
      * Output: Trả về WalletCommandDTO.TransactionResponse theo kết quả xử lý.
      */
-    private WalletCommandDTO.TransactionResponse existingCoursePurchase(
+    private ExistingCoursePurchase existingCoursePurchase(
             WalletTransaction existing, Wallet wallet, WalletCommandDTO.CoursePurchaseRequest request) {
         CoursePurchase purchase = purchaseRepository
                 .findByDebitTransaction_WalletTransactionId(existing.getWalletTransactionId())
@@ -182,7 +186,7 @@ public class WalletCommandService {
                 .findByCoursePurchase_CoursePurchaseId(purchase.getCoursePurchaseId())
                 .orElseThrow(() -> failure(FinanceErrorCode.LEDGER_INVARIANT_VIOLATION,
                         "Enrollment record is missing"));
-        return response(existing, purchase, enrollment);
+        return new ExistingCoursePurchase(existing, purchase, enrollment);
     }
 
     /**
@@ -281,21 +285,6 @@ public class WalletCommandService {
     }
 
     /**
-     * Tác dụng: Thực hiện logic response của lớp hiện tại.
-     * Input: Nhận WalletTransaction tx, CoursePurchase purchase, StudentEnrollment enrollment từ caller hoặc request.
-     * Output: Trả về WalletCommandDTO.TransactionResponse theo kết quả xử lý.
-     */
-    private WalletCommandDTO.TransactionResponse response(WalletTransaction tx,
-                                                           CoursePurchase purchase,
-                                                           StudentEnrollment enrollment) {
-        return new WalletCommandDTO.TransactionResponse(tx.getWalletTransactionId(),
-                tx.getWallet().getWalletId(), tx.getType(), tx.getDirection(), tx.getStatus(),
-                tx.getAmount(), tx.getBalanceBefore(), tx.getBalanceAfter(), tx.getExternalReference(),
-                purchase == null ? null : purchase.getCoursePurchaseId(),
-                enrollment == null ? null : enrollment.getStudentEnrollmentId(), tx.getReviewedAt());
-    }
-
-    /**
      * Tác dụng: Thực hiện logic failure của lớp hiện tại.
      * Input: Nhận String code, HttpStatus status, String message từ caller hoặc request.
      * Output: Trả về FinancialException theo kết quả xử lý.
@@ -306,6 +295,13 @@ public class WalletCommandService {
 
     private ApiException failure(ErrorCode errorCode, String safeDetail) {
         return new ApiException(errorCode, safeDetail);
+    }
+
+    private record ExistingCoursePurchase(
+            WalletTransaction transaction,
+            CoursePurchase purchase,
+            StudentEnrollment enrollment
+    ) {
     }
 }
 

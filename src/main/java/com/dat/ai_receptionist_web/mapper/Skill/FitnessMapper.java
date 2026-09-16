@@ -12,6 +12,9 @@ public interface FitnessMapper {
     @Mapping(target = "fitnessId", source = "fitnessId")
     FitnessDTO.Response toResponse(Fitness entity);
 
+    @Mapping(target = "fitnessId", source = "fitnessId")
+    FitnessDTO.SimpleResponse toSimpleResponse(Fitness entity);
+
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "scheduleLevel", source = "scheduleLevel")
     @Mapping(target = "amount", source = "amount")

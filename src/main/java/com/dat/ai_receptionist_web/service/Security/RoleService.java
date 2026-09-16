@@ -26,11 +26,11 @@ public class RoleService {
     /**
      * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
      * Input: Nhận Pageable pageable từ caller hoặc request.
-     * Output: Trả về PageResponse<RoleDTO.Response> theo kết quả xử lý.
+     * Output: Trả về PageResponse<RoleDTO.SimpleResponse> theo kết quả xử lý.
      */
     @Transactional(readOnly = true)
-    public PageResponse<RoleDTO.Response> list(Pageable pageable) {
-        return PageResponse.of(roleRepository.findAll(pageable), roleMapper::toResponse);
+    public PageResponse<RoleDTO.SimpleResponse> list(Pageable pageable) {
+        return PageResponse.of(roleRepository.findAll(pageable), roleMapper::toSimpleResponse);
     }
 
     /**

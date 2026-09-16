@@ -23,8 +23,24 @@ class PersonServiceTest {
     void createsZeroBalanceActiveWalletInPersonTransaction() {
         PersonRepository people = mock(PersonRepository.class);
         WalletRepository wallets = mock(WalletRepository.class);
+        PersonMapper personMapper = mock(PersonMapper.class);
+        when(personMapper.toEntity(any(PersonDTO.CreateRequest.class))).thenAnswer(invocation -> {
+            PersonDTO.CreateRequest request = invocation.getArgument(0);
+            return Person.builder()
+                    .fullName(request.fullName())
+                    .gender(request.gender())
+                    .birthDate(request.birthDate())
+                    .email(request.email())
+                    .nationalCode(request.nationalCode())
+                    .faceImagePath(request.faceImagePath())
+                    .currentBelt(request.currentBelt())
+                    .status(request.status())
+                    .startDate(request.startDate())
+                    .build();
+        });
+        when(personMapper.toResponse(any(Person.class))).thenReturn(null);
         when(people.save(any(Person.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        PersonService service = new PersonService(people, wallets, mock(PersonMapper.class),
+        PersonService service = new PersonService(people, wallets, personMapper,
                 new PersonCodePolicy(), mock(PositionRepository.class));
 
         service.create(new PersonDTO.CreateRequest("Nguyen Van A", true, LocalDate.of(2000, 1, 1),

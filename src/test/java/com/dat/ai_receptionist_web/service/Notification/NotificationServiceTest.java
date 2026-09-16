@@ -15,6 +15,7 @@ import com.dat.ai_receptionist_web.repository.Core.UserPersonRepository;
 import com.dat.ai_receptionist_web.repository.Notification.NotificationRepository;
 import com.dat.ai_receptionist_web.repository.Security.UserRepository;
 import org.junit.jupiter.api.Test;
+import org.mapstruct.factory.Mappers;
 import org.mockito.ArgumentCaptor;
 
 import java.util.List;
@@ -45,7 +46,7 @@ class NotificationServiceTest {
                 recipientService,
                 mock(NotificationRecipientEligibilityPolicy.class),
                 mock(NotificationDeliveryService.class),
-                mock(NotificationMapper.class),
+                Mappers.getMapper(NotificationMapper.class),
                 afterCommitExecutor);
 
         UUID userId = UUID.randomUUID();
@@ -85,7 +86,7 @@ class NotificationServiceTest {
                 recipientService,
                 mock(NotificationRecipientEligibilityPolicy.class),
                 mock(NotificationDeliveryService.class),
-                mock(NotificationMapper.class),
+                Mappers.getMapper(NotificationMapper.class),
                 mock(TransactionAfterCommitExecutor.class));
 
         UUID userId = UUID.randomUUID();

@@ -33,14 +33,25 @@ public final class CoachTimesheetDTO {
 
     public record Response(
             UUID coachTimesheetId,
-            UUID courseStaffAssignmentId,
-            UUID classSessionId,
+            CourseStaffAssignmentDTO.Response courseStaffAssignment,
+            ClassSessionDTO.Response classSession,
             LocalTime checkInTime,
             LocalTime checkOutTime,
             String note,
             AllowedActions allowedActions,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
+    ) {
+    }
+
+    public record SimpleResponse(
+            UUID coachTimesheetId,
+            CourseStaffAssignmentDTO.SimpleResponse courseStaffAssignment,
+            ClassSessionDTO.SimpleResponse classSession,
+            LocalTime checkInTime,
+            LocalTime checkOutTime,
+            String note,
+            AllowedActions allowedActions
     ) {
     }
 }

@@ -2,15 +2,17 @@ package com.dat.ai_receptionist_web.mapper.Training;
 
 import com.dat.ai_receptionist_web.domain.Training.ClassSession;
 import com.dat.ai_receptionist_web.dto.Training.ClassSessionDTO;
+import com.dat.ai_receptionist_web.mapper.Catalog.CourseMapper;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = CourseMapper.class)
 public interface ClassSessionMapper {
-    @Mapping(target = "courseId", source = "course.courseId")
     ClassSessionDTO.Response toResponse(ClassSession entity);
+
+    ClassSessionDTO.SimpleResponse toSimpleResponse(ClassSession entity);
 
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "course", ignore = true)

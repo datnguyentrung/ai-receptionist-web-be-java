@@ -18,6 +18,9 @@ public interface RoleMapper {
     @Mapping(target = "code", source = "code")
     RoleDTO.Response toResponse(Role entity);
 
+    @Mapping(target = "code", source = "code")
+    RoleDTO.SimpleResponse toSimpleResponse(Role entity);
+
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "code", ignore = true)
     @Mapping(target = "name", source = "name")

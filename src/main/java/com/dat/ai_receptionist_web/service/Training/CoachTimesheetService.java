@@ -37,7 +37,7 @@ public class CoachTimesheetService {
     private final CoachTimesheetAccessPolicy accessPolicy;
 
     @Transactional(readOnly = true)
-    public PageResponse<CoachTimesheetDTO.Response> list(
+    public PageResponse<CoachTimesheetDTO.SimpleResponse> list(
             LocalDate fromDate,
             LocalDate toDate,
             UUID courseId,
@@ -54,13 +54,14 @@ public class CoachTimesheetService {
                 toDate,
                 courseId,
                 pageable
-        ), entity -> toResponse(entity, context));
+        ), entity -> mapper.toSimpleResponse(entity, allowedActions(entity, context)));
     }
 
     @Transactional(readOnly = true)
     public CoachTimesheetDTO.Response get(UUID id) {
         AccessContext context = currentAccessContextResolver.current();
-        return toResponse(findAccessible(id, context), context);
+        CoachTimesheet entity = findAccessible(id, context);
+        return mapper.toResponse(entity, allowedActions(entity, context));
     }
 
     @Transactional
@@ -78,7 +79,8 @@ public class CoachTimesheetService {
         entity.setCheckInTime(request.checkInTime());
         entity.setCheckOutTime(request.checkOutTime());
         entity.setNote(request.note());
-        return toResponse(repository.save(entity), context);
+        CoachTimesheet saved = repository.save(entity);
+        return mapper.toResponse(saved, allowedActions(saved, context));
     }
 
     @Transactional
@@ -87,7 +89,8 @@ public class CoachTimesheetService {
         var entity = findManageable(id, context);
         accessPolicy.requireCanUpdate(context, entity);
         mapper.updateEntity(request, entity);
-        return toResponse(repository.save(entity), context);
+        CoachTimesheet saved = repository.save(entity);
+        return mapper.toResponse(saved, allowedActions(saved, context));
     }
 
     @Transactional
@@ -139,27 +142,12 @@ public class CoachTimesheetService {
         return assignments.getFirst();
     }
 
-    private CoachTimesheetDTO.Response toResponse(CoachTimesheet entity, AccessContext context) {
-        CoachTimesheetDTO.Response base = mapper.toResponse(entity);
-        return new CoachTimesheetDTO.Response(
-                base.coachTimesheetId(),
-                base.courseStaffAssignmentId(),
-                base.classSessionId(),
-                base.checkInTime(),
-                base.checkOutTime(),
-                base.note(),
-                allowedActions(entity, context),
-                base.createdAt(),
-                base.updatedAt()
-        );
-    }
-
     private CoachTimesheetDTO.AllowedActions allowedActions(CoachTimesheet entity, AccessContext context) {
         boolean update = context.hasPermission(PermissionDefinition.COACH_TIMESHEET_UPDATE.getCode())
                 && canUpdate(entity, context);
         boolean delete = context.hasPermission(PermissionDefinition.COACH_TIMESHEET_DELETE.getCode())
                 && canDelete(entity, context);
-        return new CoachTimesheetDTO.AllowedActions(update, delete);
+        return mapper.toAllowedActions(update, delete);
     }
 
     private boolean canUpdate(CoachTimesheet entity, AccessContext context) {

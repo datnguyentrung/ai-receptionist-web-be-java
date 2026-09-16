@@ -28,8 +28,8 @@ public class BeltExamService {
     private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
-    public PageResponse<BeltExamDTO.Response> list(Pageable pageable) {
-        return PageResponse.of(repository.findAll(pageable), mapper::toResponse);
+    public PageResponse<BeltExamDTO.SimpleResponse> list(Pageable pageable) {
+        return PageResponse.of(repository.findAll(pageable), mapper::toSimpleResponse);
     }
 
     @Transactional(readOnly = true)

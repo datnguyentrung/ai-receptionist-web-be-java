@@ -21,11 +21,11 @@ public class FitnessService {
     /**
      * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
      * Input: Nhận Pageable pageable từ caller hoặc request.
-     * Output: Trả về PageResponse<FitnessDTO.Response> theo kết quả xử lý.
+     * Output: Trả về PageResponse<FitnessDTO.SimpleResponse> theo kết quả xử lý.
      */
     @Transactional(readOnly = true)
-    public PageResponse<FitnessDTO.Response> list(Pageable pageable) {
-        return PageResponse.of(repository.findAll(pageable), mapper::toResponse);
+    public PageResponse<FitnessDTO.SimpleResponse> list(Pageable pageable) {
+        return PageResponse.of(repository.findAll(pageable), mapper::toSimpleResponse);
     }
 
     /**

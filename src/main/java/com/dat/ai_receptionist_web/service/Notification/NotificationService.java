@@ -34,11 +34,11 @@ public class NotificationService {
     /**
      * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
      * Input: Nhận Pageable pageable từ caller hoặc request.
-     * Output: Trả về PageResponse<NotificationDTO.Response> theo kết quả xử lý.
+     * Output: Trả về PageResponse<NotificationDTO.SimpleResponse> theo kết quả xử lý.
      */
     @Transactional(readOnly = true)
-    public PageResponse<NotificationDTO.Response> list(Pageable pageable) {
-        return PageResponse.of(notificationRepository.findAll(pageable), notificationMapper::toResponse);
+    public PageResponse<NotificationDTO.SimpleResponse> list(Pageable pageable) {
+        return PageResponse.of(notificationRepository.findAll(pageable), notificationMapper::toSimpleResponse);
     }
 
     /**
@@ -83,7 +83,7 @@ public class NotificationService {
         recipientService.saveAll(recipients);
         afterCommitExecutor.afterCommit(() ->
                 deliveryService.deliver(notification.getNotificationId()));
-        return new NotificationDTO.Response(notification.getNotificationId(), recipients.size());
+        return notificationMapper.toResponse(notification.getNotificationId(), recipients.size());
     }
 
     /**

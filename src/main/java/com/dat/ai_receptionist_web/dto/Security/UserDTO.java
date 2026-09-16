@@ -50,4 +50,12 @@ public final class UserDTO {
             LocalDateTime updatedAt
     ) {
     }
+
+    public record SimpleResponse(
+            UUID userId,
+            String phoneNumber,
+            UserStatus status,
+            LocalDateTime lastLoginAt
+    ) {
+    }
 }

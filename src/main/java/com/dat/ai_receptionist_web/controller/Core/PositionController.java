@@ -20,7 +20,7 @@ public class PositionController {
 
     @GetMapping
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).POSITION_READ.getCode())")
-    public PageResponse<PositionDTO.Response> list(Pageable pageable) {
+    public PageResponse<PositionDTO.SimpleResponse> list(Pageable pageable) {
         return service.list(pageable);
     }
 

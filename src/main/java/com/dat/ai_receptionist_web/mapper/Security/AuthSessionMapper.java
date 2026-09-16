@@ -2,16 +2,17 @@ package com.dat.ai_receptionist_web.mapper.Security;
 
 import com.dat.ai_receptionist_web.domain.Security.AuthSession;
 import com.dat.ai_receptionist_web.dto.Security.AuthSessionDTO;
+import com.dat.ai_receptionist_web.mapper.Core.UserPersonMapper;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = {UserMapper.class, UserPersonMapper.class})
 public interface AuthSessionMapper {
-    @Mapping(target = "userId", source = "user.userId")
-    @Mapping(target = "activeUserPersonId", source = "activeUserPerson.userPersonId")
     AuthSessionDTO.Response toResponse(AuthSession entity);
+
+    AuthSessionDTO.SimpleResponse toSimpleResponse(AuthSession entity);
 
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "user", ignore = true)

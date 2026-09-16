@@ -15,4 +15,7 @@ public final class PermissionDTO {
 
     public record Response(Integer permissionId, String code, String model, PermissionAction action, String description) {
     }
+
+    public record SimpleResponse(Integer permissionId, String code, String model, PermissionAction action) {
+    }
 }

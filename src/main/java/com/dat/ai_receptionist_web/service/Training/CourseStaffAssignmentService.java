@@ -36,7 +36,7 @@ public class CourseStaffAssignmentService {
     private final CourseStaffAssignmentAccessPolicy accessPolicy;
 
     @Transactional(readOnly = true)
-    public PageResponse<CourseStaffAssignmentDTO.Response> list(Pageable pageable) {
+    public PageResponse<CourseStaffAssignmentDTO.SimpleResponse> list(Pageable pageable) {
         AccessContext context = currentAccessContextResolver.current();
         TrainingAccessScope scope = accessPolicy.resolveReadScope(context);
         return PageResponse.of(repository.findAccessible(
@@ -45,7 +45,7 @@ public class CourseStaffAssignmentService {
                 scope.self(),
                 scope.managedCourses(),
                 pageable
-        ), mapper::toResponse);
+        ), mapper::toSimpleResponse);
     }
 
     @Transactional(readOnly = true)

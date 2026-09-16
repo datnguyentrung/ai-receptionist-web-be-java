@@ -12,6 +12,9 @@ public interface UserMapper {
     @Mapping(target = "userId", source = "userId")
     UserDTO.Response toResponse(User entity);
 
+    @Mapping(target = "userId", source = "userId")
+    UserDTO.SimpleResponse toSimpleResponse(User entity);
+
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "phoneNumber", source = "phoneNumber")
     @Mapping(target = "passwordHash", source = "passwordHash")

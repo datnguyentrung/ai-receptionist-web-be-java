@@ -28,11 +28,11 @@ public class BranchService{
     /**
      * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
      * Input: Nhận Pageable pageable từ caller hoặc request.
-     * Output: Trả về PageResponse<BranchDTO.Response> theo kết quả xử lý.
+     * Output: Trả về PageResponse<BranchDTO.SimpleResponse> theo kết quả xử lý.
      */
     @Transactional(readOnly = true)
-    public PageResponse<BranchDTO.Response> list(Pageable pageable) {
-        return PageResponse.of(branchRepository.findAll(pageable), branchMapper::toResponse);
+    public PageResponse<BranchDTO.SimpleResponse> list(Pageable pageable) {
+        return PageResponse.of(branchRepository.findAll(pageable), branchMapper::toSimpleResponse);
     }
 
     /**

@@ -19,11 +19,11 @@ public class FitnessController {
     /**
      * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
      * Input: Nhận Pageable pageable từ caller hoặc request.
-     * Output: Trả về PageResponse<FitnessDTO.Response> theo kết quả xử lý.
+     * Output: Trả về PageResponse<FitnessDTO.SimpleResponse> theo kết quả xử lý.
      */
     @GetMapping
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).FITNESS_READ.getCode())")
-    public PageResponse<FitnessDTO.Response> list(Pageable pageable) { return service.list(pageable); }
+    public PageResponse<FitnessDTO.SimpleResponse> list(Pageable pageable) { return service.list(pageable); }
 
     /**
      * Tác dụng: Lấy chi tiết một bản ghi theo khóa định danh.

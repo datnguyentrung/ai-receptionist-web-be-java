@@ -34,4 +34,9 @@ public final class NotificationDTO {
             this(notificationId, null, null, null, null, null, null, null, recipientCount);
         }
     }
+
+    public record SimpleResponse(UUID notificationId, String title, NotificationType notificationType,
+                                 String referenceType, String referenceId, LocalDateTime createdAt,
+                                 Integer recipientCount) {
+    }
 }

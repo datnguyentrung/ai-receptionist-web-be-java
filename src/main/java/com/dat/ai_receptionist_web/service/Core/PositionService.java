@@ -21,8 +21,8 @@ public class PositionService {
     private final PositionMapper mapper;
 
     @Transactional(readOnly = true)
-    public PageResponse<PositionDTO.Response> list(Pageable pageable) {
-        return PageResponse.of(repository.findAll(pageable), mapper::toResponse);
+    public PageResponse<PositionDTO.SimpleResponse> list(Pageable pageable) {
+        return PageResponse.of(repository.findAll(pageable), mapper::toSimpleResponse);
     }
 
     @Transactional(readOnly = true)

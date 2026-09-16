@@ -54,12 +54,12 @@ public class CourseSessionPlanningService {
         LocalDate today = LocalDate.now();
 
         if (newSchedule.getScheduleId().equals(course.getClassSchedule().getScheduleId())) {
-            return noOp(course);
+            return courseMapper.toScheduleChangeResponse(course, List.of(), List.of());
         }
         if (course.getNextClassSchedule() != null
                 && newSchedule.getScheduleId().equals(course.getNextClassSchedule().getScheduleId())
                 && effectiveFrom.equals(course.getNextScheduleEffectiveFrom())) {
-            return noOp(course);
+            return courseMapper.toScheduleChangeResponse(course, List.of(), List.of());
         }
 
         LocalDate effectiveDate = effectiveFrom.isAfter(today) ? effectiveFrom : today;
@@ -97,8 +97,8 @@ public class CourseSessionPlanningService {
 
         changeNotifier.notifyAfterCommit(course.getCourseId(), affected);
 
-        return new CourseDTO.CourseScheduleChangeResponse(
-                courseMapper.toResponse(course),
+        return courseMapper.toScheduleChangeResponse(
+                course,
                 cancelled.stream().map(ClassSession::getClassSessionId).toList(),
                 generated
         );
@@ -271,8 +271,4 @@ public class CourseSessionPlanningService {
         return schedule;
     }
 
-    private CourseDTO.CourseScheduleChangeResponse noOp(Course course) {
-        return new CourseDTO.CourseScheduleChangeResponse(
-                courseMapper.toResponse(course), List.of(), List.of());
-    }
 }

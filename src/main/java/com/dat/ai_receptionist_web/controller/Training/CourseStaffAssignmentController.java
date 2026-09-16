@@ -28,7 +28,7 @@ public class CourseStaffAssignmentController {
 
     @GetMapping
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).COURSE_STAFF_ASSIGNMENT_READ.getCode())")
-    public PageResponse<CourseStaffAssignmentDTO.Response> list(Pageable pageable) {
+    public PageResponse<CourseStaffAssignmentDTO.SimpleResponse> list(Pageable pageable) {
         return service.list(pageable);
     }
 

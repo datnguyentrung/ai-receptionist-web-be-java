@@ -49,8 +49,8 @@ public class LeaveRequestService {
     private final SessionAttendanceRepository attendanceRepository;
 
     @Transactional(readOnly = true)
-    public PageResponse<LeaveRequestDTO.Response> list(Pageable pageable) {
-        return PageResponse.of(repository.findAll(pageable), mapper::toResponse);
+    public PageResponse<LeaveRequestDTO.SimpleResponse> list(Pageable pageable) {
+        return PageResponse.of(repository.findAll(pageable), mapper::toSimpleResponse);
     }
 
     @Transactional(readOnly = true)

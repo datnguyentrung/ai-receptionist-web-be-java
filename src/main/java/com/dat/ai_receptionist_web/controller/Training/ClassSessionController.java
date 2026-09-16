@@ -28,7 +28,7 @@ public class ClassSessionController {
 
     @GetMapping
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).CLASS_SESSION_READ.getCode())")
-    public PageResponse<ClassSessionDTO.Response> list(Pageable pageable) {
+    public PageResponse<ClassSessionDTO.SimpleResponse> list(Pageable pageable) {
         return service.list(pageable);
     }
 

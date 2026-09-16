@@ -36,4 +36,12 @@ public final class PositionDTO {
             LocalDateTime updatedAt
     ) {
     }
+
+    public record SimpleResponse(
+            UUID positionId,
+            String code,
+            String name,
+            boolean active
+    ) {
+    }
 }

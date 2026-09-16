@@ -8,6 +8,7 @@ import com.dat.ai_receptionist_web.domain.Training.StudentEnrollment;
 import com.dat.ai_receptionist_web.dto.Finance.WalletCommandDTO;
 import com.dat.ai_receptionist_web.enums.Catalog.*;
 import com.dat.ai_receptionist_web.enums.Finance.*;
+import com.dat.ai_receptionist_web.mapper.Finance.WalletCommandMapper;
 import com.dat.ai_receptionist_web.repository.Catalog.*;
 import com.dat.ai_receptionist_web.repository.Finance.*;
 import com.dat.ai_receptionist_web.repository.Security.UserRepository;
@@ -47,7 +48,8 @@ class WalletCommandServiceTest {
         enrollments = mock(StudentEnrollmentRepository.class);
         users = mock(UserRepository.class);
         service = new WalletCommandService(wallets, transactions, purchases, prices, courses,
-                enrollments, users, new PersonCodePolicy());
+                enrollments, users, new PersonCodePolicy(), new WalletCommandMapper() {
+                });
     }
 
     @Test

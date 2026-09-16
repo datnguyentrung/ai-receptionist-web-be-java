@@ -7,13 +7,36 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = {ClassSessionMapper.class, StudentEnrollmentMapper.class, CourseStaffAssignmentMapper.class})
 public interface SessionAttendanceMapper {
-    @Mapping(target = "classSessionId", source = "classSession.classSessionId")
-    @Mapping(target = "studentEnrollmentId", source = "studentEnrollment.studentEnrollmentId")
-    @Mapping(target = "courseStaffAssignmentId", source = "courseStaffAssignment.courseStaffAssignmentId")
     @Mapping(target = "allowedActions", expression = "java(com.dat.ai_receptionist_web.dto.Training.SessionAttendanceDTO.AllowedActions.none())")
     SessionAttendanceDTO.Response toResponse(SessionAttendance entity);
+
+    SessionAttendanceDTO.SimpleResponse toSimpleResponse(SessionAttendance entity);
+
+    default SessionAttendanceDTO.Response toResponse(
+            SessionAttendance entity,
+            SessionAttendanceDTO.AllowedActions allowedActions
+    ) {
+        SessionAttendanceDTO.Response base = toResponse(entity);
+        return new SessionAttendanceDTO.Response(
+                base.sessionAttendanceId(),
+                base.classSession(),
+                base.studentEnrollment(),
+                base.courseStaffAssignment(),
+                base.checkInTime(),
+                base.attendanceStatus(),
+                base.evaluationStatus(),
+                base.note(),
+                allowedActions,
+                base.createdAt(),
+                base.updatedAt()
+        );
+    }
+
+    default SessionAttendanceDTO.AllowedActions toAllowedActions(boolean update, boolean delete) {
+        return new SessionAttendanceDTO.AllowedActions(update, delete);
+    }
 
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "checkInTime", source = "checkInTime")

@@ -5,6 +5,7 @@ import com.dat.ai_receptionist_web.domain.Catalog.Course;
 import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.domain.Training.ClassSession;
 import com.dat.ai_receptionist_web.domain.Training.LeaveRequest;
+import com.dat.ai_receptionist_web.dto.Catalog.ClassScheduleDTO;
 import com.dat.ai_receptionist_web.dto.Catalog.CourseDTO;
 import com.dat.ai_receptionist_web.enums.Catalog.CourseStatus;
 import com.dat.ai_receptionist_web.enums.Core.ScheduleStatus;
@@ -54,7 +55,7 @@ class CourseSessionPlanningServiceTest {
         classSessionRepository = mock(ClassSessionRepository.class);
         leaveRequestRepository = mock(LeaveRequestRepository.class);
         changeNotifier = mock(CourseScheduleChangeNotifier.class);
-        courseMapper = mock(CourseMapper.class);
+        courseMapper = mock(CourseMapper.class, CALLS_REAL_METHODS);
 
         service = new CourseSessionPlanningService(
                 courseRepository, classScheduleRepository, classSessionRepository,
@@ -103,7 +104,8 @@ class CourseSessionPlanningServiceTest {
         assertThat(course.getNextClassSchedule()).isNull();
         assertThat(course.getNextScheduleEffectiveFrom()).isNull();
         assertThat(course.getClassSessionGeneratedUntil())
-                .isEqualTo(TODAY.plusDays(CourseSessionPlanningService.CLASS_SESSION_GENERATION_HORIZON_DAYS));
+                .isEqualTo(LocalDate.now()
+                        .plusDays(CourseSessionPlanningService.CLASS_SESSION_GENERATION_HORIZON_DAYS));
 
         ArgumentCaptor<List<ClassSession>> captor = ArgumentCaptor.forClass(List.class);
         verify(classSessionRepository).saveAll(captor.capture());
@@ -236,8 +238,11 @@ class CourseSessionPlanningServiceTest {
     }
 
     private CourseDTO.Response stubResponse(Course course) {
+        ClassScheduleDTO.Response schedule = new ClassScheduleDTO.Response(
+                scheduleA.getScheduleId(), null, scheduleA.getWeekday(), null, null,
+                scheduleA.getStatus(), scheduleA.getStartTime(), scheduleA.getEndTime());
         return new CourseDTO.Response(
-                course.getCourseId(), scheduleA.getScheduleId(), null, null,
+                course.getCourseId(), schedule, null, null,
                 "Course A", 10, CourseStatus.ACTIVE, null, null, null);
     }
 }

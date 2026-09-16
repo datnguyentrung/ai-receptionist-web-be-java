@@ -31,7 +31,7 @@ public class CoachTimesheetController {
 
     @GetMapping
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).COACH_TIMESHEET_READ.getCode())")
-    public PageResponse<CoachTimesheetDTO.Response> list(
+    public PageResponse<CoachTimesheetDTO.SimpleResponse> list(
             @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) UUID courseId,

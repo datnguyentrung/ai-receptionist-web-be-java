@@ -43,9 +43,9 @@ public final class SessionAttendanceDTO {
 
     public record Response(
             UUID sessionAttendanceId,
-            UUID classSessionId,
-            UUID studentEnrollmentId,
-            UUID courseStaffAssignmentId,
+            ClassSessionDTO.Response classSession,
+            StudentEnrollmentDTO.Response studentEnrollment,
+            CourseStaffAssignmentDTO.Response courseStaffAssignment,
             LocalDateTime checkInTime,
             AttendanceStatus attendanceStatus,
             EvaluationStatus evaluationStatus,
@@ -58,13 +58,14 @@ public final class SessionAttendanceDTO {
     
     public record SimpleResponse(
             UUID sessionAttendanceId,
-            UUID classSessionId,
+            ClassSessionDTO.SimpleResponse classSession,
             StudentEnrollmentDTO.SimpleResponse studentEnrollment,
-            UUID courseStaffAssignmentId,
+            CourseStaffAssignmentDTO.SimpleResponse courseStaffAssignment,
             LocalDateTime checkInTime,
             AttendanceStatus attendanceStatus,
             EvaluationStatus evaluationStatus,
-            String note
+            String note,
+            LocalDateTime createdAt
     ) {
     }
 }

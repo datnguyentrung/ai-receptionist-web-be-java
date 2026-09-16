@@ -2,16 +2,18 @@ package com.dat.ai_receptionist_web.mapper.Training;
 
 import com.dat.ai_receptionist_web.domain.Training.BeltExam;
 import com.dat.ai_receptionist_web.dto.Training.BeltExamDTO;
+import com.dat.ai_receptionist_web.mapper.Core.PersonMapper;
+import com.dat.ai_receptionist_web.mapper.Security.UserMapper;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = {PersonMapper.class, UserMapper.class})
 public interface BeltExamMapper {
-    @Mapping(target = "personId", source = "person.personId")
-    @Mapping(target = "createdByUserId", source = "createdByUser.userId")
     BeltExamDTO.Response toResponse(BeltExam entity);
+
+    BeltExamDTO.SimpleResponse toSimpleResponse(BeltExam entity);
 
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "person", ignore = true)

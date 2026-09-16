@@ -39,7 +39,7 @@ public class StudentEnrollmentService {
     private final StudentEnrollmentAccessPolicy accessPolicy;
 
     @Transactional(readOnly = true)
-    public PageResponse<StudentEnrollmentDTO.Response> list(
+    public PageResponse<StudentEnrollmentDTO.SimpleResponse> list(
             LocalDate fromDate,
             LocalDate toDate,
             UUID courseId,
@@ -60,7 +60,7 @@ public class StudentEnrollmentService {
                 courseId,
                 studentPersonId,
                 pageable
-        ), mapper::toResponse);
+        ), mapper::toSimpleResponse);
     }
 
     @Transactional(readOnly = true)

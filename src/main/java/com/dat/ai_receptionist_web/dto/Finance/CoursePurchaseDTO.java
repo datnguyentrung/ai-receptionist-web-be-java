@@ -1,5 +1,7 @@
 package com.dat.ai_receptionist_web.dto.Finance;
 
+import com.dat.ai_receptionist_web.dto.Catalog.CoursePriceDTO;
+import com.dat.ai_receptionist_web.dto.Core.PersonDTO;
 import jakarta.validation.constraints.*;
 import java.util.UUID;
 
@@ -13,6 +15,9 @@ public final class CoursePurchaseDTO {
     public record UpdateRequest(@NotNull UUID studentPersonId, @NotNull UUID coursePriceId, @NotNull UUID debitTransactionId) {
     }
 
-    public record Response(UUID coursePurchaseId, UUID studentPersonId, UUID coursePriceId, UUID debitTransactionId) {
+    public record Response(UUID coursePurchaseId, PersonDTO.Response studentPerson, CoursePriceDTO.Response coursePrice, UUID debitTransactionId) {
+    }
+
+    public record SimpleResponse(UUID coursePurchaseId, PersonDTO.SimpleResponse studentPerson, CoursePriceDTO.SimpleResponse coursePrice, UUID debitTransactionId) {
     }
 }

@@ -31,7 +31,7 @@ public class StudentEnrollmentController {
 
     @GetMapping
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).STUDENT_ENROLLMENT_READ.getCode())")
-    public PageResponse<StudentEnrollmentDTO.Response> list(
+    public PageResponse<StudentEnrollmentDTO.SimpleResponse> list(
             @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) UUID courseId,

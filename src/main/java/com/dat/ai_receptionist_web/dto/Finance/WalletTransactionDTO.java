@@ -1,5 +1,6 @@
 package com.dat.ai_receptionist_web.dto.Finance;
 
+import com.dat.ai_receptionist_web.dto.Security.UserDTO;
 import jakarta.validation.constraints.*;
 import com.dat.ai_receptionist_web.enums.Finance.WalletTransactionDirection;
 import com.dat.ai_receptionist_web.enums.Finance.WalletTransactionStatus;
@@ -45,9 +46,9 @@ public final class WalletTransactionDTO {
 
     public record Response(
             UUID walletTransactionId,
-            UUID walletId,
-            UUID createdByUserId,
-            UUID reviewedByUserId,
+            WalletDTO.Response wallet,
+            UserDTO.SimpleResponse createdByUser,
+            UserDTO.SimpleResponse reviewedByUser,
             WalletTransactionType type,
             WalletTransactionDirection direction,
             BigDecimal amount,
@@ -59,5 +60,20 @@ public final class WalletTransactionDTO {
             WalletTransactionStatus status,
             LocalDateTime createdAt,
             LocalDateTime updatedAt) {
+    }
+
+    public record SimpleResponse(
+            UUID walletTransactionId,
+            WalletDTO.SimpleResponse wallet,
+            UserDTO.SimpleResponse createdByUser,
+            UserDTO.SimpleResponse reviewedByUser,
+            WalletTransactionType type,
+            WalletTransactionDirection direction,
+            BigDecimal amount,
+            BigDecimal balanceAfter,
+            String externalReference,
+            LocalDateTime reviewedAt,
+            WalletTransactionStatus status,
+            LocalDateTime createdAt) {
     }
 }

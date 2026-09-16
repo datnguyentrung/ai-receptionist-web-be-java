@@ -39,11 +39,11 @@ public class UserService {
     /**
      * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
      * Input: Nhận Pageable pageable từ caller hoặc request.
-     * Output: Trả về PageResponse<UserDTO.Response> theo kết quả xử lý.
+     * Output: Trả về PageResponse<UserDTO.SimpleResponse> theo kết quả xử lý.
      */
     @Transactional(readOnly = true)
-    public PageResponse<UserDTO.Response> list(Pageable pageable) {
-        return PageResponse.of(userRepository.findAll(pageable), userMapper::toResponse);
+    public PageResponse<UserDTO.SimpleResponse> list(Pageable pageable) {
+        return PageResponse.of(userRepository.findAll(pageable), userMapper::toSimpleResponse);
     }
 
     /**

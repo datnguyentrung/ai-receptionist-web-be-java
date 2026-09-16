@@ -31,7 +31,7 @@ public class SessionAttendanceController {
 
     @GetMapping
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).SESSION_ATTENDANCE_READ.getCode())")
-    public PageResponse<SessionAttendanceDTO.Response> list(
+    public PageResponse<SessionAttendanceDTO.SimpleResponse> list(
             @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) UUID courseId,

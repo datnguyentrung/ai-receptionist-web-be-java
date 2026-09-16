@@ -37,12 +37,12 @@ public class ClassSessionService {
     private final ClassSessionAccessPolicy accessPolicy;
 
     @Transactional(readOnly = true)
-    public PageResponse<ClassSessionDTO.Response> list(Pageable pageable) {
+    public PageResponse<ClassSessionDTO.SimpleResponse> list(Pageable pageable) {
         AccessContext context = currentAccessContextResolver.current();
         TrainingAccessScope scope = accessPolicy.resolveReadScope(context);
         return PageResponse.of(
                 repository.findAccessible(context.activePersonId(), scope.unrestricted(), pageable),
-                mapper::toResponse
+                mapper::toSimpleResponse
         );
     }
 

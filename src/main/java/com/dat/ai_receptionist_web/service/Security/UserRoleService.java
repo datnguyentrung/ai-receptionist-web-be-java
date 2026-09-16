@@ -27,11 +27,11 @@ public class UserRoleService {
     /**
      * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
      * Input: Nhận Pageable pageable từ caller hoặc request.
-     * Output: Trả về PageResponse<UserRoleDTO.ItemResponse> theo kết quả xử lý.
+     * Output: Trả về PageResponse<UserRoleDTO.SimpleResponse> theo kết quả xử lý.
      */
     @Transactional(readOnly = true)
-    public PageResponse<UserRoleDTO.ItemResponse> list(Pageable pageable) {
-        return PageResponse.of(userRoleRepository.findAll(pageable), userRoleMapper::toResponse);
+    public PageResponse<UserRoleDTO.SimpleResponse> list(Pageable pageable) {
+        return PageResponse.of(userRoleRepository.findAll(pageable), userRoleMapper::toSimpleResponse);
     }
 
     /**
@@ -75,7 +75,7 @@ public class UserRoleService {
     public UserRoleDTO.Response assignRole(UserRoleDTO.AssignRequest request) {
         UUID userId = request.getUserId();
         assignRoleIfMissing(userId, request.getRoleCode());
-        return new UserRoleDTO.Response(userId, userRoleRepository.findRoleCodes(userId));
+        return userRoleMapper.toResponse(userId, userRoleRepository.findRoleCodes(userId));
     }
 
     /**
@@ -225,7 +225,7 @@ public class UserRoleService {
             userRepository.incrementAuthorizationVersion(userId);
         }
 
-        return new UserRoleDTO.Response(userId, desired);
+        return userRoleMapper.toResponse(userId, desired);
     }
 
     /**

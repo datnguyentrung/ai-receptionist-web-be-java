@@ -2,17 +2,18 @@ package com.dat.ai_receptionist_web.mapper.Notification;
 
 import com.dat.ai_receptionist_web.domain.Notification.NotificationRecipient;
 import com.dat.ai_receptionist_web.dto.Notification.NotificationRecipientDTO;
+import com.dat.ai_receptionist_web.mapper.Core.PersonMapper;
+import com.dat.ai_receptionist_web.mapper.Security.UserMapper;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = {NotificationMapper.class, UserMapper.class, PersonMapper.class})
 public interface NotificationRecipientMapper {
-    @Mapping(target = "notificationId", source = "notification.notificationId")
-    @Mapping(target = "recipientUserId", source = "recipientUser.userId")
-    @Mapping(target = "contextPersonId", source = "contextPerson.personId")
     NotificationRecipientDTO.Response toResponse(NotificationRecipient entity);
+
+    NotificationRecipientDTO.SimpleResponse toSimpleResponse(NotificationRecipient entity);
 
     @Mapping(target = "notificationId", source = "notification.notificationId")
     @Mapping(target = "contextPersonId", source = "contextPerson.personId")
@@ -23,6 +24,10 @@ public interface NotificationRecipientMapper {
     @Mapping(target = "referenceId", source = "notification.referenceId")
     @Mapping(target = "payload", source = "notification.payload")
     NotificationRecipientDTO.MineResponse toMineResponse(NotificationRecipient entity);
+
+    default NotificationRecipientDTO.UnreadCountResponse toUnreadCountResponse(long unreadCount) {
+        return new NotificationRecipientDTO.UnreadCountResponse(unreadCount);
+    }
 
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "deliveredAt", source = "deliveredAt")

@@ -1,5 +1,7 @@
 package com.dat.ai_receptionist_web.dto.Training;
 
+import com.dat.ai_receptionist_web.dto.Core.PersonDTO;
+import com.dat.ai_receptionist_web.dto.Security.UserDTO;
 import com.dat.ai_receptionist_web.enums.Training.LeaveRequestStatus;
 import com.dat.ai_receptionist_web.enums.Training.RequesterType;
 import jakarta.validation.constraints.NotBlank;
@@ -31,19 +33,31 @@ public final class LeaveRequestDTO {
 
     public record Response(
             UUID leaveRequestId,
-            UUID personId,
+            PersonDTO.Response person,
             RequesterType requesterType,
             LocalDate leaveDate,
-            UUID leaveClassSessionId,
-            UUID makeupClassSessionId,
+            ClassSessionDTO.Response leaveClassSession,
+            ClassSessionDTO.Response makeupClassSession,
             String leaveContext,
             LeaveRequestStatus status,
-            UUID createdByUserId,
-            UUID reviewedByUserId,
+            UserDTO.SimpleResponse createdByUser,
+            UserDTO.SimpleResponse reviewedByUser,
             LocalDateTime reviewedAt,
             String reviewNote,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
+    ) {
+    }
+
+    public record SimpleResponse(
+            UUID leaveRequestId,
+            PersonDTO.SimpleResponse person,
+            RequesterType requesterType,
+            LocalDate leaveDate,
+            ClassSessionDTO.SimpleResponse leaveClassSession,
+            ClassSessionDTO.SimpleResponse makeupClassSession,
+            LeaveRequestStatus status,
+            LocalDateTime reviewedAt
     ) {
     }
 }

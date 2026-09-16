@@ -13,6 +13,14 @@ public interface NotificationMapper {
     @Mapping(target = "recipientCount", ignore = true)
     NotificationDTO.Response toResponse(Notification entity);
 
+    @Mapping(target = "notificationId", source = "notificationId")
+    @Mapping(target = "recipientCount", ignore = true)
+    NotificationDTO.SimpleResponse toSimpleResponse(Notification entity);
+
+    default NotificationDTO.Response toResponse(java.util.UUID notificationId, int recipientCount) {
+        return new NotificationDTO.Response(notificationId, recipientCount);
+    }
+
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "title", source = "title")
     @Mapping(target = "body", source = "body")

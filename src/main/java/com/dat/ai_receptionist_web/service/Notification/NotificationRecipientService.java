@@ -52,11 +52,11 @@ public class NotificationRecipientService {
     /**
      * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
      * Input: Nhận Pageable pageable từ caller hoặc request.
-     * Output: Trả về PageResponse<NotificationRecipientDTO.Response> theo kết quả xử lý.
+     * Output: Trả về PageResponse<NotificationRecipientDTO.SimpleResponse> theo kết quả xử lý.
      */
     @Transactional(readOnly = true)
-    public PageResponse<NotificationRecipientDTO.Response> list(Pageable pageable) {
-        return PageResponse.of(repository.findAll(pageable), mapper::toResponse);
+    public PageResponse<NotificationRecipientDTO.SimpleResponse> list(Pageable pageable) {
+        return PageResponse.of(repository.findAll(pageable), mapper::toSimpleResponse);
     }
 
     /**
@@ -145,8 +145,7 @@ public class NotificationRecipientService {
     @Transactional(readOnly = true)
     public NotificationRecipientDTO.UnreadCountResponse unreadCountMine() {
         AccessContext context = currentAccessContextResolver.current();
-        return new NotificationRecipientDTO.UnreadCountResponse(
-                repository.countUnreadMine(context.userId(), context.activePersonId()));
+        return mapper.toUnreadCountResponse(repository.countUnreadMine(context.userId(), context.activePersonId()));
     }
 
     @Transactional
@@ -155,16 +154,14 @@ public class NotificationRecipientService {
         repository.markRead(id, context.userId(), context.activePersonId(), LocalDateTime.now());
         repository.findMineById(id, context.userId(), context.activePersonId())
                 .orElseThrow(() -> new ApiException(NotificationErrorCode.NOTIFICATION_RECIPIENT_NOT_FOUND));
-        return new NotificationRecipientDTO.UnreadCountResponse(
-                repository.countUnreadMine(context.userId(), context.activePersonId()));
+        return mapper.toUnreadCountResponse(repository.countUnreadMine(context.userId(), context.activePersonId()));
     }
 
     @Transactional
     public NotificationRecipientDTO.UnreadCountResponse markAllRead() {
         AccessContext context = currentAccessContextResolver.current();
         repository.markAllRead(context.userId(), context.activePersonId(), LocalDateTime.now());
-        return new NotificationRecipientDTO.UnreadCountResponse(
-                repository.countUnreadMine(context.userId(), context.activePersonId()));
+        return mapper.toUnreadCountResponse(repository.countUnreadMine(context.userId(), context.activePersonId()));
     }
 
     NotificationRecipient createRecipient(Notification notification, User recipientUser, Person contextPerson,

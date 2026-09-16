@@ -2,16 +2,18 @@ package com.dat.ai_receptionist_web.mapper.Training;
 
 import com.dat.ai_receptionist_web.domain.Training.CourseStaffAssignment;
 import com.dat.ai_receptionist_web.dto.Training.CourseStaffAssignmentDTO;
+import com.dat.ai_receptionist_web.mapper.Catalog.CourseMapper;
+import com.dat.ai_receptionist_web.mapper.Core.PersonMapper;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = {PersonMapper.class, CourseMapper.class})
 public interface CourseStaffAssignmentMapper {
-    @Mapping(target = "staffPersonId", source = "staffPerson.personId")
-    @Mapping(target = "courseId", source = "course.courseId")
     CourseStaffAssignmentDTO.Response toResponse(CourseStaffAssignment entity);
+
+    CourseStaffAssignmentDTO.SimpleResponse toSimpleResponse(CourseStaffAssignment entity);
 
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "staffPerson", ignore = true)

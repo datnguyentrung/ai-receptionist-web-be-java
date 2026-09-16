@@ -43,6 +43,16 @@ class TrainingPolicyRepositoryContractTest {
                 .getAnnotation(Query.class);
 
         assertScopedAttendanceQuery(listQuery.value());
+        assertThat(listQuery.value())
+                .contains(
+                        "join fetch a.classSession",
+                        "left join fetch a.studentEnrollment",
+                        "left join fetch e.coursePurchase",
+                        "left join fetch purchase.coursePrice",
+                        "left join fetch a.courseStaffAssignment"
+                );
+        assertThat(listQuery.countQuery()).isNotBlank();
+        assertThat(listQuery.countQuery()).doesNotContain("fetch");
         assertScopedAttendanceQuery(detailQuery.value());
     }
 

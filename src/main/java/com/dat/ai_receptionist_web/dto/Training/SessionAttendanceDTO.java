@@ -55,4 +55,16 @@ public final class SessionAttendanceDTO {
             LocalDateTime updatedAt
     ) {
     }
+    
+    public record SimpleResponse(
+            UUID sessionAttendanceId,
+            UUID classSessionId,
+            StudentEnrollmentDTO.SimpleResponse studentEnrollment,
+            UUID courseStaffAssignmentId,
+            LocalDateTime checkInTime,
+            AttendanceStatus attendanceStatus,
+            EvaluationStatus evaluationStatus,
+            String note
+    ) {
+    }
 }

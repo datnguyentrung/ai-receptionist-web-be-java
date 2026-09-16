@@ -41,13 +41,13 @@ public enum TrainingErrorCode implements ErrorCode {
             "Attendance closed", "Attendance is closed and has not been reopened"),
     ATTENDANCE_UPDATE_NOT_ALLOWED("ATTENDANCE_UPDATE_NOT_ALLOWED", HttpStatus.FORBIDDEN,
             "Attendance update not allowed", "Attendance update is not allowed"),
-    COURSE_STAFF_ASSIGNMENT_NOT_EFFECTIVE("COURSE_STAFF_ASSIGNMENT_NOT_EFFECTIVE", HttpStatus.UNPROCESSABLE_ENTITY,
+    COURSE_STAFF_ASSIGNMENT_NOT_EFFECTIVE("COURSE_STAFF_ASSIGNMENT_NOT_EFFECTIVE", HttpStatus.UNPROCESSABLE_CONTENT,
             "Course staff assignment not effective", "Course staff assignment is not effective for this session"),
     COURSE_STAFF_ASSIGNMENT_AMBIGUOUS("COURSE_STAFF_ASSIGNMENT_AMBIGUOUS", HttpStatus.CONFLICT,
             "Course staff assignment ambiguous", "Multiple effective staff assignments match the same course and date"),
     SESSION_ATTENDANCE_PARTICIPANT_INVALID("SESSION_ATTENDANCE_PARTICIPANT_INVALID", HttpStatus.BAD_REQUEST,
             "Session attendance participant invalid", "Exactly one session attendance participant is required"),
-    STUDENT_ENROLLMENT_NOT_EFFECTIVE("STUDENT_ENROLLMENT_NOT_EFFECTIVE", HttpStatus.UNPROCESSABLE_ENTITY,
+    STUDENT_ENROLLMENT_NOT_EFFECTIVE("STUDENT_ENROLLMENT_NOT_EFFECTIVE", HttpStatus.UNPROCESSABLE_CONTENT,
             "Student enrollment not effective", "Student enrollment is not effective for this session");
 
     private final String code;

@@ -21,7 +21,7 @@ public enum CoreErrorCode implements ErrorCode {
             "National code already exists", "National code already exists"),
     PERSON_CODE_ALREADY_EXISTS("PERSON_CODE_ALREADY_EXISTS", HttpStatus.CONFLICT,
             "Person code already exists", "Person code already exists"),
-    PERSON_CODE_POLICY_VIOLATION("PERSON_CODE_POLICY_VIOLATION", HttpStatus.UNPROCESSABLE_ENTITY,
+    PERSON_CODE_POLICY_VIOLATION("PERSON_CODE_POLICY_VIOLATION", HttpStatus.UNPROCESSABLE_CONTENT,
             "Person code policy violation",
             "Person code must start with VQ_ (student) or VQT_ (system employee)");
 

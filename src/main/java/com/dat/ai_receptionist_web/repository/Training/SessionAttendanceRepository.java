@@ -21,8 +21,54 @@ public interface SessionAttendanceRepository extends JpaRepository<SessionAttend
 
     List<SessionAttendance> findByClassSession_ClassSessionId(UUID classSessionId);
 
-    @Query("""
+    @Query(value = """
         select a
+        from SessionAttendance a
+        join fetch a.classSession cs
+        left join fetch cs.course sessionCourse
+        left join fetch a.studentEnrollment e
+        left join fetch e.coursePurchase purchase
+        left join fetch purchase.coursePrice price
+        left join fetch price.course enrollmentCourse
+        left join fetch a.courseStaffAssignment participantAssignment
+        left join fetch participantAssignment.staffPerson participantStaff
+        left join fetch participantAssignment.course participantCourse
+        where cs.sessionDate between :fromDate and :toDate
+          and (:courseId is null or cs.course.courseId = :courseId)
+          and (:studentPersonId is null and :staffPersonId is null
+               or :studentPersonId is not null and e.studentPerson.personId = :studentPersonId
+               or :staffPersonId is not null and participantAssignment.staffPerson.personId = :staffPersonId)
+          and (
+              :unrestricted = true
+              or (:self = true and e.studentPerson.personId = :activePersonId)
+              or (:self = true and participantAssignment.staffPerson.personId = :activePersonId)
+              or (
+                  :dependents = true
+                  and exists (
+                      select 1
+                      from UserPerson up
+                      where up.user.userId = :userId
+                        and up.person.personId = e.studentPerson.personId
+                        and up.relationshipType = com.dat.ai_receptionist_web.enums.Security.RelationshipType.GUARDIAN
+                        and up.active = true
+                  )
+              )
+              or (
+                  :assignedCourses = true
+                  and exists (
+                      select 1
+                      from CourseStaffAssignment csa
+                      where csa.staffPerson.personId = :activePersonId
+                        and csa.course.courseId = cs.course.courseId
+                        and csa.startDate <= cs.sessionDate
+                        and (csa.endDate is null or csa.endDate >= cs.sessionDate)
+                        and csa.assignmentStatus in (com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ACTIVE, com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ENDED)
+                  )
+              )
+          )
+    """,
+            countQuery = """
+        select count(a)
         from SessionAttendance a
         join a.classSession cs
         left join a.studentEnrollment e

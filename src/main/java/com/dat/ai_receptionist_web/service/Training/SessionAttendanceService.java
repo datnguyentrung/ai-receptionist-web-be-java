@@ -20,7 +20,9 @@ import com.dat.ai_receptionist_web.service.Security.access.CurrentAccessContextR
 import com.dat.ai_receptionist_web.service.Training.access.SessionAttendanceAccessPolicy;
 import com.dat.ai_receptionist_web.service.Training.access.TrainingAccessScope;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,11 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class SessionAttendanceService {
+    private static final Sort DEFAULT_LIST_SORT = Sort.by(
+            Sort.Order.desc("createdAt"),
+            Sort.Order.desc("sessionAttendanceId")
+    );
+
     private final SessionAttendanceRepository repository;
     private final SessionAttendanceMapper mapper;
     private final ClassSessionRepository classSessionRepository;
@@ -50,6 +57,7 @@ public class SessionAttendanceService {
     ) {
         AccessContext context = currentAccessContextResolver.current();
         TrainingAccessScope scope = accessPolicy.resolveReadScope(context);
+        Pageable effectivePageable = withDefaultSort(pageable);
         var page = repository.findAccessible(
                 context.userId(),
                 context.activePersonId(),
@@ -62,7 +70,7 @@ public class SessionAttendanceService {
                 courseId,
                 studentPersonId,
                 staffPersonId,
-                pageable
+                effectivePageable
         );
         return PageResponse.of(page, entity -> toResponse(entity, context));
     }
@@ -195,5 +203,12 @@ public class SessionAttendanceService {
         } catch (ApiException ex) {
             return false;
         }
+    }
+
+    private Pageable withDefaultSort(Pageable pageable) {
+        if (pageable.getSort().isSorted()) {
+            return pageable;
+        }
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), DEFAULT_LIST_SORT);
     }
 }

@@ -1,10 +1,12 @@
 package com.dat.ai_receptionist_web.dto.Core;
 
-import jakarta.validation.constraints.*;
-import java.time.LocalDateTime;
 import com.dat.ai_receptionist_web.enums.Core.Belt;
 import com.dat.ai_receptionist_web.enums.Core.PersonStatus;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 public final class PersonDTO {
@@ -12,31 +14,44 @@ public final class PersonDTO {
     }
 
     public record CreateRequest(
-            @NotBlank String fullName,
-            @NotNull Boolean gender,
-            @NotNull LocalDate birthDate,
+            @NotBlank
+            String fullName,
+            @NotNull
+            Boolean gender,
+            @NotNull
+            LocalDate birthDate,
             String email,
             String nationalCode,
             String faceImagePath,
-            @NotNull Belt currentBelt,
-            @NotNull PersonStatus status,
-            @NotNull LocalDate startDate,
+            @NotNull
+            Belt currentBelt,
+            @NotNull
+            PersonStatus status,
+            @NotNull
+            LocalDate startDate,
             UUID positionId
     ) {
     }
 
     public record UpdateRequest(
-            @NotNull String fullName,
-            @NotNull Boolean gender,
-            @NotNull LocalDate birthDate,
+            @NotNull
+            String fullName,
+            @NotNull
+            Boolean gender,
+            @NotNull
+            LocalDate birthDate,
             String email,
             String nationalCode,
             String faceImagePath,
             String personCode,
-            @NotNull Belt currentBelt,
-            @NotNull PersonStatus status,
-            @NotNull LocalDate startDate,
-            UUID positionId) {
+            @NotNull
+            Belt currentBelt,
+            @NotNull
+            PersonStatus status,
+            @NotNull
+            LocalDate startDate,
+            UUID positionId
+    ) {
     }
 
     public record Response(
@@ -53,6 +68,19 @@ public final class PersonDTO {
             UUID positionId,
             String faceImagePath,
             LocalDateTime createdAt,
-            LocalDateTime updatedAt) {
+            LocalDateTime updatedAt
+    ) {
+    }
+
+    public record SimpleResponse(
+            UUID personId,
+            String fullName,
+            Boolean gender,
+            LocalDate birthDate,
+            String personCode,
+            Belt currentBelt,
+            PersonStatus status,
+            String faceImagePath
+    ) {
     }
 }

@@ -15,8 +15,19 @@ public interface CoachTimesheetRepository extends JpaRepository<CoachTimesheet, 
     @Query("""
         select t
         from CoachTimesheet t
-        join t.classSession cs
-        join t.courseStaffAssignment csa
+        join fetch t.classSession cs
+        join fetch t.courseStaffAssignment csa
+        left join fetch cs.course sessionCourse
+        left join fetch sessionCourse.classSchedule sessionCourseSchedule
+        left join fetch sessionCourseSchedule.branch
+        left join fetch sessionCourse.nextClassSchedule sessionCourseNextSchedule
+        left join fetch sessionCourseNextSchedule.branch
+        left join fetch csa.staffPerson assignmentStaff
+        left join fetch csa.course assignmentCourse
+        left join fetch assignmentCourse.classSchedule assignmentCourseSchedule
+        left join fetch assignmentCourseSchedule.branch
+        left join fetch assignmentCourse.nextClassSchedule assignmentCourseNextSchedule
+        left join fetch assignmentCourseNextSchedule.branch
         where cs.sessionDate between :fromDate and :toDate
           and (:courseId is null or cs.course.courseId = :courseId)
           and (
@@ -64,8 +75,20 @@ public interface CoachTimesheetRepository extends JpaRepository<CoachTimesheet, 
     @Query("""
         select t
         from CoachTimesheet t
-        join t.classSession cs
-        join t.courseStaffAssignment csa
+        join fetch t.classSession cs
+        join fetch t.courseStaffAssignment csa
+        left join fetch cs.course sessionCourse
+        left join fetch sessionCourse.classSchedule sessionCourseSchedule
+        left join fetch sessionCourseSchedule.branch
+        left join fetch sessionCourse.nextClassSchedule sessionCourseNextSchedule
+        left join fetch sessionCourseNextSchedule.branch
+        left join fetch csa.staffPerson assignmentStaff
+        left join fetch assignmentStaff.position
+        left join fetch csa.course assignmentCourse
+        left join fetch assignmentCourse.classSchedule assignmentCourseSchedule
+        left join fetch assignmentCourseSchedule.branch
+        left join fetch assignmentCourse.nextClassSchedule assignmentCourseNextSchedule
+        left join fetch assignmentCourseNextSchedule.branch
         where t.coachTimesheetId = :id
           and (
               :unrestricted = true

@@ -50,12 +50,12 @@ public class LeaveRequestService {
 
     @Transactional(readOnly = true)
     public PageResponse<LeaveRequestDTO.SimpleResponse> list(Pageable pageable) {
-        return PageResponse.of(repository.findAll(pageable), mapper::toSimpleResponse);
+        return PageResponse.of(repository.findAllDetailed(pageable), mapper::toSimpleResponse);
     }
 
     @Transactional(readOnly = true)
     public LeaveRequestDTO.Response get(UUID id) {
-        return mapper.toResponse(find(id));
+        return mapper.toResponse(findDetailed(id));
     }
 
     @Transactional
@@ -163,6 +163,11 @@ public class LeaveRequestService {
 
     private LeaveRequest find(UUID id) {
         return repository.findById(id)
+                .orElseThrow(() -> new ApiException(TrainingErrorCode.LEAVE_REQUEST_NOT_FOUND));
+    }
+
+    private LeaveRequest findDetailed(UUID id) {
+        return repository.findDetailedById(id)
                 .orElseThrow(() -> new ApiException(TrainingErrorCode.LEAVE_REQUEST_NOT_FOUND));
     }
 

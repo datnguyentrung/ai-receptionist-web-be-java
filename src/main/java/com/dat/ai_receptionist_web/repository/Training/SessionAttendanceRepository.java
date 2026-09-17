@@ -26,13 +26,24 @@ public interface SessionAttendanceRepository extends JpaRepository<SessionAttend
         from SessionAttendance a
         join fetch a.classSession cs
         left join fetch cs.course sessionCourse
+        left join fetch sessionCourse.classSchedule sessionCourseSchedule
+        left join fetch sessionCourseSchedule.branch
+        left join fetch sessionCourse.nextClassSchedule sessionCourseNextSchedule
+        left join fetch sessionCourseNextSchedule.branch
         left join fetch a.studentEnrollment e
+        left join fetch e.studentPerson enrollmentStudent
+        left join fetch e.classSchedule enrollmentSchedule
+        left join fetch enrollmentSchedule.branch
         left join fetch e.coursePurchase purchase
         left join fetch purchase.coursePrice price
         left join fetch price.course enrollmentCourse
         left join fetch a.courseStaffAssignment participantAssignment
         left join fetch participantAssignment.staffPerson participantStaff
         left join fetch participantAssignment.course participantCourse
+        left join fetch participantCourse.classSchedule participantCourseSchedule
+        left join fetch participantCourseSchedule.branch
+        left join fetch participantCourse.nextClassSchedule participantCourseNextSchedule
+        left join fetch participantCourseNextSchedule.branch
         where cs.sessionDate between :fromDate and :toDate
           and (:courseId is null or cs.course.courseId = :courseId)
           and (:studentPersonId is null and :staffPersonId is null
@@ -125,9 +136,26 @@ public interface SessionAttendanceRepository extends JpaRepository<SessionAttend
     @Query("""
         select a
         from SessionAttendance a
-        join a.classSession cs
-        left join a.studentEnrollment e
-        left join a.courseStaffAssignment participantAssignment
+        join fetch a.classSession cs
+        left join fetch cs.course sessionCourse
+        left join fetch sessionCourse.classSchedule sessionCourseSchedule
+        left join fetch sessionCourseSchedule.branch
+        left join fetch sessionCourse.nextClassSchedule sessionCourseNextSchedule
+        left join fetch sessionCourseNextSchedule.branch
+        left join fetch a.studentEnrollment e
+        left join fetch e.studentPerson enrollmentStudent
+        left join fetch enrollmentStudent.position
+        left join fetch e.classSchedule enrollmentSchedule
+        left join fetch enrollmentSchedule.branch
+        left join fetch e.coursePurchase
+        left join fetch a.courseStaffAssignment participantAssignment
+        left join fetch participantAssignment.staffPerson participantStaff
+        left join fetch participantStaff.position
+        left join fetch participantAssignment.course participantCourse
+        left join fetch participantCourse.classSchedule participantCourseSchedule
+        left join fetch participantCourseSchedule.branch
+        left join fetch participantCourse.nextClassSchedule participantCourseNextSchedule
+        left join fetch participantCourseNextSchedule.branch
         where a.sessionAttendanceId = :id
           and (
               :unrestricted = true

@@ -114,6 +114,12 @@ public interface CourseStaffAssignmentRepository extends JpaRepository<CourseSta
     @Query("""
         select a
         from CourseStaffAssignment a
+        left join fetch a.staffPerson staffPerson
+        left join fetch a.course course
+        left join fetch course.classSchedule courseSchedule
+        left join fetch courseSchedule.branch
+        left join fetch course.nextClassSchedule courseNextSchedule
+        left join fetch courseNextSchedule.branch
         where :unrestricted = true
            or (:self = true and a.staffPerson.personId = :activePersonId)
            or (
@@ -144,6 +150,13 @@ public interface CourseStaffAssignmentRepository extends JpaRepository<CourseSta
     @Query("""
         select a
         from CourseStaffAssignment a
+        left join fetch a.staffPerson staffPerson
+        left join fetch staffPerson.position
+        left join fetch a.course course
+        left join fetch course.classSchedule courseSchedule
+        left join fetch courseSchedule.branch
+        left join fetch course.nextClassSchedule courseNextSchedule
+        left join fetch courseNextSchedule.branch
         where a.courseStaffAssignmentId = :id
           and (
               :unrestricted = true

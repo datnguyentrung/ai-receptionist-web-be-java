@@ -29,12 +29,12 @@ public class BeltExamService {
 
     @Transactional(readOnly = true)
     public PageResponse<BeltExamDTO.SimpleResponse> list(Pageable pageable) {
-        return PageResponse.of(repository.findAll(pageable), mapper::toSimpleResponse);
+        return PageResponse.of(repository.findAllDetailed(pageable), mapper::toSimpleResponse);
     }
 
     @Transactional(readOnly = true)
     public BeltExamDTO.Response get(UUID id) {
-        return mapper.toResponse(find(id));
+        return mapper.toResponse(findDetailed(id));
     }
 
     @Transactional
@@ -76,6 +76,11 @@ public class BeltExamService {
 
     private BeltExam find(UUID id) {
         return repository.findById(id)
+                .orElseThrow(() -> new ApiException(TrainingErrorCode.BELT_EXAM_NOT_FOUND));
+    }
+
+    private BeltExam findDetailed(UUID id) {
+        return repository.findDetailedById(id)
                 .orElseThrow(() -> new ApiException(TrainingErrorCode.BELT_EXAM_NOT_FOUND));
     }
 

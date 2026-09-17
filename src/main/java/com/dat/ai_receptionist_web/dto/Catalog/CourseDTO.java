@@ -1,9 +1,11 @@
 package com.dat.ai_receptionist_web.dto.Catalog;
 
-import jakarta.validation.constraints.*;
+import com.dat.ai_receptionist_web.enums.Catalog.CourseStatus;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import com.dat.ai_receptionist_web.enums.Catalog.CourseStatus;
 import java.util.UUID;
 
 public final class CourseDTO {
@@ -29,7 +31,9 @@ public final class CourseDTO {
             String name,
 
             int capacity,
-            @NotNull(message = "Status is required") CourseStatus status) {
+            @NotNull(message = "Status is required")
+            CourseStatus status
+    ) {
     }
 
     public record Response(
@@ -42,7 +46,8 @@ public final class CourseDTO {
             CourseStatus status,
             LocalDate classSessionGeneratedUntil,
             LocalDateTime createdAt,
-            LocalDateTime updatedAt) {
+            LocalDateTime updatedAt
+    ) {
     }
 
     public record SimpleResponse(
@@ -52,7 +57,8 @@ public final class CourseDTO {
             LocalDate nextScheduleEffectiveFrom,
             String name,
             int capacity,
-            CourseStatus status) {
+            CourseStatus status
+    ) {
     }
 
     public record ScheduleChangeRequest(
@@ -60,12 +66,14 @@ public final class CourseDTO {
             UUID classScheduleId,
 
             @NotNull(message = "Effective from is required")
-            LocalDate effectiveFrom) {
+            LocalDate effectiveFrom
+    ) {
     }
 
     public record CourseScheduleChangeResponse(
             Response course,
             java.util.List<UUID> cancelledSessionIds,
-            java.util.List<UUID> generatedSessionIds) {
+            java.util.List<UUID> generatedSessionIds
+    ) {
     }
 }

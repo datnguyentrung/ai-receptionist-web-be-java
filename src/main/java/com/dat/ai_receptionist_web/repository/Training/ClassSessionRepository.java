@@ -102,6 +102,11 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, UUID
     @Query("""
         select c
         from ClassSession c
+        left join fetch c.course course
+        left join fetch course.classSchedule courseSchedule
+        left join fetch courseSchedule.branch
+        left join fetch course.nextClassSchedule courseNextSchedule
+        left join fetch courseNextSchedule.branch
         where :unrestricted = true
            or exists (
                select 1
@@ -125,6 +130,11 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, UUID
     @Query("""
         select c
         from ClassSession c
+        left join fetch c.course course
+        left join fetch course.classSchedule courseSchedule
+        left join fetch courseSchedule.branch
+        left join fetch course.nextClassSchedule courseNextSchedule
+        left join fetch courseNextSchedule.branch
         where c.classSessionId = :id
           and (
               :unrestricted = true

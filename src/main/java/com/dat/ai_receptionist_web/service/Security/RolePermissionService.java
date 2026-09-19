@@ -35,7 +35,7 @@ public class RolePermissionService {
      */
     @Transactional(readOnly = true)
     public PageResponse<RolePermissionDTO.SimpleResponse> list(Pageable pageable) {
-        return PageResponse.of(rolePermissionRepository.findAll(pageable), rolePermissionMapper::toSimpleResponse);
+        return PageResponse.of(rolePermissionRepository.findAllDetailed(pageable), rolePermissionMapper::toSimpleResponse);
     }
 
     /**

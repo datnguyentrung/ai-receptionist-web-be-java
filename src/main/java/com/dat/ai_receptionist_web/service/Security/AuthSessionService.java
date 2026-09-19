@@ -41,7 +41,7 @@ public class AuthSessionService {
      */
     @Transactional(readOnly = true)
     public PageResponse<AuthSessionDTO.SimpleResponse> list(Pageable pageable) {
-        return PageResponse.of(sessionRepository.findAll(pageable), authSessionMapper::toSimpleResponse);
+        return PageResponse.of(sessionRepository.findAllDetailed(pageable), authSessionMapper::toSimpleResponse);
     }
 
     /**

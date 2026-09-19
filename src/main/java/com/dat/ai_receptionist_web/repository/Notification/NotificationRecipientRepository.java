@@ -7,6 +7,19 @@ import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import java.util.*;
 public interface NotificationRecipientRepository extends JpaRepository<NotificationRecipient, UUID> {
+    @Query(value = """
+            select nr
+            from NotificationRecipient nr
+            join fetch nr.notification
+            join fetch nr.recipientUser
+            left join fetch nr.contextPerson
+            """,
+            countQuery = """
+            select count(nr)
+            from NotificationRecipient nr
+            """)
+    Page<NotificationRecipient> findAllDetailed(Pageable pageable);
+
     @EntityGraph(attributePaths = {"notification", "recipientUser", "contextPerson"})
     @Query("select nr from NotificationRecipient nr where nr.notification.notificationId = :id")
     List<NotificationRecipient> findDeliveryRows(@Param("id") UUID notificationId);
@@ -20,16 +33,15 @@ public interface NotificationRecipientRepository extends JpaRepository<Notificat
             (:activePersonId is null and nr.contextPerson is null)
             or
             (:activePersonId is not null and (
-                nr.contextPerson is null
-                or nr.contextPerson.personId = :activePersonId
+                nr.contextPerson is null or nr.contextPerson.personId = :activePersonId
             ))
           )
           and (:read is null or nr.read = :read)
           and (:type is null or nr.notification.notificationType = :type)
           and (
-            :searchPattern is null
-            or lower(nr.notification.title) like :searchPattern
-            or lower(nr.notification.body) like :searchPattern
+            :search is null
+            or lower(nr.notification.title) like lower(concat('%', :search, '%'))
+            or lower(nr.notification.body) like lower(concat('%', :search, '%'))
           )
         order by nr.createdAt desc, nr.notificationRecipientId desc
         """)
@@ -38,7 +50,7 @@ public interface NotificationRecipientRepository extends JpaRepository<Notificat
             @Param("activePersonId") UUID activePersonId,
             @Param("read") Boolean read,
             @Param("type") NotificationType type,
-            @Param("searchPattern") String searchPattern,
+            @Param("search") String search,
             Pageable pageable
     );
 

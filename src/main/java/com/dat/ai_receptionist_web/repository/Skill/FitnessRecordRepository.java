@@ -21,6 +21,19 @@ import java.util.UUID;
 
 @Repository
 public interface FitnessRecordRepository extends JpaRepository<FitnessRecord, Long>, JpaSpecificationExecutor<FitnessRecord> {
+    @Query(value = """
+            select fr
+            from FitnessRecord fr
+            join fetch fr.student
+            join fetch fr.fitness
+            join fetch fr.recordedByCoach
+            """,
+            countQuery = """
+            select count(fr)
+            from FitnessRecord fr
+            """)
+    Page<FitnessRecord> findAllDetailed(Pageable pageable);
+
     @Override
     @NonNull
     Page<FitnessRecord> findAll(

@@ -1,12 +1,26 @@
 package com.dat.ai_receptionist_web.repository.Security;
 
 import com.dat.ai_receptionist_web.domain.Security.RolePermission;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
 import java.util.*;
 
 public interface RolePermissionRepository extends JpaRepository<RolePermission, RolePermission.Key> {
+    @Query(value = """
+            select rp
+            from RolePermission rp
+            join fetch rp.role
+            join fetch rp.permission
+            """,
+            countQuery = """
+            select count(rp)
+            from RolePermission rp
+            """)
+    Page<RolePermission> findAllDetailed(Pageable pageable);
+
     List<RolePermission> findAllById_RoleId(String roleId);
 
     @Query("select rp.permission.code from RolePermission rp where rp.id.roleId = :role order by rp.permission.code")

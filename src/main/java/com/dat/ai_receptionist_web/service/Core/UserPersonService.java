@@ -31,7 +31,7 @@ public class UserPersonService {
      */
     @Transactional(readOnly = true)
     public PageResponse<UserPersonDTO.SimpleResponse> list(Pageable pageable) {
-        return PageResponse.of(repository.findAll(pageable), mapper::toSimpleResponse);
+        return PageResponse.of(repository.findAllDetailed(pageable), mapper::toSimpleResponse);
     }
 
     /**

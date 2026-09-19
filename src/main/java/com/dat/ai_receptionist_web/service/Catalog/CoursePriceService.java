@@ -29,7 +29,7 @@ public class CoursePriceService {
      */
     @Transactional(readOnly = true)
     public PageResponse<CoursePriceDTO.SimpleResponse> list(Pageable pageable) {
-        return PageResponse.of(repository.findAll(pageable), mapper::toSimpleResponse);
+        return PageResponse.of(repository.findAllDetailed(pageable), mapper::toSimpleResponse);
     }
 
     /**

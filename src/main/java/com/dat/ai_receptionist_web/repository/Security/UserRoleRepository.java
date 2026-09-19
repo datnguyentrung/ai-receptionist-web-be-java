@@ -1,12 +1,26 @@
 package com.dat.ai_receptionist_web.repository.Security;
 
 import com.dat.ai_receptionist_web.domain.Security.UserRole;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
 import java.util.*;
 
 public interface UserRoleRepository extends JpaRepository<UserRole, UserRole.Key> {
+    @Query(value = """
+            select ur
+            from UserRole ur
+            join fetch ur.user
+            join fetch ur.role
+            """,
+            countQuery = """
+            select count(ur)
+            from UserRole ur
+            """)
+    Page<UserRole> findAllDetailed(Pageable pageable);
+
     List<UserRole> findAllById_UserId(UUID userId);
 
     @Query("select ur.role.code from UserRole ur where ur.id.userId = :userId order by ur.role.code")

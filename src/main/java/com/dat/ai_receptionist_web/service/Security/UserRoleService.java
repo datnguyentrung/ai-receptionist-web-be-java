@@ -31,7 +31,7 @@ public class UserRoleService {
      */
     @Transactional(readOnly = true)
     public PageResponse<UserRoleDTO.SimpleResponse> list(Pageable pageable) {
-        return PageResponse.of(userRoleRepository.findAll(pageable), userRoleMapper::toSimpleResponse);
+        return PageResponse.of(userRoleRepository.findAllDetailed(pageable), userRoleMapper::toSimpleResponse);
     }
 
     /**

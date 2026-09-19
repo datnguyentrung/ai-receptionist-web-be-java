@@ -34,7 +34,7 @@ public class ClassScheduleService {
      */
     @Transactional(readOnly = true)
     public PageResponse<ClassScheduleDTO.SimpleResponse> list(Pageable pageable) {
-        return PageResponse.of(classScheduleRepository.findAll(pageable), classScheduleMapper::toSimpleResponse);
+        return PageResponse.of(classScheduleRepository.findAllDetailed(pageable), classScheduleMapper::toSimpleResponse);
     }
 
     /**

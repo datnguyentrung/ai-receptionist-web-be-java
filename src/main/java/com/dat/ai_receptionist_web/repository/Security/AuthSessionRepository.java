@@ -2,6 +2,8 @@ package com.dat.ai_receptionist_web.repository.Security;
 
 import com.dat.ai_receptionist_web.domain.Security.AuthSession;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
@@ -12,6 +14,20 @@ import java.util.UUID;
 
 public interface AuthSessionRepository extends JpaRepository<AuthSession, UUID> {
     Optional<AuthSession> findByRefreshTokenHash(String refreshTokenHash);
+
+    @Query(value = """
+            select s
+            from AuthSession s
+            join fetch s.user
+            left join fetch s.activeUserPerson activeUserPerson
+            left join fetch activeUserPerson.user
+            left join fetch activeUserPerson.person
+            """,
+            countQuery = """
+            select count(s)
+            from AuthSession s
+            """)
+    Page<AuthSession> findAllDetailed(Pageable pageable);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from AuthSession s join fetch s.user left join fetch s.activeUserPerson where s.refreshTokenHash = :hash")

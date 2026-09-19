@@ -1,6 +1,8 @@
 package com.dat.ai_receptionist_web.repository.Core;
 
 import com.dat.ai_receptionist_web.domain.Core.UserPerson;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
@@ -11,6 +13,18 @@ import java.util.UUID;
 import com.dat.ai_receptionist_web.enums.Security.RelationshipType;
 
 public interface UserPersonRepository extends JpaRepository<UserPerson, UUID> {
+    @Query(value = """
+            select up
+            from UserPerson up
+            join fetch up.user
+            join fetch up.person
+            """,
+            countQuery = """
+            select count(up)
+            from UserPerson up
+            """)
+    Page<UserPerson> findAllDetailed(Pageable pageable);
+
     @EntityGraph(attributePaths = "person")
     List<UserPerson> findAllByUser_UserIdAndActiveTrue(UUID userId);
 

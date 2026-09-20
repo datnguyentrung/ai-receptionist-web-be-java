@@ -11,8 +11,10 @@ import com.dat.ai_receptionist_web.enums.Security.UserStatus;
 import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.code.CoreErrorCode;
 import com.dat.ai_receptionist_web.error.code.SecurityErrorCode;
+import com.dat.ai_receptionist_web.mapper.Core.PersonMapper;
 import com.dat.ai_receptionist_web.mapper.Security.UserMapper;
 import com.dat.ai_receptionist_web.repository.Core.PersonRepository;
+import com.dat.ai_receptionist_web.repository.Core.UserPersonRepository;
 import com.dat.ai_receptionist_web.repository.Security.UserRepository;
 import com.dat.ai_receptionist_web.service.Core.PersonService;
 import com.dat.ai_receptionist_web.service.Core.UserPersonService;
@@ -24,7 +26,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +41,8 @@ public class UserService {
     private final UserMapper userMapper;
     private final UserPersonService userPersonService;
     private final PersonService personService;
+    private final UserPersonRepository userPersonRepository;
+    private final PersonMapper personMapper;
 
     /**
      * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
@@ -43,7 +51,55 @@ public class UserService {
      */
     @Transactional(readOnly = true)
     public PageResponse<UserDTO.SimpleResponse> list(Pageable pageable) {
-        return PageResponse.of(userRepository.findAll(pageable), userMapper::toSimpleResponse);
+        return list(null, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<UserDTO.SimpleResponse> list(String search, Pageable pageable) {
+        String normalizedSearch = normalizeSearch(search);
+        var users = normalizedSearch.isBlank()
+                ? userRepository.findAll(pageable)
+                : userRepository.searchByPhoneNumberOrPersonFullName(
+                normalizedSearch,
+                normalizePhoneSearch(normalizedSearch),
+                pageable
+        );
+        Set<UUID> userIds = users.getContent().stream()
+                .map(User::getUserId)
+                .collect(Collectors.toSet());
+        Map<UUID, List<PersonDTO.SimpleResponse>> personsByUserId = userIds.isEmpty()
+                ? Map.of()
+                : userPersonRepository.findAllActiveByUserIds(userIds).stream()
+                .collect(Collectors.groupingBy(
+                        userPerson -> userPerson.getUser().getUserId(),
+                        Collectors.mapping(
+                                userPerson -> personMapper.toSimpleResponse(userPerson.getPerson()),
+                                Collectors.toList()
+                        )
+                ));
+
+        return PageResponse.of(users, user -> new UserDTO.SimpleResponse(
+                user.getUserId(),
+                user.getPhoneNumber(),
+                user.getStatus(),
+                user.getLastLoginAt(),
+                personsByUserId.getOrDefault(user.getUserId(), List.of())
+        ));
+    }
+
+    private String normalizeSearch(String search) {
+        return search == null ? "" : search.trim().toLowerCase();
+    }
+
+    private String normalizePhoneSearch(String search) {
+        String phoneSearch = search.replaceAll("[\\s.\\-()]", "");
+        if (phoneSearch.startsWith("+84")) {
+            return "0" + phoneSearch.substring(3);
+        }
+        if (phoneSearch.startsWith("84") && phoneSearch.length() > 2) {
+            return "0" + phoneSearch.substring(2);
+        }
+        return phoneSearch.replaceAll("[^0-9]", "");
     }
 
     /**

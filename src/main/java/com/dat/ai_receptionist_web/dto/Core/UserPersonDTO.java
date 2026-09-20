@@ -1,5 +1,6 @@
 package com.dat.ai_receptionist_web.dto.Core;
 
+import com.dat.ai_receptionist_web.dto.Security.UserDTO;
 import jakarta.validation.constraints.*;
 import java.time.LocalDateTime;
 import com.dat.ai_receptionist_web.enums.Security.RelationshipType;
@@ -27,7 +28,7 @@ public final class UserPersonDTO {
 
     public record Response(
             UUID userPersonId,
-            com.dat.ai_receptionist_web.dto.Security.UserDTO.SimpleResponse user,
+            UserDTO.SimpleResponse user,
             PersonDTO.Response person,
             RelationshipType relationshipType,
             boolean active,
@@ -38,7 +39,7 @@ public final class UserPersonDTO {
 
     public record SimpleResponse(
             UUID userPersonId,
-            com.dat.ai_receptionist_web.dto.Security.UserDTO.SimpleResponse user,
+            UserDTO.SimpleResponse user,
             PersonDTO.SimpleResponse person,
             RelationshipType relationshipType,
             boolean active

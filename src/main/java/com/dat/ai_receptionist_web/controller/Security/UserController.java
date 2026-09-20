@@ -24,7 +24,10 @@ public class UserController {
      */
     @GetMapping
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).USER_READ.getCode())")
-    public PageResponse<UserDTO.SimpleResponse> list(Pageable pageable) { return service.list(pageable); }
+    public PageResponse<UserDTO.SimpleResponse> list(
+            @RequestParam(required = false) String search,
+            Pageable pageable
+    ) { return service.list(search, pageable); }
 
     /**
      * Tác dụng: Lấy chi tiết một bản ghi theo khóa định danh.

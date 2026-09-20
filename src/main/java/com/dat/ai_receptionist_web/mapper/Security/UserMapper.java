@@ -13,6 +13,7 @@ public interface UserMapper {
     UserDTO.Response toResponse(User entity);
 
     @Mapping(target = "userId", source = "userId")
+    @Mapping(target = "persons", ignore = true)
     UserDTO.SimpleResponse toSimpleResponse(User entity);
 
     @BeanMapping(ignoreByDefault = true)

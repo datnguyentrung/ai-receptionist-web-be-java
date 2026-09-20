@@ -1,6 +1,8 @@
 package com.dat.ai_receptionist_web.repository.Security;
 
 import com.dat.ai_receptionist_web.domain.Security.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.repository.query.Param;
@@ -18,6 +20,38 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByPhoneNumber(String phoneNumber);
 
     List<User> findAllByPhoneNumberIn(Set<String> phoneNumbers);
+
+    @Query(value = """
+            select u
+            from User u
+            where (:phoneSearch <> '' and lower(u.phoneNumber) like concat('%', :phoneSearch, '%'))
+               or exists (
+                   select 1
+                   from UserPerson up
+                   join up.person p
+                   where up.user = u
+                     and up.active = true
+                     and lower(p.fullName) like concat('%', :search, '%')
+               )
+            """,
+            countQuery = """
+            select count(u)
+            from User u
+            where (:phoneSearch <> '' and lower(u.phoneNumber) like concat('%', :phoneSearch, '%'))
+               or exists (
+                   select 1
+                   from UserPerson up
+                   join up.person p
+                   where up.user = u
+                     and up.active = true
+                     and lower(p.fullName) like concat('%', :search, '%')
+               )
+            """)
+    Page<User> searchByPhoneNumberOrPersonFullName(
+            @Param("search") String search,
+            @Param("phoneSearch") String phoneSearch,
+            Pageable pageable
+    );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from User u where u.userId in :userIds")

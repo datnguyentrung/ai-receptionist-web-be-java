@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import com.dat.ai_receptionist_web.enums.Security.UserStatus;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public final class UserDTO {
@@ -55,7 +56,8 @@ public final class UserDTO {
             UUID userId,
             String phoneNumber,
             UserStatus status,
-            LocalDateTime lastLoginAt
+            LocalDateTime lastLoginAt,
+            List<PersonDTO.SimpleResponse> persons
     ) {
     }
 }

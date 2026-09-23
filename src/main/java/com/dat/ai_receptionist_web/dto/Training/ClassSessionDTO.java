@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.dto.Training;
 
 import com.dat.ai_receptionist_web.dto.Catalog.CourseDTO;
+import com.dat.ai_receptionist_web.dto.Core.PersonDTO;
 import jakarta.validation.constraints.*;
 import com.dat.ai_receptionist_web.enums.Training.SessionStatus;
 
@@ -65,7 +66,21 @@ public final class ClassSessionDTO {
             SessionStatus status,
             boolean attendanceClosed,
             LocalTime startTime,
-            LocalTime endTime
+            LocalTime endTime,
+            PersonDTO.SimpleResponse primaryCoach
+    ) {
+    }
+
+    public record CalendarResponse(
+            UUID classSessionId,
+            UUID courseId,
+            String courseName,
+            LocalDate sessionDate,
+            LocalTime startTime,
+            LocalTime endTime,
+            SessionStatus status,
+            boolean attendanceClosed,
+            PersonDTO.SimpleResponse primaryCoach
     ) {
     }
 

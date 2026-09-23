@@ -227,6 +227,24 @@ class TrainingPolicyRepositoryContractTest {
     }
 
     @Test
+    void classSessionCalendarQueryUsesDateRangeSortAndFetchesCourse() throws Exception {
+        Query calendarQuery = ClassSessionRepository.class
+                .getMethod("findCalendarSessions", LocalDate.class, LocalDate.class, UUID.class, boolean.class)
+                .getAnnotation(Query.class);
+
+        assertThat(calendarQuery.value())
+                .contains(
+                        "join fetch c.course",
+                        "c.sessionDate >= :fromDate",
+                        "c.sessionDate <= :toDate",
+                        "order by c.sessionDate asc, c.startTime asc"
+                )
+                .contains("CourseStaffAssignment a")
+                .contains("a.startDate <= c.sessionDate", "a.endDate is null or a.endDate >= c.sessionDate")
+                .doesNotContain("Pageable", "PageResponse");
+    }
+
+    @Test
     void courseStaffAssignmentAccessibleQueriesSupportOwnAndManagedCourseScope() throws Exception {
         Query listQuery = CourseStaffAssignmentRepository.class
                 .getMethod(
@@ -268,6 +286,38 @@ class TrainingPolicyRepositoryContractTest {
                         "left join fetch a.course",
                         "left join fetch course.classSchedule",
                         "left join fetch course.nextClassSchedule"
+                );
+    }
+
+    @Test
+    void courseStaffAssignmentBatchStaffQueriesFetchPersonAndUseEffectivePeriod() throws Exception {
+        Query courseStaffQuery = CourseStaffAssignmentRepository.class
+                .getMethod("findEffectiveStaffByCourseIdsAndDate",
+                        java.util.Collection.class, java.util.Collection.class, LocalDate.class)
+                .getAnnotation(Query.class);
+        Query primaryCoachRangeQuery = CourseStaffAssignmentRepository.class
+                .getMethod("findEffectivePrimaryCoachAssignmentsForCourseIdsBetween",
+                        java.util.Collection.class, LocalDate.class, LocalDate.class)
+                .getAnnotation(Query.class);
+
+        assertThat(courseStaffQuery.value())
+                .contains(
+                        "join fetch a.staffPerson",
+                        "left join fetch staffPerson.position",
+                        "a.course.courseId in :courseIds",
+                        "a.assignmentType in :assignmentTypes",
+                        "a.startDate <= :effectiveDate",
+                        "a.endDate is null or a.endDate >= :effectiveDate",
+                        "CourseStaffAssignmentStatus.ACTIVE",
+                        "CourseStaffAssignmentStatus.ENDED"
+                );
+        assertThat(primaryCoachRangeQuery.value())
+                .contains(
+                        "join fetch a.staffPerson",
+                        "left join fetch staffPerson.position",
+                        "AssignmentType.PRIMARY_COACH",
+                        "a.startDate <= :toDate",
+                        "a.endDate is null or a.endDate >= :fromDate"
                 );
     }
 

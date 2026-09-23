@@ -102,6 +102,36 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, UUID
     @Query("""
         select c
         from ClassSession c
+        join fetch c.course course
+        where c.sessionDate >= :fromDate
+          and c.sessionDate <= :toDate
+          and (
+              :unrestricted = true
+              or exists (
+                  select 1
+                  from CourseStaffAssignment a
+                  where a.staffPerson.personId = :activePersonId
+                    and a.course.courseId = c.course.courseId
+                    and a.startDate <= c.sessionDate
+                    and (a.endDate is null or a.endDate >= c.sessionDate)
+                    and a.assignmentStatus in (
+                        com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ACTIVE,
+                        com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ENDED
+                    )
+              )
+          )
+        order by c.sessionDate asc, c.startTime asc
+    """)
+    List<ClassSession> findCalendarSessions(
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate,
+            @Param("activePersonId") UUID activePersonId,
+            @Param("unrestricted") boolean unrestricted
+    );
+
+    @Query("""
+        select c
+        from ClassSession c
         left join fetch c.course course
         left join fetch course.classSchedule courseSchedule
         left join fetch courseSchedule.branch

@@ -1,7 +1,9 @@
 package com.dat.ai_receptionist_web.service.Training.session;
 
 import com.dat.ai_receptionist_web.domain.Catalog.Course;
+import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.domain.Training.ClassSession;
+import com.dat.ai_receptionist_web.domain.Training.CourseStaffAssignment;
 import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.dto.Training.ClassSessionDTO;
 import com.dat.ai_receptionist_web.enums.Catalog.CourseStatus;
@@ -13,36 +15,53 @@ import com.dat.ai_receptionist_web.error.code.TrainingErrorCode;
 import com.dat.ai_receptionist_web.mapper.Training.ClassSessionMapper;
 import com.dat.ai_receptionist_web.repository.Catalog.CourseRepository;
 import com.dat.ai_receptionist_web.repository.Training.ClassSessionRepository;
+import com.dat.ai_receptionist_web.repository.Training.CourseStaffAssignmentRepository;
 import com.dat.ai_receptionist_web.service.Security.access.AccessContext;
 import com.dat.ai_receptionist_web.service.Security.access.CurrentAccessContextResolver;
 import com.dat.ai_receptionist_web.service.Training.access.ClassSessionAccessPolicy;
 import com.dat.ai_receptionist_web.service.Training.access.TrainingAccessScope;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ClassSessionService {
+    private static final long MAX_CALENDAR_RANGE_DAYS = 42;
+
     private final ClassSessionRepository repository;
     private final ClassSessionMapper mapper;
     private final CourseRepository courseRepository;
     private final CurrentAccessContextResolver currentAccessContextResolver;
     private final ClassSessionAccessPolicy accessPolicy;
+    private final CourseStaffAssignmentRepository courseStaffAssignmentRepository;
 
     @Transactional(readOnly = true)
     public PageResponse<ClassSessionDTO.SimpleResponse> list(Pageable pageable) {
         AccessContext context = currentAccessContextResolver.current();
         TrainingAccessScope scope = accessPolicy.resolveReadScope(context);
+        Page<ClassSession> sessions = repository.findAccessible(context.activePersonId(), scope.unrestricted(), pageable);
+        Map<SessionPrimaryCoachKey, Person> primaryCoachBySessionKey = getPrimaryCoaches(sessions.getContent());
         return PageResponse.of(
-                repository.findAccessible(context.activePersonId(), scope.unrestricted(), pageable),
-                mapper::toSimpleResponse
+                sessions,
+                session -> mapper.toSimpleResponse(
+                        session,
+                        primaryCoachBySessionKey.get(SessionPrimaryCoachKey.of(session)))
         );
     }
 
@@ -84,7 +103,8 @@ public class ClassSessionService {
     }
 
     @Transactional
-    public ClassSessionDTO.Response update(UUID id, ClassSessionDTO.UpdateRequest request) {
+    public ClassSessionDTO.Response update(UUID id,
+                                           ClassSessionDTO.UpdateRequest request) {
         AccessContext context = currentAccessContextResolver.current();
         ClassSession entity = findAccessible(id, context, accessPolicy.resolveWriteScope(context));
         requireMutable(entity);
@@ -96,7 +116,7 @@ public class ClassSessionService {
         validateTime(request.startTime(), request.endTime());
         if (!request.sessionDate().equals(entity.getSessionDate())
                 && repository.existsByCourse_CourseIdAndSessionDateAndStatusNot(
-                        request.courseId(), request.sessionDate(), SessionStatus.CANCELLED)) {
+                request.courseId(), request.sessionDate(), SessionStatus.CANCELLED)) {
             throw new ApiException(TrainingErrorCode.CLASS_SESSION_ALREADY_EXISTS);
         }
         mapper.updateEntity(request, entity);
@@ -113,7 +133,8 @@ public class ClassSessionService {
     }
 
     @Transactional
-    public ClassSessionDTO.Response reopenAttendance(UUID id, ClassSessionDTO.ReopenAttendanceRequest request) {
+    public ClassSessionDTO.Response reopenAttendance(UUID id,
+                                                     ClassSessionDTO.ReopenAttendanceRequest request) {
         if (request.attendanceReopenedUntil() == null
                 || !request.attendanceReopenedUntil().isAfter(LocalDateTime.now())) {
             throw new ApiException(GeneralErrorCode.INVALID_REQUEST_BODY,
@@ -153,9 +174,113 @@ public class ClassSessionService {
         }
     }
 
-    private void validateTime(LocalTime startTime, LocalTime endTime) {
+    private void validateTime(LocalTime startTime,
+                              LocalTime endTime) {
         if (startTime == null || endTime == null || !endTime.isAfter(startTime)) {
             throw new ApiException(TrainingErrorCode.CLASS_SESSION_TIME_INVALID);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public List<ClassSessionDTO.CalendarResponse> getCalendar(LocalDate fromDate,
+                                                              LocalDate toDate) {
+        validateCalendarRange(fromDate, toDate);
+        AccessContext context = currentAccessContextResolver.current();
+        TrainingAccessScope scope = accessPolicy.resolveReadScope(context);
+        List<ClassSession> sessions = repository.findCalendarSessions(
+                        fromDate,
+                        toDate,
+                        context.activePersonId(),
+                        scope.unrestricted());
+        Map<SessionPrimaryCoachKey, Person> primaryCoachBySessionKey =
+                getPrimaryCoachesForRange(sessions, fromDate, toDate);
+        return sessions.stream()
+                .sorted(Comparator.comparing(ClassSession::getSessionDate)
+                        .thenComparing(ClassSession::getStartTime))
+                .map(session -> mapper.toCalendarResponse(
+                        session,
+                        primaryCoachBySessionKey.get(SessionPrimaryCoachKey.of(session))))
+                .toList();
+    }
+
+    private void validateCalendarRange(LocalDate fromDate,
+                                       LocalDate toDate) {
+        if (fromDate == null || toDate == null) {
+            throw new ApiException(GeneralErrorCode.INVALID_REQUEST_PARAMETER,
+                    "fromDate and toDate are required");
+        }
+        if (fromDate.isAfter(toDate)) {
+            throw new ApiException(GeneralErrorCode.INVALID_REQUEST_PARAMETER,
+                    "fromDate must be before or equal to toDate");
+        }
+        long rangeDays = ChronoUnit.DAYS.between(fromDate, toDate);
+        if (rangeDays > MAX_CALENDAR_RANGE_DAYS) {
+            throw new ApiException(GeneralErrorCode.INVALID_REQUEST_PARAMETER,
+                    "Calendar range must not exceed " + MAX_CALENDAR_RANGE_DAYS + " days");
+        }
+    }
+
+    private Map<SessionPrimaryCoachKey, Person> getPrimaryCoaches(List<ClassSession> sessions) {
+        if (sessions.isEmpty()) {
+            return Map.of();
+        }
+        LocalDate fromDate = sessions.stream()
+                .map(ClassSession::getSessionDate)
+                .min(LocalDate::compareTo)
+                .orElseThrow();
+        LocalDate toDate = sessions.stream()
+                .map(ClassSession::getSessionDate)
+                .max(LocalDate::compareTo)
+                .orElseThrow();
+        return getPrimaryCoachesForRange(sessions, fromDate, toDate);
+    }
+
+    private Map<SessionPrimaryCoachKey, Person> getPrimaryCoachesForRange(Collection<ClassSession> sessions,
+                                                                          LocalDate fromDate,
+                                                                          LocalDate toDate) {
+        if (sessions.isEmpty()) {
+            return Map.of();
+        }
+        Set<UUID> courseIds = sessions.stream()
+                .map(session -> session.getCourse().getCourseId())
+                .collect(Collectors.toSet());
+        if (courseIds.isEmpty()) {
+            return Map.of();
+        }
+        List<CourseStaffAssignment> assignments =
+                courseStaffAssignmentRepository.findEffectivePrimaryCoachAssignmentsForCourseIdsBetween(
+                        courseIds, fromDate, toDate);
+        Map<UUID, List<CourseStaffAssignment>> assignmentsByCourseId = assignments.stream()
+                .collect(Collectors.groupingBy(
+                        assignment -> assignment.getCourse().getCourseId(),
+                        LinkedHashMap::new,
+                        Collectors.toList()));
+
+        Map<SessionPrimaryCoachKey, Person> primaryCoachBySessionKey = new LinkedHashMap<>();
+        for (ClassSession session : sessions) {
+            Person primaryCoach = assignmentsByCourseId
+                    .getOrDefault(session.getCourse().getCourseId(), List.of()).stream()
+                    .filter(assignment -> isEffectiveOn(assignment, session.getSessionDate()))
+                    .map(CourseStaffAssignment::getStaffPerson)
+                    .findFirst()
+                    .orElse(null);
+            primaryCoachBySessionKey.put(SessionPrimaryCoachKey.of(session), primaryCoach);
+        }
+        return primaryCoachBySessionKey;
+    }
+
+    private boolean isEffectiveOn(CourseStaffAssignment assignment,
+                                  LocalDate sessionDate) {
+        return !assignment.getStartDate().isAfter(sessionDate)
+                && (assignment.getEndDate() == null || !assignment.getEndDate().isBefore(sessionDate));
+    }
+
+    private record SessionPrimaryCoachKey(UUID courseId, LocalDate sessionDate, UUID classSessionId) {
+        private static SessionPrimaryCoachKey of(ClassSession session) {
+            return new SessionPrimaryCoachKey(
+                    session.getCourse().getCourseId(),
+                    session.getSessionDate(),
+                    session.getClassSessionId());
         }
     }
 }

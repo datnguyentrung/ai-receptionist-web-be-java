@@ -1,11 +1,13 @@
 package com.dat.ai_receptionist_web.dto.Catalog;
 
+import com.dat.ai_receptionist_web.dto.Core.PersonDTO;
 import com.dat.ai_receptionist_web.enums.Catalog.CourseStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public final class CourseDTO {
@@ -45,6 +47,10 @@ public final class CourseDTO {
             int capacity,
             CourseStatus status,
             LocalDate classSessionGeneratedUntil,
+            PersonDTO.Response primaryCoach,
+            List<PersonDTO.Response> assistantCoaches,
+            List<PersonDTO.Response> teachingAssistants,
+            PersonDTO.Response manager,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
@@ -57,7 +63,8 @@ public final class CourseDTO {
             LocalDate nextScheduleEffectiveFrom,
             String name,
             int capacity,
-            CourseStatus status
+            CourseStatus status,
+            PersonDTO.SimpleResponse primaryCoach
     ) {
     }
 

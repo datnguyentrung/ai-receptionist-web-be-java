@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.repository.Training;
 
 import com.dat.ai_receptionist_web.domain.Training.CourseStaffAssignment;
+import com.dat.ai_receptionist_web.enums.Training.AssignmentType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -8,11 +9,54 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface CourseStaffAssignmentRepository extends JpaRepository<CourseStaffAssignment, UUID> {
+    @Query("""
+        select a
+        from CourseStaffAssignment a
+        join fetch a.staffPerson staffPerson
+        left join fetch staffPerson.position
+        where a.course.courseId in :courseIds
+          and a.assignmentType in :assignmentTypes
+          and a.startDate <= :effectiveDate
+          and (a.endDate is null or a.endDate >= :effectiveDate)
+          and a.assignmentStatus in (
+              com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ACTIVE,
+              com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ENDED
+          )
+        order by a.course.courseId, a.assignmentType, a.startDate desc, a.courseStaffAssignmentId
+    """)
+    List<CourseStaffAssignment> findEffectiveStaffByCourseIdsAndDate(
+            @Param("courseIds") Collection<UUID> courseIds,
+            @Param("assignmentTypes") Collection<AssignmentType> assignmentTypes,
+            @Param("effectiveDate") LocalDate effectiveDate
+    );
+
+    @Query("""
+        select a
+        from CourseStaffAssignment a
+        join fetch a.staffPerson staffPerson
+        left join fetch staffPerson.position
+        where a.course.courseId in :courseIds
+          and a.assignmentType = com.dat.ai_receptionist_web.enums.Training.AssignmentType.PRIMARY_COACH
+          and a.startDate <= :toDate
+          and (a.endDate is null or a.endDate >= :fromDate)
+          and a.assignmentStatus in (
+              com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ACTIVE,
+              com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ENDED
+          )
+        order by a.course.courseId, a.startDate desc, a.courseStaffAssignmentId
+    """)
+    List<CourseStaffAssignment> findEffectivePrimaryCoachAssignmentsForCourseIdsBetween(
+            @Param("courseIds") Collection<UUID> courseIds,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate
+    );
+
     @Query("""
         select a
         from CourseStaffAssignment a

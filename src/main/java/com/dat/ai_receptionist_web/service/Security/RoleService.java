@@ -8,11 +8,14 @@ import com.dat.ai_receptionist_web.error.code.SecurityErrorCode;
 import com.dat.ai_receptionist_web.mapper.Security.RoleMapper;
 import com.dat.ai_receptionist_web.repository.Security.RoleRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,8 +32,16 @@ public class RoleService {
      * Output: Trả về PageResponse<RoleDTO.SimpleResponse> theo kết quả xử lý.
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = "roleList", key = "T(com.dat.ai_receptionist_web.util.CacheKeys).pageable(#pageable)", cacheManager = "redisCacheManager")
     public PageResponse<RoleDTO.SimpleResponse> list(Pageable pageable) {
-        return PageResponse.of(roleRepository.findAll(pageable), roleMapper::toSimpleResponse);
+        var roles = roleRepository.findAll(pageable);
+        Map<String, List<RoleRepository.RolePermissionRow>> permissionsByRole =
+                permissionRowsByRoleCode(roleCodes(roles.getContent()));
+
+        return PageResponse.of(roles, role -> roleMapper.toSimpleResponse(
+                role,
+                permissionsByRole.getOrDefault(role.getCode(), List.of())
+        ));
     }
 
     /**
@@ -40,7 +51,11 @@ public class RoleService {
      */
     @Transactional(readOnly = true)
     public RoleDTO.Response get(String id) {
-        return roleMapper.toResponse(getRole(id));
+        Role role = getRole(id);
+        return roleMapper.toResponse(
+                role,
+                permissionRowsByRoleCode(Set.of(role.getCode())).getOrDefault(role.getCode(), List.of())
+        );
     }
 
     /**
@@ -49,13 +64,14 @@ public class RoleService {
      * Output: Trả về RoleDTO.Response theo kết quả xử lý.
      */
     @Transactional
+    @CacheEvict(value = "roleList", allEntries = true, cacheManager = "redisCacheManager")
     public RoleDTO.Response create(RoleDTO.CreateRequest request) {
         Role role = new Role();
         role.setCode(request.code());
         role.setName(request.name());
         role.setDescription(request.description());
         role.setPermissionVersion(request.permissionVersion());
-        return roleMapper.toResponse(roleRepository.save(role));
+        return roleMapper.toResponse(roleRepository.save(role), List.of());
     }
 
     /**
@@ -64,10 +80,15 @@ public class RoleService {
      * Output: Trả về RoleDTO.Response theo kết quả xử lý.
      */
     @Transactional
+    @CacheEvict(value = "roleList", allEntries = true, cacheManager = "redisCacheManager")
     public RoleDTO.Response update(String id, RoleDTO.UpdateRequest request) {
         Role role = getRole(id);
         roleMapper.updateEntity(request, role);
-        return roleMapper.toResponse(roleRepository.save(role));
+        Role saved = roleRepository.save(role);
+        return roleMapper.toResponse(
+                saved,
+                permissionRowsByRoleCode(Set.of(saved.getCode())).getOrDefault(saved.getCode(), List.of())
+        );
     }
 
     /**
@@ -76,6 +97,7 @@ public class RoleService {
      * Output: Không trả về dữ liệu; cập nhật trạng thái hoặc ném lỗi khi xử lý thất bại.
      */
     @Transactional
+    @CacheEvict(value = "roleList", allEntries = true, cacheManager = "redisCacheManager")
     public void delete(String id) {
         roleRepository.delete(getRole(id));
     }
@@ -107,6 +129,7 @@ public class RoleService {
      * Output: Trả về Role theo kết quả xử lý.
      */
     @Transactional
+    @CacheEvict(value = "roleList", allEntries = true, cacheManager = "redisCacheManager")
     public Role createRole(RoleDTO.CreateRequest request) {
         String code = request.code();
         String name = request.name();
@@ -129,6 +152,7 @@ public class RoleService {
      * Output: Trả về Role theo kết quả xử lý.
      */
     @Transactional
+    @CacheEvict(value = "roleList", allEntries = true, cacheManager = "redisCacheManager")
     public Role updateRole(String code, RoleDTO.UpdateRequest request) {
         Role role = getRole(code);
         roleMapper.updateEntity(request, role);
@@ -141,9 +165,26 @@ public class RoleService {
      * Output: Không trả về dữ liệu; cập nhật trạng thái hoặc ném lỗi khi xử lý thất bại.
      */
     @Transactional
+    @CacheEvict(value = "roleList", allEntries = true, cacheManager = "redisCacheManager")
     public void deleteRole(String code) {
         Role role = getRole(code);
         roleRepository.delete(role);
+    }
+
+    private Set<String> roleCodes(List<Role> roles) {
+        return roles.stream()
+                .map(Role::getCode)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    private Map<String, List<RoleRepository.RolePermissionRow>> permissionRowsByRoleCode(Set<String> roleCodes) {
+        if (roleCodes == null || roleCodes.isEmpty()) {
+            return Map.of();
+        }
+
+        return roleMapper.groupPermissionRowsByRoleCode(
+                roleRepository.findPermissionsByRoleCodeIn(roleCodes)
+        );
     }
 }
 

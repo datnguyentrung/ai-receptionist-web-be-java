@@ -85,6 +85,15 @@ public class PersonService {
         return PageResponse.of(personRepository.findAll(pageable), personMapper::toSimpleResponse);
     }
 
+    @Transactional(readOnly = true)
+    public PageResponse<PersonDTO.SimpleResponse> list(UUID positionId, Pageable pageable) {
+        if (positionId == null) {
+            return list(pageable);
+        }
+        return PageResponse.of(personRepository.findByPosition_PositionId(positionId, pageable),
+                personMapper::toSimpleResponse);
+    }
+
     /**
      * Tác dụng: Lấy chi tiết một bản ghi theo khóa định danh.
      * Input: Nhận UUID id từ caller hoặc request.

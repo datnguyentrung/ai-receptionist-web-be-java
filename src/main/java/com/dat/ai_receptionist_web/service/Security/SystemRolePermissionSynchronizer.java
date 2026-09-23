@@ -18,6 +18,23 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Order(3)
 public class SystemRolePermissionSynchronizer implements ApplicationRunner {
+    private static final Set<String> GUARDIAN_PERMISSIONS = Set.of(
+            PermissionDefinition.STUDENT_ENROLLMENT_READ.getCode(),
+            PermissionDefinition.SESSION_ATTENDANCE_READ.getCode(),
+            PermissionDefinition.CLASS_SESSION_READ.getCode(),
+            PermissionDefinition.CLASS_SCHEDULE_READ.getCode(),
+            PermissionDefinition.COURSE_READ.getCode(),
+            PermissionDefinition.COURSE_PRICE_READ.getCode(),
+            PermissionDefinition.BELT_EXAM_READ.getCode(),
+            PermissionDefinition.FITNESS_READ.getCode(),
+            PermissionDefinition.FITNESS_RECORD_READ.getCode(),
+            PermissionDefinition.WALLET_READ.getCode(),
+            PermissionDefinition.WALLET_TRANSACTION_READ.getCode(),
+            PermissionDefinition.COURSE_PURCHASE_READ.getCode(),
+            PermissionDefinition.COURSE_PURCHASE_CREATE.getCode(),
+            PermissionDefinition.WALLET_TOP_UP_CREATE.getCode()
+    );
+
     private static final Set<String> SYSTEM_ADMIN_EXCLUDED_PERMISSIONS = Set.of(
             PermissionDefinition.WALLET_READ.getCode(),
             PermissionDefinition.WALLET_CREATE.getCode(),
@@ -63,6 +80,10 @@ public class SystemRolePermissionSynchronizer implements ApplicationRunner {
     }
 
     Set<String> getPermissionsForRole(SystemRoleDefinition role) {
+        if (role == SystemRoleDefinition.GUARDIAN) {
+            return Collections.unmodifiableSet(new TreeSet<>(GUARDIAN_PERMISSIONS));
+        }
+
         Set<String> permissionCodes = allPermissionCodes();
         if (role == SystemRoleDefinition.SYSTEM_ADMIN) {
             permissionCodes.removeAll(getSystemAdminExcludedPermissions());

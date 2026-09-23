@@ -27,7 +27,7 @@ import java.util.UUID;
 @Table(name = "person", schema = "core", uniqueConstraints = {
         @UniqueConstraint(name = "uk_person_national_code", columnNames = "national_code"),
         @UniqueConstraint(name = "uk_person_code", columnNames = "person_code")
-})
+}, indexes = @Index(name = "idx_person_position", columnList = "position_id"))
 public class Person {
     @Id
     @GeneratedValue

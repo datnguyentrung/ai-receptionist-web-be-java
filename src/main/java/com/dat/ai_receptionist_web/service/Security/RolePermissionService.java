@@ -13,6 +13,7 @@ import com.dat.ai_receptionist_web.repository.Security.PermissionRepository;
 import com.dat.ai_receptionist_web.repository.Security.RolePermissionRepository;
 import com.dat.ai_receptionist_web.repository.Security.RoleRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,6 +55,7 @@ public class RolePermissionService {
      * Output: Trả về RolePermissionDTO.ItemResponse theo kết quả xử lý.
      */
     @Transactional
+    @CacheEvict(value = "roleList", allEntries = true, cacheManager = "redisCacheManager")
     public RolePermissionDTO.ItemResponse create(RolePermissionDTO.CreateRequest request) {
         Role role = roleRepository.findById(request.roleCode())
                 .orElseThrow(() -> new ApiException(SecurityErrorCode.ROLE_NOT_FOUND));
@@ -72,6 +74,7 @@ public class RolePermissionService {
      * Output: Không trả về dữ liệu; cập nhật trạng thái hoặc ném lỗi khi xử lý thất bại.
      */
     @Transactional
+    @CacheEvict(value = "roleList", allEntries = true, cacheManager = "redisCacheManager")
     public void delete(String roleCode, Integer permissionId) {
         rolePermissionRepository.delete(find(roleCode, permissionId));
         roleRepository.incrementPermissionVersion(roleCode);
@@ -83,6 +86,7 @@ public class RolePermissionService {
      * Output: Trả về RolePermissionDTO.Response theo kết quả xử lý.
      */
     @Transactional
+    @CacheEvict(value = "roleList", allEntries = true, cacheManager = "redisCacheManager")
     public RolePermissionDTO.Response replace(String roleCode, Set<String> requestedCodes) {
         SyncResult result = replaceInternal(roleCode, requestedCodes);
         return rolePermissionMapper.toResponse(
@@ -98,6 +102,7 @@ public class RolePermissionService {
      * Output: Trả về SyncResult theo kết quả xử lý.
      */
     @Transactional
+    @CacheEvict(value = "roleList", allEntries = true, cacheManager = "redisCacheManager")
     public SyncResult replaceInternal(String roleCode, Set<String> requestedCodes) {
         String normalizedRoleCode = normalizeRoleCode(roleCode);
         SortedSet<String> desired = normalizeAndValidate(requestedCodes);
@@ -149,6 +154,7 @@ public class RolePermissionService {
      * Output: Trả về BulkSyncResult theo kết quả xử lý.
      */
     @Transactional
+    @CacheEvict(value = "roleList", allEntries = true, cacheManager = "redisCacheManager")
     public BulkSyncResult replaceAll(Map<String, Set<String>> requestedCodesByRole) {
         if (requestedCodesByRole == null) {
             throw new ApiException(SecurityErrorCode.ROLE_PERMISSIONS_REQUIRED);

@@ -9,9 +9,17 @@ import org.mapstruct.MappingTarget;
 
 @Mapper(componentModel = "spring")
 public interface PositionMapper {
+    @Mapping(target = "personCount", constant = "0L")
     PositionDTO.Response toResponse(Position entity);
 
+    @Mapping(target = "personCount", source = "personCount")
+    PositionDTO.Response toResponse(Position entity, long personCount);
+
+    @Mapping(target = "personCount", constant = "0L")
     PositionDTO.SimpleResponse toSimpleResponse(Position entity);
+
+    @Mapping(target = "personCount", source = "personCount")
+    PositionDTO.SimpleResponse toSimpleResponse(Position entity, long personCount);
 
     @Mapping(target = "positionId", ignore = true)
     @Mapping(target = "createdAt", ignore = true)

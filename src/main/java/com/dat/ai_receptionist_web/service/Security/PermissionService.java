@@ -1,13 +1,15 @@
 package com.dat.ai_receptionist_web.service.Security;
 
 import com.dat.ai_receptionist_web.domain.Security.Permission;
-import com.dat.ai_receptionist_web.dto.Security.PermissionDTO;
 import com.dat.ai_receptionist_web.dto.PageResponse;
+import com.dat.ai_receptionist_web.dto.Security.PermissionDTO;
 import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.code.SecurityErrorCode;
 import com.dat.ai_receptionist_web.mapper.Security.PermissionMapper;
 import com.dat.ai_receptionist_web.repository.Security.PermissionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +26,7 @@ public class PermissionService {
      * Output: Trả về PageResponse<PermissionDTO.SimpleResponse> theo kết quả xử lý.
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = "permissionList", key = "T(com.dat.ai_receptionist_web.util.CacheKeys).pageable(#pageable)", cacheManager = "redisCacheManager")
     public PageResponse<PermissionDTO.SimpleResponse> list(Pageable pageable) {
         return PageResponse.of(repository.findAll(pageable), mapper::toSimpleResponse);
     }
@@ -44,6 +47,7 @@ public class PermissionService {
      * Output: Trả về PermissionDTO.Response theo kết quả xử lý.
      */
     @Transactional
+    @CacheEvict(value = "permissionList", allEntries = true, cacheManager = "redisCacheManager")
     public PermissionDTO.Response create(PermissionDTO.CreateRequest request) {
         Permission entity = new Permission();
         entity.setCode(request.code());
@@ -59,7 +63,9 @@ public class PermissionService {
      * Output: Trả về PermissionDTO.Response theo kết quả xử lý.
      */
     @Transactional
-    public PermissionDTO.Response update(Integer id, PermissionDTO.UpdateRequest request) {
+    @CacheEvict(value = "permissionList", allEntries = true, cacheManager = "redisCacheManager")
+    public PermissionDTO.Response update(Integer id,
+                                         PermissionDTO.UpdateRequest request) {
         var entity = find(id);
         mapper.updateEntity(request, entity);
         return mapper.toResponse(repository.save(entity));
@@ -71,6 +77,7 @@ public class PermissionService {
      * Output: Không trả về dữ liệu; cập nhật trạng thái hoặc ném lỗi khi xử lý thất bại.
      */
     @Transactional
+    @CacheEvict(value = "permissionList", allEntries = true, cacheManager = "redisCacheManager")
     public void delete(Integer id) {
         var entity = find(id);
         repository.delete(entity);

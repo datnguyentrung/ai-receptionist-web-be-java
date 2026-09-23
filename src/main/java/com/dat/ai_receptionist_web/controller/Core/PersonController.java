@@ -24,7 +24,10 @@ public class PersonController {
      */
     @GetMapping
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).PERSON_READ.getCode())")
-    public PageResponse<PersonDTO.SimpleResponse> list(Pageable pageable) { return service.list(pageable); }
+    public PageResponse<PersonDTO.SimpleResponse> list(@RequestParam(required = false) UUID positionId,
+                                                       Pageable pageable) {
+        return service.list(positionId, pageable);
+    }
 
     /**
      * Tác dụng: Lấy chi tiết một bản ghi theo khóa định danh.

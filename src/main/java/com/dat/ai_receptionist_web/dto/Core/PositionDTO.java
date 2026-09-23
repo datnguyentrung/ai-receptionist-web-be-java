@@ -32,6 +32,7 @@ public final class PositionDTO {
             String name,
             String description,
             boolean active,
+            long personCount,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
@@ -41,7 +42,8 @@ public final class PositionDTO {
             UUID positionId,
             String code,
             String name,
-            boolean active
+            boolean active,
+            long personCount
     ) {
     }
 }

@@ -12,7 +12,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -22,12 +25,19 @@ public class PositionService {
 
     @Transactional(readOnly = true)
     public PageResponse<PositionDTO.SimpleResponse> list(Pageable pageable) {
-        return PageResponse.of(repository.findAll(pageable), mapper::toSimpleResponse);
+        var positions = repository.findAll(pageable);
+        Map<UUID, Long> personCounts = getPersonCounts(positions.getContent().stream()
+                .map(Position::getPositionId)
+                .collect(Collectors.toSet()));
+        return PageResponse.of(positions, position -> mapper.toSimpleResponse(
+                position,
+                personCounts.getOrDefault(position.getPositionId(), 0L)));
     }
 
     @Transactional(readOnly = true)
     public PositionDTO.Response get(UUID id) {
-        return mapper.toResponse(find(id));
+        Position position = find(id);
+        return mapper.toResponse(position, repository.countPersonsByPositionId(position.getPositionId()));
     }
 
     @Transactional
@@ -35,7 +45,7 @@ public class PositionService {
         requireUniqueCode(request.code());
         Position position = mapper.toEntity(request);
         position.setCode(normalizeCode(request.code()));
-        return mapper.toResponse(repository.save(position));
+        return mapper.toResponse(repository.save(position), 0L);
     }
 
     @Transactional
@@ -47,7 +57,8 @@ public class PositionService {
         }
         mapper.updateEntity(request, position);
         position.setCode(normalizedCode);
-        return mapper.toResponse(repository.save(position));
+        Position saved = repository.save(position);
+        return mapper.toResponse(saved, repository.countPersonsByPositionId(saved.getPositionId()));
     }
 
     @Transactional
@@ -69,5 +80,15 @@ public class PositionService {
 
     private String normalizeCode(String code) {
         return code == null ? null : code.trim().toUpperCase();
+    }
+
+    private Map<UUID, Long> getPersonCounts(Set<UUID> positionIds) {
+        if (positionIds.isEmpty()) {
+            return Map.of();
+        }
+        return repository.countPersonsByPositionIds(positionIds).stream()
+                .collect(Collectors.toMap(
+                        PositionRepository.PersonCountByPosition::getPositionId,
+                        PositionRepository.PersonCountByPosition::getPersonCount));
     }
 }

@@ -214,6 +214,8 @@ public class RedisConfig implements CachingConfigurer {
         specificCacheConfigs.put("coach", defaultConfig.entryTtl(ttlConfig.randomOneWeek()));
         specificCacheConfigs.put("coachByCode", defaultConfig.entryTtl(ttlConfig.randomOneWeek()));
         specificCacheConfigs.put("classSchedule", defaultConfig.entryTtl(ttlConfig.randomOneWeek()));
+        specificCacheConfigs.put("permissionList", defaultConfig.entryTtl(ttlConfig.randomOneWeek()));
+        specificCacheConfigs.put("roleList", defaultConfig.entryTtl(ttlConfig.randomOneWeek()));
 
         // 3. Build CacheManager
         return RedisCacheManager.builder(connectionFactory)

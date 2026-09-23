@@ -18,4 +18,6 @@ public interface PersonRepository extends JpaRepository<Person, UUID> {
 
     Page<Person> findByFullNameContainingIgnoreCaseOrPersonCodeContainingIgnoreCase(
             String fullName, String personCode, Pageable pageable);
+
+    Page<Person> findByPosition_PositionId(UUID positionId, Pageable pageable);
 }

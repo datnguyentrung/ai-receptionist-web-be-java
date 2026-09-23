@@ -17,6 +17,12 @@ public enum SystemRoleDefinition {
             "SYSTEM_ADMIN",
             "System Administrator",
             "Has administrative privileges within the system"
+    ),
+
+    GUARDIAN(
+            "GUARDIAN",
+            "Guardian",
+            "Parent or guardian with access to dependent student information"
     );
 
     private final String code;

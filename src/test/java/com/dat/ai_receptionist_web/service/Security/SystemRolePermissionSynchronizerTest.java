@@ -52,6 +52,41 @@ class SystemRolePermissionSynchronizerTest {
     }
 
     @Test
+    void guardianReceivesOnlyDependentStudentPermissions() {
+        Set<String> permissions = synchronizer.getPermissionsForRole(SystemRoleDefinition.GUARDIAN);
+
+        assertThat(permissions).containsExactlyInAnyOrder(
+                PermissionDefinition.STUDENT_ENROLLMENT_READ.getCode(),
+                PermissionDefinition.SESSION_ATTENDANCE_READ.getCode(),
+                PermissionDefinition.CLASS_SESSION_READ.getCode(),
+                PermissionDefinition.CLASS_SCHEDULE_READ.getCode(),
+                PermissionDefinition.COURSE_READ.getCode(),
+                PermissionDefinition.COURSE_PRICE_READ.getCode(),
+                PermissionDefinition.BELT_EXAM_READ.getCode(),
+                PermissionDefinition.FITNESS_READ.getCode(),
+                PermissionDefinition.FITNESS_RECORD_READ.getCode(),
+                PermissionDefinition.WALLET_READ.getCode(),
+                PermissionDefinition.WALLET_TRANSACTION_READ.getCode(),
+                PermissionDefinition.COURSE_PURCHASE_READ.getCode(),
+                PermissionDefinition.COURSE_PURCHASE_CREATE.getCode(),
+                PermissionDefinition.WALLET_TOP_UP_CREATE.getCode()
+        );
+        assertThat(permissions).doesNotContain(
+                PermissionDefinition.LEAVE_REQUEST_CREATE.getCode(),
+                PermissionDefinition.LEAVE_REQUEST_UPDATE.getCode(),
+                PermissionDefinition.AUTH_SESSION_READ.getCode(),
+                PermissionDefinition.AUTH_SESSION_CREATE.getCode(),
+                PermissionDefinition.AUTH_SESSION_UPDATE.getCode(),
+                PermissionDefinition.AUTH_SESSION_DELETE.getCode(),
+                PermissionDefinition.PERMISSION_READ.getCode(),
+                PermissionDefinition.ROLE_READ.getCode(),
+                PermissionDefinition.ROLE_PERMISSION_READ.getCode(),
+                PermissionDefinition.USER_ROLE_READ.getCode(),
+                PermissionDefinition.USER_READ.getCode()
+        );
+    }
+
+    @Test
     void runReplacesAllSystemRolePermissionsInOneBulkCall() {
         when(rolePermissionService.replaceAll(anyMap()))
                 .thenReturn(new RolePermissionService.BulkSyncResult(0, 0));
@@ -63,7 +98,8 @@ class SystemRolePermissionSynchronizerTest {
         verify(rolePermissionService).replaceAll(desired.capture());
         assertThat(desired.getValue().keySet()).containsExactlyInAnyOrder(
                 SystemRoleDefinition.SUPER_ADMIN.getCode(),
-                SystemRoleDefinition.SYSTEM_ADMIN.getCode()
+                SystemRoleDefinition.SYSTEM_ADMIN.getCode(),
+                SystemRoleDefinition.GUARDIAN.getCode()
         );
     }
 }

@@ -11,8 +11,12 @@ import com.dat.ai_receptionist_web.repository.Core.PositionRepository;
 import com.dat.ai_receptionist_web.repository.Finance.WalletRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -51,5 +55,29 @@ class PersonServiceTest {
         assertThat(wallet.getValue().getBalance()).isZero();
         assertThat(wallet.getValue().getStatus()).isEqualTo(WalletStatus.ACTIVE);
         assertThat(wallet.getValue().getPerson().getPersonCode()).isEqualTo("VQ_anv_010100");
+    }
+
+    @Test
+    void listsPeopleByPositionWhenPositionIdFilterIsProvided() {
+        PersonRepository people = mock(PersonRepository.class);
+        WalletRepository wallets = mock(WalletRepository.class);
+        PersonMapper personMapper = mock(PersonMapper.class);
+        UUID positionId = UUID.randomUUID();
+        Pageable pageable = Pageable.unpaged();
+        Person person = Person.builder().personId(UUID.randomUUID()).fullName("Nguyen Van A").build();
+        PersonDTO.SimpleResponse response = new PersonDTO.SimpleResponse(person.getPersonId(), "Nguyen Van A",
+                null, null, null, null, null, null);
+
+        when(people.findByPosition_PositionId(positionId, pageable)).thenReturn(new PageImpl<>(List.of(person)));
+        when(personMapper.toSimpleResponse(person)).thenReturn(response);
+
+        PersonService service = new PersonService(people, wallets, personMapper,
+                new PersonCodePolicy(), mock(PositionRepository.class));
+
+        var result = service.list(positionId, pageable);
+
+        assertThat(result.getContent()).containsExactly(response);
+        verify(people).findByPosition_PositionId(positionId, pageable);
+        verify(people, never()).findAll(pageable);
     }
 }

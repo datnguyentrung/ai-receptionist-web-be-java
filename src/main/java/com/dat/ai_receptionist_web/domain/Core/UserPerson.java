@@ -20,7 +20,13 @@ import java.util.UUID;
 @Entity
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "user_person", schema = "core", uniqueConstraints =
-        @UniqueConstraint(name = "uk_user_person_relationship", columnNames = {"user_id", "person_id", "relationship_type"}))
+        @UniqueConstraint(name = "uk_user_person_relationship",
+                columnNames = {"user_id", "person_id", "relationship_type"}),
+        indexes = {
+                @Index(name = "idx_user_person_person", columnList = "person_id"),
+                @Index(name = "idx_user_person_user_relationship_person_active",
+                        columnList = "user_id,relationship_type,person_id,active")
+        })
 public class UserPerson {
     @Id
     @GeneratedValue

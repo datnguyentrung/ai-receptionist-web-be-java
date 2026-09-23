@@ -24,6 +24,11 @@ import java.util.UUID;
                 columnNames = {"class_session_id", "student_enrollment_id"}),
         @UniqueConstraint(name = "uk_session_attendance_session_staff_assignment",
                 columnNames = {"class_session_id", "course_staff_assignment_id"})
+}, indexes = {
+        @Index(name = "idx_session_attendance_session", columnList = "class_session_id"),
+        @Index(name = "idx_session_attendance_enrollment", columnList = "student_enrollment_id"),
+        @Index(name = "idx_session_attendance_course_staff_assignment",
+                columnList = "course_staff_assignment_id")
 })
 public class SessionAttendance {
     @Id

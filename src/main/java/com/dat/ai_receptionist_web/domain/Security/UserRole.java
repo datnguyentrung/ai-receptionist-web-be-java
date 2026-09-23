@@ -11,7 +11,8 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "user_role", schema = "security")
+@Table(name = "user_role", schema = "security",
+        indexes = @Index(name = "idx_user_role_role", columnList = "role_id"))
 public class UserRole {
     @EmbeddedId
     private Key id;

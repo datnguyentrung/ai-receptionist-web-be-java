@@ -20,7 +20,13 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "notification_recipient", schema = "notification")
+@Table(name = "notification_recipient", schema = "notification", indexes = {
+        @Index(name = "idx_notification_recipient_user", columnList = "recipient_user_id"),
+        @Index(name = "idx_notification_recipient_inbox_context",
+                columnList = "recipient_user_id,context_person_id,created_at DESC,notification_recipient_id DESC"),
+        @Index(name = "idx_notification_recipient_unread_context",
+                columnList = "recipient_user_id,context_person_id,created_at DESC,notification_recipient_id DESC")
+})
 public class NotificationRecipient {
     @Id
     @GeneratedValue

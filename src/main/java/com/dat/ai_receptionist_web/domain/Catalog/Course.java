@@ -19,7 +19,11 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "course", schema = "catalog")
+@Table(name = "course", schema = "catalog", indexes = {
+        @Index(name = "idx_course_next_schedule_effective", columnList = "next_schedule_effective_from"),
+        @Index(name = "idx_course_schedule_status", columnList = "schedule_id,status"),
+        @Index(name = "idx_course_next_schedule", columnList = "next_schedule_id")
+})
 public class Course {
     @Id
     @GeneratedValue

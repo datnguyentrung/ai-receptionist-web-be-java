@@ -17,7 +17,12 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "class_session", schema = "training")
+@Table(name = "class_session", schema = "training", indexes = {
+        @Index(name = "idx_class_session_date_time", columnList = "session_date,start_time"),
+        @Index(name = "idx_class_session_lifecycle", columnList = "status,session_date,start_time"),
+        @Index(name = "idx_class_session_closure", columnList = "status,is_attendance_closed,session_date"),
+        @Index(name = "idx_class_session_course_session_date", columnList = "course_id,session_date")
+})
 public class ClassSession {
     @Id
     @GeneratedValue

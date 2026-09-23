@@ -21,7 +21,8 @@ import java.util.UUID;
 @Entity
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "wallet_transaction", schema = "finance", uniqueConstraints =
-        @UniqueConstraint(name = "uk_wallet_tx_type_reference", columnNames = {"type", "external_reference"}))
+        @UniqueConstraint(name = "uk_wallet_tx_type_reference", columnNames = {"type", "external_reference"}),
+        indexes = @Index(name = "idx_wallet_tx_wallet_created", columnList = "wallet_id,created_at DESC"))
 public class WalletTransaction {
     @Id
     @GeneratedValue

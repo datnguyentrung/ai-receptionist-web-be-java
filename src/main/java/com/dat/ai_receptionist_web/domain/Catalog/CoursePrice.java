@@ -14,7 +14,8 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "course_price", schema = "catalog")
+@Table(name = "course_price", schema = "catalog",
+        indexes = @Index(name = "idx_course_price_course", columnList = "course_id"))
 public class CoursePrice {
     @Id
     @GeneratedValue

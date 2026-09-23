@@ -19,7 +19,12 @@ import java.util.UUID;
 @Entity
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "auth_session", schema = "security", uniqueConstraints =
-        @UniqueConstraint(name = "uk_auth_session_refresh_hash", columnNames = "refresh_token_hash"))
+        @UniqueConstraint(name = "uk_auth_session_refresh_hash", columnNames = "refresh_token_hash"),
+        indexes = {
+                @Index(name = "idx_auth_session_user", columnList = "user_id"),
+                @Index(name = "idx_auth_session_active_user_person_revoked",
+                        columnList = "active_user_person_id,revoked")
+        })
 public class AuthSession {
     @Id
     @GeneratedValue

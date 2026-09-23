@@ -15,7 +15,8 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @Table(name = "course_purchase", schema = "finance", uniqueConstraints =
-        @UniqueConstraint(name = "uk_course_purchase_debit_tx", columnNames = "debit_transaction_id"))
+        @UniqueConstraint(name = "uk_course_purchase_debit_tx", columnNames = "debit_transaction_id"),
+        indexes = @Index(name = "idx_course_purchase_price", columnList = "course_price_id"))
 public class CoursePurchase {
     @Id
     @GeneratedValue

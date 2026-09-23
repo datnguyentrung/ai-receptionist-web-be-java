@@ -23,7 +23,13 @@ import java.util.UUID;
 @Entity
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "student_enrollment", schema = "training", uniqueConstraints =
-        @UniqueConstraint(name = "uk_enrollment_course_purchase", columnNames = "course_purchase_id"))
+        @UniqueConstraint(name = "uk_enrollment_course_purchase", columnNames = "course_purchase_id"),
+        indexes = {
+                @Index(name = "idx_enrollment_schedule", columnList = "class_schedule_id"),
+                @Index(name = "idx_student_enrollment_student_period",
+                        columnList = "student_person_id,start_date,end_date"),
+                @Index(name = "idx_enrollment_status_period", columnList = "status,start_date,end_date")
+        })
 public class StudentEnrollment {
     @Id
     @GeneratedValue

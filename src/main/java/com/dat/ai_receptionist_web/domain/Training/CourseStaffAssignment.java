@@ -24,7 +24,14 @@ import java.util.UUID;
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "course_staff_assignment", schema = "training", uniqueConstraints =
         @UniqueConstraint(name = "uk_course_staff_assignment_course_staff_type",
-                columnNames = {"course_id", "staff_person_id", "assignment_type"}))
+                columnNames = {"course_id", "staff_person_id", "assignment_type"}),
+        indexes = {
+                @Index(name = "idx_course_staff_assignment_person_course_period",
+                        columnList = "staff_person_id,course_id,start_date,end_date"),
+                @Index(name = "idx_course_staff_assignment_course", columnList = "course_id"),
+                @Index(name = "idx_course_staff_assignment_course_type_period",
+                        columnList = "course_id,assignment_type,start_date,end_date,assignment_status")
+        })
 public class CourseStaffAssignment {
     @Id
     @GeneratedValue

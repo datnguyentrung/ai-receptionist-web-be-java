@@ -10,7 +10,8 @@ import java.io.Serializable;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "role_permission", schema = "security")
+@Table(name = "role_permission", schema = "security",
+        indexes = @Index(name = "idx_role_permission_permission", columnList = "permission_id"))
 public class RolePermission {
     @EmbeddedId
     private Key id;

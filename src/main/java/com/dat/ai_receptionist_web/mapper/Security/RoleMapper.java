@@ -47,6 +47,8 @@ public interface RoleMapper {
         );
     }
 
+    RoleDTO.BriefResponse toBriefResponse(Role entity);
+
     default Map<String, List<RoleRepository.RolePermissionRow>> groupPermissionRowsByRoleCode(
             List<RoleRepository.RolePermissionRow> permissionRows
     ) {

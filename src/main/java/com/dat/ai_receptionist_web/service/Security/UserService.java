@@ -6,16 +6,19 @@ import com.dat.ai_receptionist_web.dto.Core.PersonDTO;
 import com.dat.ai_receptionist_web.dto.Core.UserPersonDTO;
 import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.dto.Security.ChangePasswordReq;
+import com.dat.ai_receptionist_web.dto.Security.RoleDTO;
 import com.dat.ai_receptionist_web.dto.Security.UserDTO;
 import com.dat.ai_receptionist_web.enums.Security.UserStatus;
 import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.code.CoreErrorCode;
 import com.dat.ai_receptionist_web.error.code.SecurityErrorCode;
 import com.dat.ai_receptionist_web.mapper.Core.PersonMapper;
+import com.dat.ai_receptionist_web.mapper.Security.RoleMapper;
 import com.dat.ai_receptionist_web.mapper.Security.UserMapper;
 import com.dat.ai_receptionist_web.repository.Core.PersonRepository;
 import com.dat.ai_receptionist_web.repository.Core.UserPersonRepository;
 import com.dat.ai_receptionist_web.repository.Security.UserRepository;
+import com.dat.ai_receptionist_web.repository.Security.UserRoleRepository;
 import com.dat.ai_receptionist_web.service.Core.PersonService;
 import com.dat.ai_receptionist_web.service.Core.UserPersonService;
 import com.dat.ai_receptionist_web.util.PhoneNumberUtil;
@@ -43,6 +46,8 @@ public class UserService {
     private final PersonService personService;
     private final UserPersonRepository userPersonRepository;
     private final PersonMapper personMapper;
+    private final UserRoleRepository userRoleRepository;
+    private final RoleMapper roleMapper;
 
     /**
      * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
@@ -67,13 +72,13 @@ public class UserService {
         Set<UUID> userIds = users.getContent().stream()
                 .map(User::getUserId)
                 .collect(Collectors.toSet());
-        Map<UUID, List<PersonDTO.SimpleResponse>> personsByUserId = userIds.isEmpty()
+        Map<UUID, List<PersonDTO.BriefResponse>> personsByUserId = userIds.isEmpty()
                 ? Map.of()
                 : userPersonRepository.findAllActiveByUserIds(userIds).stream()
                 .collect(Collectors.groupingBy(
                         userPerson -> userPerson.getUser().getUserId(),
                         Collectors.mapping(
-                                userPerson -> personMapper.toSimpleResponse(userPerson.getPerson()),
+                                userPerson -> personMapper.toBriefResponse(userPerson.getPerson()),
                                 Collectors.toList()
                         )
                 ));
@@ -109,7 +114,32 @@ public class UserService {
      */
     @Transactional(readOnly = true)
     public UserDTO.Response get(UUID id) {
-        return userMapper.toResponse(find(id));
+        return toResponse(find(id));
+    }
+
+    private UserDTO.Response toResponse(User user) {
+        List<PersonDTO.BriefResponse> persons = userPersonRepository
+                .findAllByUser_UserIdAndActiveTrue(user.getUserId())
+                .stream()
+                .map(userPerson -> personMapper.toBriefResponse(userPerson.getPerson()))
+                .toList();
+        List<RoleDTO.BriefResponse> roles = userRoleRepository
+                .findAllDetailedByUserId(user.getUserId())
+                .stream()
+                .map(userRole -> roleMapper.toBriefResponse(userRole.getRole()))
+                .toList();
+
+        return new UserDTO.Response(
+                user.getUserId(),
+                user.getPhoneNumber(),
+                user.getStatus(),
+                user.getAuthorizationVersion(),
+                user.getLastLoginAt(),
+                user.getCreatedAt(),
+                user.getUpdatedAt(),
+                persons,
+                roles
+        );
     }
 
     /**
@@ -142,7 +172,7 @@ public class UserService {
                 )
         );
 
-        return userMapper.toResponse(user);
+        return toResponse(user);
     }
 
     /**
@@ -154,7 +184,8 @@ public class UserService {
     public UserDTO.Response update(UUID id, UserDTO.UpdateRequest request) {
         User user = find(id);
         userMapper.updateEntity(request, user);
-        return userMapper.toResponse(userRepository.save(user));
+        user.setPasswordHash(passwordEncoder.encode(request.passwordHash()));
+        return toResponse(userRepository.save(user));
     }
 
     /**

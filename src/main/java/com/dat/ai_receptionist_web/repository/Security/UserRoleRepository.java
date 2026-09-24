@@ -23,6 +23,15 @@ public interface UserRoleRepository extends JpaRepository<UserRole, UserRole.Key
 
     List<UserRole> findAllById_UserId(UUID userId);
 
+    @EntityGraph(attributePaths = "role")
+    @Query("""
+            select ur
+            from UserRole ur
+            where ur.user.userId = :userId
+            order by ur.role.code
+            """)
+    List<UserRole> findAllDetailedByUserId(@Param("userId") UUID userId);
+
     @Query("select ur.role.code from UserRole ur where ur.id.userId = :userId order by ur.role.code")
     SortedSet<String> findRoleCodes(@Param("userId") UUID userId);
 

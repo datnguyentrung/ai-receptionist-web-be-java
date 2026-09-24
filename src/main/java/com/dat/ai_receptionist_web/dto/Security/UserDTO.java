@@ -43,12 +43,13 @@ public final class UserDTO {
     public record Response(
             UUID userId,
             String phoneNumber,
-            String passwordHash,
             UserStatus status,
             long authorizationVersion,
             LocalDateTime lastLoginAt,
             LocalDateTime createdAt,
-            LocalDateTime updatedAt
+            LocalDateTime updatedAt,
+            List<PersonDTO.BriefResponse> persons,
+            List<RoleDTO.BriefResponse> roles
     ) {
     }
 
@@ -57,7 +58,7 @@ public final class UserDTO {
             String phoneNumber,
             UserStatus status,
             LocalDateTime lastLoginAt,
-            List<PersonDTO.SimpleResponse> persons
+            List<PersonDTO.BriefResponse> persons
     ) {
     }
 }

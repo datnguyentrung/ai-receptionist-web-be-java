@@ -28,6 +28,9 @@ public interface UserPersonRepository extends JpaRepository<UserPerson, UUID> {
     @EntityGraph(attributePaths = "person")
     List<UserPerson> findAllByUser_UserIdAndActiveTrue(UUID userId);
 
+    @EntityGraph(attributePaths = {"person", "person.position"})
+    List<UserPerson> findAllDetailedByUser_UserIdAndActiveTrue(UUID userId);
+
     @EntityGraph(attributePaths = {"user", "person"})
     @Query("""
             select up

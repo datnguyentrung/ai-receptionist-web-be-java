@@ -72,6 +72,16 @@ public final class PersonDTO {
     ) {
     }
 
+    public record BriefResponse(
+            UUID personId,
+            String fullName,
+            String personCode,
+            Belt currentBelt,
+            PersonStatus status,
+            String faceImagePath
+    ) {
+    }
+
     public record SimpleResponse(
             UUID personId,
             String fullName,

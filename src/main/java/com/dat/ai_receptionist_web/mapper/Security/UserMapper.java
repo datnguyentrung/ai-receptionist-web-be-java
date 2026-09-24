@@ -10,6 +10,8 @@ import org.mapstruct.MappingTarget;
 @Mapper(componentModel = "spring")
 public interface UserMapper {
     @Mapping(target = "userId", source = "userId")
+    @Mapping(target = "persons", ignore = true)
+    @Mapping(target = "roles", ignore = true)
     UserDTO.Response toResponse(User entity);
 
     @Mapping(target = "userId", source = "userId")
@@ -18,7 +20,7 @@ public interface UserMapper {
 
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "phoneNumber", source = "phoneNumber")
-    @Mapping(target = "passwordHash", source = "passwordHash")
+    @Mapping(target = "passwordHash", ignore = true)
     @Mapping(target = "status", source = "status")
     @Mapping(target = "authorizationVersion", source = "authorizationVersion")
     @Mapping(target = "lastLoginAt", source = "lastLoginAt")

@@ -15,6 +15,9 @@ public interface PersonMapper {
     @Mapping(target = "personId", source = "personId")
     PersonDTO.SimpleResponse toSimpleResponse(Person entity);
 
+    @Mapping(target = "personId", source = "personId")
+    PersonDTO.BriefResponse toBriefResponse(Person entity);
+
     @Mapping(target = "personId", ignore = true)
     @Mapping(target = "personCode", ignore = true)
     @Mapping(target = "createdAt", ignore = true)

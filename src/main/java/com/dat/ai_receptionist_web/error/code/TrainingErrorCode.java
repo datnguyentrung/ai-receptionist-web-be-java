@@ -48,7 +48,17 @@ public enum TrainingErrorCode implements ErrorCode {
     SESSION_ATTENDANCE_PARTICIPANT_INVALID("SESSION_ATTENDANCE_PARTICIPANT_INVALID", HttpStatus.BAD_REQUEST,
             "Session attendance participant invalid", "Exactly one session attendance participant is required"),
     STUDENT_ENROLLMENT_NOT_EFFECTIVE("STUDENT_ENROLLMENT_NOT_EFFECTIVE", HttpStatus.UNPROCESSABLE_CONTENT,
-            "Student enrollment not effective", "Student enrollment is not effective for this session");
+            "Student enrollment not effective", "Student enrollment is not effective for this session"),
+    FACE_CHECK_IN_NO_ACTIVE_CONTEXT("FACE_CHECK_IN_NO_ACTIVE_CONTEXT", HttpStatus.NOT_FOUND,
+            "No active face check-in context", "No active attendance context was found for this person"),
+    FACE_CHECK_IN_AMBIGUOUS_CONTEXT("FACE_CHECK_IN_AMBIGUOUS_CONTEXT", HttpStatus.CONFLICT,
+            "Ambiguous face check-in context", "Multiple attendance contexts match this person"),
+    FACE_CHECK_IN_UNSUPPORTED_CONTEXT("FACE_CHECK_IN_UNSUPPORTED_CONTEXT", HttpStatus.UNPROCESSABLE_CONTENT,
+            "Unsupported face check-in context", "This attendance context is not supported for face check-in"),
+    FACE_CHECK_IN_ALREADY_CHECKED_IN("FACE_CHECK_IN_ALREADY_CHECKED_IN", HttpStatus.CONFLICT,
+            "Already checked in", "This person has already checked in"),
+    FACE_CHECK_IN_ALREADY_CHECKED_OUT("FACE_CHECK_IN_ALREADY_CHECKED_OUT", HttpStatus.CONFLICT,
+            "Already checked out", "This coach timesheet is already checked out");
 
     private final String code;
     private final HttpStatus status;

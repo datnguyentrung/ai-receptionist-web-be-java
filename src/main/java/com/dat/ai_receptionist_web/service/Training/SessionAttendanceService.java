@@ -1,10 +1,13 @@
 package com.dat.ai_receptionist_web.service.Training;
 
+import com.dat.ai_receptionist_web.domain.Training.ClassSession;
 import com.dat.ai_receptionist_web.domain.Training.CourseStaffAssignment;
 import com.dat.ai_receptionist_web.domain.Training.SessionAttendance;
 import com.dat.ai_receptionist_web.domain.Training.StudentEnrollment;
 import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.dto.Training.SessionAttendanceDTO;
+import com.dat.ai_receptionist_web.enums.Training.AttendanceStatus;
+import com.dat.ai_receptionist_web.enums.Training.EvaluationStatus;
 import com.dat.ai_receptionist_web.enums.Security.PermissionDefinition;
 import com.dat.ai_receptionist_web.enums.Training.AssignmentType;
 import com.dat.ai_receptionist_web.error.ApiException;
@@ -20,6 +23,7 @@ import com.dat.ai_receptionist_web.service.Security.access.CurrentAccessContextR
 import com.dat.ai_receptionist_web.service.Training.access.SessionAttendanceAccessPolicy;
 import com.dat.ai_receptionist_web.service.Training.access.TrainingAccessScope;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -127,6 +131,14 @@ public class SessionAttendanceService {
         repository.delete(entity);
     }
 
+    @Transactional
+    public SessionAttendance checkInResolvedStudent(UUID classSessionId, UUID studentEnrollmentId,
+                                                    java.time.LocalDateTime checkInTime) {
+        return repository.findByClassSession_ClassSessionIdAndStudentEnrollment_StudentEnrollmentId(
+                        classSessionId, studentEnrollmentId)
+                .orElseGet(() -> createResolvedStudentAttendance(classSessionId, studentEnrollmentId, checkInTime));
+    }
+
     private SessionAttendance findReadable(UUID id, AccessContext context) {
         TrainingAccessScope scope = accessPolicy.resolveReadScope(context);
         return repository.findAccessibleById(
@@ -163,6 +175,42 @@ public class SessionAttendanceService {
             throw new ApiException(TrainingErrorCode.COURSE_STAFF_ASSIGNMENT_NOT_EFFECTIVE);
         }
         return assignment;
+    }
+
+    private SessionAttendance createResolvedStudentAttendance(UUID classSessionId, UUID studentEnrollmentId,
+                                                              java.time.LocalDateTime checkInTime) {
+        ClassSession session = classSessionRepository.findById(classSessionId)
+                .orElseThrow(() -> new ApiException(TrainingErrorCode.CLASS_SESSION_NOT_FOUND));
+        StudentEnrollment enrollment = studentEnrollmentRepository.findById(studentEnrollmentId)
+                .orElseThrow(() -> new ApiException(TrainingErrorCode.STUDENT_ENROLLMENT_NOT_FOUND));
+        personCodePolicy.requireStudent(enrollment.getStudentPerson());
+        accessPolicy.requireCanCreate(session, enrollment, null);
+        SessionAttendance entity = baseResolvedAttendance(session, checkInTime);
+        entity.setStudentEnrollment(enrollment);
+        return saveResolvedAttendance(entity, () -> repository
+                .findByClassSession_ClassSessionIdAndStudentEnrollment_StudentEnrollmentId(classSessionId, studentEnrollmentId)
+                .orElseThrow(() -> new ApiException(TrainingErrorCode.SESSION_ATTENDANCE_NOT_FOUND)));
+    }
+
+    private SessionAttendance baseResolvedAttendance(ClassSession session, java.time.LocalDateTime checkInTime) {
+        SessionAttendance entity = new SessionAttendance();
+        entity.setClassSession(session);
+        entity.setCheckInTime(checkInTime);
+        entity.setAttendanceStatus(AttendanceStatus.PRESENT);
+        entity.setEvaluationStatus(EvaluationStatus.PENDING);
+        entity.setNote("FACE_CHECK_IN");
+        return entity;
+    }
+
+    private SessionAttendance saveResolvedAttendance(
+            SessionAttendance entity,
+            java.util.function.Supplier<SessionAttendance> existingAfterConflict
+    ) {
+        try {
+            return repository.saveAndFlush(entity);
+        } catch (DataIntegrityViolationException exception) {
+            return existingAfterConflict.get();
+        }
     }
 
     private SessionAttendanceDTO.AllowedActions allowedActions(SessionAttendance entity, AccessContext context) {

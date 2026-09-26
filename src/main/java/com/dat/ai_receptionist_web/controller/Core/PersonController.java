@@ -6,9 +6,11 @@ import com.dat.ai_receptionist_web.service.Core.PersonService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import java.util.UUID;
 
 @RestController
@@ -66,6 +68,37 @@ public class PersonController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).PERSON_DELETE.getCode())")
     public void delete(@PathVariable UUID id) { service.delete(id); }
+
+    @PostMapping(value = "/identify", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).PERSON_READ.getCode())")
+    public PersonDTO.Response identify(
+            @RequestPart(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "personCode", required = false) String personCode
+    ) {
+        return service.identifyPerson(file, personCode);
+    }
+
+    @PatchMapping(value = "/{personId}/face-embedding", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).PERSON_UPDATE.getCode())")
+    public PersonDTO.FaceEmbeddingUpdateResponse updateFaceEmbedding(
+            @PathVariable UUID personId,
+            @RequestPart("file") MultipartFile file
+    ) {
+        return service.updateFaceEmbedding(file, personId);
+    }
+
+    @GetMapping("/{personId}/face-image-url")
+    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).PERSON_READ.getCode())")
+    public PersonDTO.FaceImageUrlResponse getFaceImageUrl(@PathVariable UUID personId) {
+        return service.getFaceImageUrl(personId);
+    }
+
+    @DeleteMapping("/{personId}/face-embedding")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).PERSON_UPDATE.getCode())")
+    public void deleteFaceEmbedding(@PathVariable UUID personId) {
+        service.deleteFaceEmbedding(personId);
+    }
 }
 
 

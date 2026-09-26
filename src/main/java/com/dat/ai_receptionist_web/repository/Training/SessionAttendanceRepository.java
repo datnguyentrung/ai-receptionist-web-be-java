@@ -19,6 +19,12 @@ public interface SessionAttendanceRepository extends JpaRepository<SessionAttend
     boolean existsByClassSession_ClassSessionIdAndCourseStaffAssignment_CourseStaffAssignmentId(
             UUID classSessionId, UUID courseStaffAssignmentId);
 
+    Optional<SessionAttendance> findByClassSession_ClassSessionIdAndStudentEnrollment_StudentEnrollmentId(
+            UUID classSessionId, UUID studentEnrollmentId);
+
+    Optional<SessionAttendance> findByClassSession_ClassSessionIdAndCourseStaffAssignment_CourseStaffAssignmentId(
+            UUID classSessionId, UUID courseStaffAssignmentId);
+
     List<SessionAttendance> findByClassSession_ClassSessionId(UUID classSessionId);
 
     @Query(value = """

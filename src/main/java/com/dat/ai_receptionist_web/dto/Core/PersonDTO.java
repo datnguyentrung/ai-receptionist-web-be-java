@@ -93,4 +93,17 @@ public final class PersonDTO {
             String faceImagePath
     ) {
     }
+
+    public record FaceEmbeddingUpdateResponse(
+            UUID personId,
+            int dimension,
+            String model,
+            String faceImagePath,
+            String avatarUrl,
+            LocalDateTime updatedAt
+    ) {
+    }
+
+    public record FaceImageUrlResponse(String url) {
+    }
 }

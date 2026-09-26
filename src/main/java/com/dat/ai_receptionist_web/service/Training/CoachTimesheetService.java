@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.service.Training;
 
 import com.dat.ai_receptionist_web.domain.Training.CoachTimesheet;
+import com.dat.ai_receptionist_web.domain.Training.ClassSession;
 import com.dat.ai_receptionist_web.domain.Training.CourseStaffAssignment;
 import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.dto.Training.CoachTimesheetDTO;
@@ -18,11 +19,14 @@ import com.dat.ai_receptionist_web.service.Security.access.CurrentAccessContextR
 import com.dat.ai_receptionist_web.service.Training.access.CoachTimesheetAccessPolicy;
 import com.dat.ai_receptionist_web.service.Training.access.TrainingAccessScope;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.UUID;
 
 @Service
@@ -101,6 +105,15 @@ public class CoachTimesheetService {
         repository.delete(entity);
     }
 
+    @Transactional
+    public CoachTimesheet checkInResolvedCoach(UUID classSessionId, UUID courseStaffAssignmentId,
+                                               LocalDateTime now) {
+        return repository.findByClassSession_ClassSessionIdAndCourseStaffAssignment_CourseStaffAssignmentId(
+                        classSessionId, courseStaffAssignmentId)
+                .map(existing -> applyResolvedCoachRescan(existing, now))
+                .orElseGet(() -> createResolvedCoachTimesheet(classSessionId, courseStaffAssignmentId, now));
+    }
+
     private CoachTimesheet findAccessible(UUID id, AccessContext context) {
         TrainingAccessScope scope = accessPolicy.resolveReadScope(context);
         return repository.findAccessibleById(
@@ -157,6 +170,52 @@ public class CoachTimesheetService {
         } catch (ApiException ex) {
             return false;
         }
+    }
+
+    private CoachTimesheet createResolvedCoachTimesheet(UUID classSessionId, UUID courseStaffAssignmentId,
+                                                        LocalDateTime now) {
+        ClassSession session = classSessionRepository.findById(classSessionId)
+                .orElseThrow(() -> new ApiException(TrainingErrorCode.CLASS_SESSION_NOT_FOUND));
+        CourseStaffAssignment assignment = courseStaffAssignmentRepository.findById(courseStaffAssignmentId)
+                .orElseThrow(() -> new ApiException(TrainingErrorCode.COURSE_STAFF_ASSIGNMENT_NOT_FOUND));
+        requireResolvedStaffAssignment(session, assignment);
+        personCodePolicy.requireSystemEmployee(assignment.getStaffPerson());
+        CoachTimesheet entity = new CoachTimesheet();
+        entity.setClassSession(session);
+        entity.setCourseStaffAssignment(assignment);
+        entity.setCheckInTime(now.toLocalTime());
+        entity.setNote("FACE_CHECK_IN");
+        try {
+            return repository.saveAndFlush(entity);
+        } catch (DataIntegrityViolationException exception) {
+            return repository.findByClassSession_ClassSessionIdAndCourseStaffAssignment_CourseStaffAssignmentId(
+                            classSessionId, courseStaffAssignmentId)
+                    .orElseThrow(() -> new ApiException(TrainingErrorCode.COACH_TIMESHEET_NOT_FOUND));
+        }
+    }
+
+    private CoachTimesheet applyResolvedCoachRescan(CoachTimesheet existing, LocalDateTime now) {
+        if (existing.getCheckOutTime() != null) {
+            return existing;
+        }
+        if (isAtOrAfterSessionEnd(existing.getClassSession(), now.toLocalTime())) {
+            existing.setCheckOutTime(now.toLocalTime());
+            return repository.save(existing);
+        }
+        return existing;
+    }
+
+    private void requireResolvedStaffAssignment(ClassSession session, CourseStaffAssignment assignment) {
+        if (!assignment.getCourse().getCourseId().equals(session.getCourse().getCourseId())
+                || assignment.getStartDate().isAfter(session.getSessionDate())
+                || (assignment.getEndDate() != null && assignment.getEndDate().isBefore(session.getSessionDate()))
+                || !assignment.getAssignmentStatus().isActiveLike()) {
+            throw new ApiException(TrainingErrorCode.COURSE_STAFF_ASSIGNMENT_NOT_EFFECTIVE);
+        }
+    }
+
+    private boolean isAtOrAfterSessionEnd(ClassSession session, LocalTime currentTime) {
+        return !currentTime.isBefore(session.getEndTime());
     }
 
     private boolean canDelete(CoachTimesheet entity, AccessContext context) {

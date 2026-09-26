@@ -12,6 +12,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface CoachTimesheetRepository extends JpaRepository<CoachTimesheet, UUID> {
+    Optional<CoachTimesheet> findByClassSession_ClassSessionIdAndCourseStaffAssignment_CourseStaffAssignmentId(
+            UUID classSessionId, UUID courseStaffAssignmentId);
+
     @Query("""
         select t
         from CoachTimesheet t

@@ -185,11 +185,32 @@ firebase:
   enabled: ${FIREBASE_ENABLED:false}
   config-base64: ${FIREBASE_CONFIG_BASE64:}
 
+supabase:
+  url: ${SUPABASE_URL:}
+  service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:}
+  storage:
+    face-image-bucket: ${SUPABASE_FACE_IMAGE_BUCKET:face-images}
+    max-file-size: ${SUPABASE_FACE_IMAGE_MAX_SIZE:5242880}
+
+avatar:
+  cache:
+    rebuild:
+      enabled: ${AVATAR_CACHE_REBUILD_ENABLED:false}
+
 cache:
   ttl:
     one-day-seconds: 86400
     one-week-seconds: 604800
     one-month-seconds: 2592000
+
+face:
+  match-threshold: ${FACE_MATCH_THRESHOLD:0.70}
+
+python-backend:
+  api: ${BACKEND_PYTHON_API:}
+  hugging-face-token: ${HUGGING_FACE_TOKEN:}
+  connect-timeout: ${PYTHON_BACKEND_CONNECT_TIMEOUT:5s}
+  read-timeout: ${PYTHON_BACKEND_READ_TIMEOUT:60s}
 
 bytescale:
   account-id: ${BYTESCALE_ACCOUNT_ID}

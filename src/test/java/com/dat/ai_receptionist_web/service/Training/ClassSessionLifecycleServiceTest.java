@@ -7,7 +7,6 @@ import com.dat.ai_receptionist_web.domain.Training.StudentEnrollment;
 import com.dat.ai_receptionist_web.enums.Training.AttendanceStatus;
 import com.dat.ai_receptionist_web.enums.Training.SessionStatus;
 import com.dat.ai_receptionist_web.repository.Training.ClassSessionRepository;
-import com.dat.ai_receptionist_web.repository.Training.CourseStaffAssignmentRepository;
 import com.dat.ai_receptionist_web.repository.Training.SessionAttendanceRepository;
 import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentRepository;
 import com.dat.ai_receptionist_web.service.Training.session.ClassSessionLifecycleService;
@@ -31,7 +30,6 @@ class ClassSessionLifecycleServiceTest {
     private ClassSessionRepository classSessionRepository;
     private StudentEnrollmentRepository enrollmentRepository;
     private SessionAttendanceRepository attendanceRepository;
-    private CourseStaffAssignmentRepository assignmentRepository;
     private TransactionTemplate transactionTemplate;
     private ClassSessionLifecycleService service;
 
@@ -40,15 +38,13 @@ class ClassSessionLifecycleServiceTest {
         classSessionRepository = mock(ClassSessionRepository.class);
         enrollmentRepository = mock(StudentEnrollmentRepository.class);
         attendanceRepository = mock(SessionAttendanceRepository.class);
-        assignmentRepository = mock(CourseStaffAssignmentRepository.class);
         transactionTemplate = mock(TransactionTemplate.class);
         when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
             TransactionCallback<?> callback = invocation.getArgument(0);
             return callback.doInTransaction(null);
         });
         service = new ClassSessionLifecycleService(
-                classSessionRepository, enrollmentRepository, attendanceRepository,
-                assignmentRepository, transactionTemplate);
+                classSessionRepository, enrollmentRepository, attendanceRepository, transactionTemplate);
     }
 
     @Test
@@ -100,8 +96,6 @@ class ClassSessionLifecycleServiceTest {
                 .thenReturn(Optional.of(session));
         when(enrollmentRepository.findActiveEnrollmentsForCourseOnDate(
                 course.getCourseId(), today)).thenReturn(List.of(enrolled, missing));
-        when(assignmentRepository.findEffectiveAssistantAssignmentsForCourseOnDate(
-                course.getCourseId(), today)).thenReturn(List.of());
         when(attendanceRepository.findByClassSession_ClassSessionId(
                 session.getClassSessionId())).thenReturn(List.of(existing));
 

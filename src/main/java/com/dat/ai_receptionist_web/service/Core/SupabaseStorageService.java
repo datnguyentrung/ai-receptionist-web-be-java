@@ -15,6 +15,7 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -138,6 +139,40 @@ public class SupabaseStorageService {
                 + objectPath;
     }
 
+    public String createSignedUrl(String objectPath) {
+        if (!StringUtils.hasText(objectPath)) {
+            return null;
+        }
+        requireConfigured();
+        try {
+            SignedUrlResponse response = client().post()
+                    .uri(uriBuilder -> uriBuilder
+                            .pathSegment("object", "sign", properties.getStorage().getFaceImageBucket())
+                            .pathSegment(objectPath.split("/"))
+                            .build())
+                    .body(Map.of("expiresIn", properties.getStorage().getSignedUrlTtlSeconds()))
+                    .retrieve()
+                    .body(SignedUrlResponse.class);
+            if (response == null || !StringUtils.hasText(response.signedURL())) {
+                throw new ApiException(CoreErrorCode.SUPABASE_STORAGE_UNAVAILABLE);
+            }
+            return toAbsoluteStorageUrl(response.signedURL());
+        } catch (RestClientResponseException exception) {
+            log.error("Supabase signed-url creation failed: objectPath={}, status={}",
+                    objectPath, exception.getStatusCode().value(), exception);
+            throw new ApiException(toStorageErrorCode(exception, CoreErrorCode.SUPABASE_STORAGE_UNAVAILABLE));
+        } catch (ResourceAccessException exception) {
+            log.error("Supabase signed-url creation unavailable: objectPath={}", objectPath, exception);
+            throw new ApiException(CoreErrorCode.SUPABASE_STORAGE_UNAVAILABLE);
+        } catch (RuntimeException exception) {
+            if (exception instanceof ApiException apiException) {
+                throw apiException;
+            }
+            log.error("Supabase signed-url creation failed: objectPath={}", objectPath, exception);
+            throw new ApiException(CoreErrorCode.SUPABASE_STORAGE_UNAVAILABLE);
+        }
+    }
+
     private RestClient client() {
         RestClient client = supabaseStorageRestClient.getIfAvailable();
         if (client == null) {
@@ -187,6 +222,14 @@ public class SupabaseStorageService {
         return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
     }
 
+    private String toAbsoluteStorageUrl(String signedUrl) {
+        if (signedUrl.startsWith("http://") || signedUrl.startsWith("https://")) {
+            return signedUrl;
+        }
+        String normalizedPath = signedUrl.startsWith("/") ? signedUrl : "/" + signedUrl;
+        return stripTrailingSlash(properties.getUrl()) + "/storage/v1" + normalizedPath;
+    }
+
     private static java.net.URI storageObjectUri(
             org.springframework.web.util.UriBuilder uriBuilder,
             String bucket,
@@ -198,5 +241,8 @@ public class SupabaseStorageService {
     }
 
     public record ValidatedImage(MediaType contentType, String extension, byte[] bytes) {
+    }
+
+    private record SignedUrlResponse(String signedURL) {
     }
 }

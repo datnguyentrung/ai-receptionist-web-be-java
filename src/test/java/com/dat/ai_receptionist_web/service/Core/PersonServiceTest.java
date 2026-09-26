@@ -1,5 +1,6 @@
 package com.dat.ai_receptionist_web.service.Core;
 
+import com.dat.ai_receptionist_web.client.PythonBackendClient;
 import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.domain.Finance.Wallet;
 import com.dat.ai_receptionist_web.dto.Core.PersonDTO;
@@ -45,7 +46,9 @@ class PersonServiceTest {
         when(personMapper.toResponse(any(Person.class))).thenReturn(null);
         when(people.save(any(Person.class))).thenAnswer(invocation -> invocation.getArgument(0));
         PersonService service = new PersonService(people, wallets, personMapper,
-                new PersonCodePolicy(), mock(PositionRepository.class));
+                new PersonCodePolicy(), mock(PositionRepository.class), mock(PythonBackendClient.class),
+                mock(SupabaseStorageService.class), mock(PersonAvatarUrlCacheService.class),
+                mock(PersonFaceImageUrlResolver.class));
 
         service.create(new PersonDTO.CreateRequest("Nguyen Van A", true, LocalDate.of(2000, 1, 1),
                 "a@example.com", "N1", "face.jpg", Belt.C10, PersonStatus.ACTIVE, LocalDate.now(), null));
@@ -72,7 +75,9 @@ class PersonServiceTest {
         when(personMapper.toSimpleResponse(person)).thenReturn(response);
 
         PersonService service = new PersonService(people, wallets, personMapper,
-                new PersonCodePolicy(), mock(PositionRepository.class));
+                new PersonCodePolicy(), mock(PositionRepository.class), mock(PythonBackendClient.class),
+                mock(SupabaseStorageService.class), mock(PersonAvatarUrlCacheService.class),
+                mock(PersonFaceImageUrlResolver.class));
 
         var result = service.list(positionId, pageable);
 

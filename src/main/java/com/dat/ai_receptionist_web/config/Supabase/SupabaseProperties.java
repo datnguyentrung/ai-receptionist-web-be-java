@@ -19,5 +19,6 @@ public class SupabaseProperties {
     public static class Storage {
         private String faceImageBucket = "face-images";
         private long maxFileSize = 5_242_880L;
+        private long signedUrlTtlSeconds = 3_600L;
     }
 }

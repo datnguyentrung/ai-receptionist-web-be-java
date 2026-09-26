@@ -191,6 +191,7 @@ supabase:
   storage:
     face-image-bucket: ${SUPABASE_FACE_IMAGE_BUCKET:face-images}
     max-file-size: ${SUPABASE_FACE_IMAGE_MAX_SIZE:5242880}
+    signed-url-ttl-seconds: ${SUPABASE_FACE_IMAGE_SIGNED_URL_TTL_SECONDS:3600}
 
 avatar:
   cache:

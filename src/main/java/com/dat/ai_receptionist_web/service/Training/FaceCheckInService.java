@@ -11,6 +11,7 @@ import com.dat.ai_receptionist_web.error.code.CoreErrorCode;
 import com.dat.ai_receptionist_web.repository.Core.PersonRepository;
 import com.dat.ai_receptionist_web.repository.Training.CoachTimesheetRepository;
 import com.dat.ai_receptionist_web.repository.Training.SessionAttendanceRepository;
+import com.dat.ai_receptionist_web.service.Core.PersonFaceImageUrlResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +29,7 @@ public class FaceCheckInService {
     private final SessionAttendanceRepository sessionAttendanceRepository;
     private final CoachTimesheetRepository coachTimesheetRepository;
     private final PersonRepository personRepository;
+    private final PersonFaceImageUrlResolver faceImageUrlResolver;
 
     @Transactional
     public FaceCheckInResponse checkIn(MultipartFile file) {
@@ -132,7 +134,7 @@ public class FaceCheckInService {
                 person.getPersonId(),
                 person.getFullName(),
                 person.getPersonCode(),
-                person.getFaceImagePath()
+                faceImageUrlResolver.resolve(person.getPersonId(), person.getFaceImagePath())
         );
     }
 

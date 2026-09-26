@@ -31,7 +31,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -46,6 +45,7 @@ public class PersonService {
     private final PythonBackendClient pythonBackendClient;
     private final SupabaseStorageService supabaseStorageService;
     private final PersonAvatarUrlCacheService avatarUrlCacheService;
+    private final PersonFaceImageUrlResolver faceImageUrlResolver;
 
     @Value("${face.match-threshold:${FACE_MATCH_THRESHOLD:0.70}}")
     private float faceMatchThreshold = 0.70f;
@@ -206,7 +206,7 @@ public class PersonService {
             person.setFaceImagePath(uploadedPath);
             Person savedPerson = personRepository.saveAndFlush(person);
             registerStorageCompensation(savedPerson.getPersonId(), uploadedPath, oldPath);
-            String avatarUrl = supabaseStorageService.getPublicUrl(savedPerson.getFaceImagePath());
+            String avatarUrl = supabaseStorageService.createSignedUrl(savedPerson.getFaceImagePath());
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
@@ -248,13 +248,8 @@ public class PersonService {
     @Transactional(readOnly = true)
     public PersonDTO.FaceImageUrlResponse getFaceImageUrl(UUID personId) {
         Person person = find(personId);
-        Map<UUID, String> cached = avatarUrlCacheService.getMany(List.of(personId));
-        String avatarUrl = cached.get(personId);
-        if (!StringUtils.hasText(avatarUrl)) {
-            avatarUrl = supabaseStorageService.getPublicUrl(person.getFaceImagePath());
-            avatarUrlCacheService.put(personId, avatarUrl);
-        }
-        return new PersonDTO.FaceImageUrlResponse(avatarUrl);
+        return new PersonDTO.FaceImageUrlResponse(
+                faceImageUrlResolver.resolve(person.getPersonId(), person.getFaceImagePath()));
     }
 
     public PythonBackendClient.FaceEmbeddingResponse generateFaceEmbedding(MultipartFile file) {

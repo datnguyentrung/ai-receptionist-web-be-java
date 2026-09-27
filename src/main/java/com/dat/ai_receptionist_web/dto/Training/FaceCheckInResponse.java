@@ -15,13 +15,18 @@ public record FaceCheckInResponse(
         UUID recordId,
         LocalDateTime checkInTime,
         LocalTime checkOutTime,
+        UUID requestId,
+        float confidence,
         AttendanceStatus attendanceStatus,
-        String message
+        String message,
+        ErrorSummary error
 ) {
     public enum Status {
         SUCCESS,
         ALREADY_CHECKED_IN,
-        ALREADY_CHECKED_OUT
+        ALREADY_CHECKED_OUT,
+        PENDING,
+        FAILED
     }
 
     public enum Action {
@@ -46,6 +51,13 @@ public record FaceCheckInResponse(
             LocalDate sessionDate,
             LocalTime startTime,
             LocalTime endTime
+    ) {
+    }
+
+    public record ErrorSummary(
+            String code,
+            String title,
+            String detail
     ) {
     }
 }

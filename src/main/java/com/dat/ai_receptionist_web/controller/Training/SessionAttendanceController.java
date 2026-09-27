@@ -2,6 +2,8 @@ package com.dat.ai_receptionist_web.controller.Training;
 
 import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.dto.Training.SessionAttendanceDTO;
+import com.dat.ai_receptionist_web.dto.Training.command.AttendanceCommandDTO;
+import com.dat.ai_receptionist_web.domain.Training.command.AttendanceCommandType;
 import com.dat.ai_receptionist_web.service.Training.SessionAttendanceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -42,6 +45,19 @@ public class SessionAttendanceController {
         return service.list(fromDate, toDate, courseId, studentPersonId, staffPersonId, pageable);
     }
 
+    @GetMapping("/with-stats")
+    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).SESSION_ATTENDANCE_READ.getCode())")
+    public SessionAttendanceDTO.AttendanceListResponse listWithStats(
+            @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) UUID courseId,
+            @RequestParam(required = false) UUID studentPersonId,
+            @RequestParam(required = false) UUID staffPersonId,
+            Pageable pageable
+    ) {
+        return service.listWithStats(fromDate, toDate, courseId, studentPersonId, staffPersonId, pageable);
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).SESSION_ATTENDANCE_READ.getCode())")
     public SessionAttendanceDTO.Response get(@PathVariable UUID id) {
@@ -64,10 +80,81 @@ public class SessionAttendanceController {
         return service.update(id, request);
     }
 
+    @PutMapping
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).SESSION_ATTENDANCE_UPDATE.getCode())")
+    public AttendanceCommandDTO.Receipt updateBatch(
+            @Valid @RequestBody SessionAttendanceDTO.BatchUpdateRequest request
+    ) {
+        return service.enqueueCommand(AttendanceCommandType.SESSION_ATTENDANCE_BATCH_UPDATE, request);
+    }
+
+    @PatchMapping("/{id}/status")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).SESSION_ATTENDANCE_UPDATE.getCode())")
+    public AttendanceCommandDTO.Receipt updateStatus(
+            @PathVariable UUID id,
+            @Valid @RequestBody SessionAttendanceDTO.UpdateStatusRequest request
+    ) {
+        return service.enqueueCommand(
+                AttendanceCommandType.SESSION_ATTENDANCE_STATUS_UPDATE,
+                new SessionAttendanceService.IdPayload<>(id, request)
+        );
+    }
+
+    @PatchMapping("/{id}/evaluation")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).SESSION_ATTENDANCE_UPDATE.getCode())")
+    public AttendanceCommandDTO.Receipt updateEvaluation(
+            @PathVariable UUID id,
+            @Valid @RequestBody SessionAttendanceDTO.UpdateEvaluationRequest request
+    ) {
+        return service.enqueueCommand(
+                AttendanceCommandType.SESSION_ATTENDANCE_EVALUATION_UPDATE,
+                new SessionAttendanceService.IdPayload<>(id, request)
+        );
+    }
+
+    @PostMapping("/manual")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).SESSION_ATTENDANCE_CREATE.getCode())")
+    public AttendanceCommandDTO.Receipt createManual(
+            @Valid @RequestBody SessionAttendanceDTO.ManualLogRequest request
+    ) {
+        return service.enqueueCommand(AttendanceCommandType.SESSION_ATTENDANCE_MANUAL_CREATE, request);
+    }
+
+    @PostMapping("/check-in")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).SESSION_ATTENDANCE_CREATE.getCode())")
+    public AttendanceCommandDTO.Receipt quickCheckIn(
+            @Valid @RequestBody SessionAttendanceDTO.QuickCheckInRequest request
+    ) {
+        return service.enqueueCommand(AttendanceCommandType.SESSION_ATTENDANCE_QUICK_CHECK_IN, request);
+    }
+
+    @PostMapping("/batch-init")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).SESSION_ATTENDANCE_CREATE.getCode())")
+    public AttendanceCommandDTO.Receipt batchInit(
+            @Valid @RequestBody SessionAttendanceDTO.BatchInitRequest request
+    ) {
+        return service.enqueueCommand(AttendanceCommandType.SESSION_ATTENDANCE_BATCH_INIT, request);
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).SESSION_ATTENDANCE_DELETE.getCode())")
     public void delete(@PathVariable UUID id) {
         service.delete(id);
+    }
+
+    @DeleteMapping
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).SESSION_ATTENDANCE_DELETE.getCode())")
+    public AttendanceCommandDTO.Receipt bulkDelete(
+            @Valid @RequestBody SessionAttendanceDTO.BulkDeleteRequest request
+    ) {
+        return service.enqueueCommand(AttendanceCommandType.SESSION_ATTENDANCE_BULK_DELETE, request);
     }
 }

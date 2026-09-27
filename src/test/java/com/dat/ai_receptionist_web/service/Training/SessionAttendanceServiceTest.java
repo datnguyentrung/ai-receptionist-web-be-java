@@ -10,8 +10,10 @@ import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentReposito
 import com.dat.ai_receptionist_web.service.Core.PersonCodePolicy;
 import com.dat.ai_receptionist_web.service.Security.access.AccessContext;
 import com.dat.ai_receptionist_web.service.Security.access.CurrentAccessContextResolver;
+import com.dat.ai_receptionist_web.service.Training.command.AttendanceCommandService;
 import com.dat.ai_receptionist_web.service.Training.access.SessionAttendanceAccessPolicy;
 import com.dat.ai_receptionist_web.service.Training.access.TrainingAccessScope;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -41,7 +43,9 @@ class SessionAttendanceServiceTest {
             mock(CourseStaffAssignmentRepository.class),
             mock(PersonCodePolicy.class),
             currentAccessContextResolver,
-            accessPolicy
+            accessPolicy,
+            mock(AttendanceCommandService.class),
+            new ObjectMapper()
     );
 
     @Test

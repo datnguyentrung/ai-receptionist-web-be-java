@@ -18,6 +18,8 @@ public enum TrainingErrorCode implements ErrorCode {
             "Leave request not found", "Leave request not found"),
     SESSION_ATTENDANCE_NOT_FOUND("SESSION_ATTENDANCE_NOT_FOUND", HttpStatus.NOT_FOUND,
             "Session attendance not found", "Session attendance not found"),
+    ATTENDANCE_COMMAND_NOT_FOUND("ATTENDANCE_COMMAND_NOT_FOUND", HttpStatus.NOT_FOUND,
+            "Attendance command not found", "Attendance command not found"),
     STUDENT_ENROLLMENT_NOT_FOUND("STUDENT_ENROLLMENT_NOT_FOUND", HttpStatus.NOT_FOUND,
             "Student enrollment not found", "Student enrollment not found"),
     CLASS_SESSION_IMMUTABLE("CLASS_SESSION_IMMUTABLE", HttpStatus.CONFLICT,

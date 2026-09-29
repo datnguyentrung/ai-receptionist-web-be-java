@@ -402,7 +402,9 @@ public class SessionAttendanceService {
         SessionAttendance entity = new SessionAttendance();
         entity.setClassSession(session);
         entity.setCheckInTime(checkInTime);
-        entity.setAttendanceStatus(AttendanceStatus.PRESENT);
+        entity.setAttendanceStatus(checkInTime.toLocalTime().isAfter(session.getStartTime())
+                ? AttendanceStatus.LATE
+                : AttendanceStatus.PRESENT);
         entity.setEvaluationStatus(EvaluationStatus.PENDING);
         entity.setNote("FACE_CHECK_IN");
         return entity;

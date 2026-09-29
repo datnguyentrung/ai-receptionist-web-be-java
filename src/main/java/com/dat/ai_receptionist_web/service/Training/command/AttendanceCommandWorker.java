@@ -34,6 +34,10 @@ public class AttendanceCommandWorker {
                     message.confidence(),
                     message.requestedAt()
             );
+            if (result.status() == FaceCheckInResponse.Status.REJECTED) {
+                store.markRejected(message.requestId(), result, result.error());
+                return;
+            }
             if (result.status() == FaceCheckInResponse.Status.FAILED) {
                 store.markFailed(message.requestId(), result.error());
                 return;

@@ -41,7 +41,9 @@ public class AttendanceCommandStore {
     public void markProcessing(UUID requestId) {
         AttendanceCommand command = getEntity(requestId);
         if (command.getStatus() == AttendanceCommandStatus.SUCCEEDED
-                || command.getStatus() == AttendanceCommandStatus.FAILED) {
+                || command.getStatus() == AttendanceCommandStatus.REJECTED
+                || command.getStatus() == AttendanceCommandStatus.FAILED
+                || command.getStatus() == AttendanceCommandStatus.EXPIRED) {
             return;
         }
         command.setStatus(AttendanceCommandStatus.PROCESSING);
@@ -62,10 +64,41 @@ public class AttendanceCommandStore {
     }
 
     @Transactional
+    public void markRejected(UUID requestId, Object result, FaceCheckInResponse.ErrorSummary error) {
+        AttendanceCommand command = getEntity(requestId);
+        LocalDateTime now = LocalDateTime.now();
+        command.setStatus(AttendanceCommandStatus.REJECTED);
+        command.setResult(writeJson(result));
+        command.setErrorCode(error == null ? null : error.code());
+        command.setErrorTitle(error == null ? null : error.title());
+        command.setErrorDetail(error == null ? null : error.detail());
+        command.setUpdatedAt(now);
+        command.setCompletedAt(now);
+    }
+
+    @Transactional
     public void markFailed(UUID requestId, FaceCheckInResponse.ErrorSummary error) {
         AttendanceCommand command = getEntity(requestId);
         LocalDateTime now = LocalDateTime.now();
         command.setStatus(AttendanceCommandStatus.FAILED);
+        command.setErrorCode(error == null ? null : error.code());
+        command.setErrorTitle(error == null ? null : error.title());
+        command.setErrorDetail(error == null ? null : error.detail());
+        command.setUpdatedAt(now);
+        command.setCompletedAt(now);
+    }
+
+    @Transactional
+    public void markExpired(UUID requestId, FaceCheckInResponse.ErrorSummary error) {
+        AttendanceCommand command = getEntity(requestId);
+        if (command.getStatus() == AttendanceCommandStatus.SUCCEEDED
+                || command.getStatus() == AttendanceCommandStatus.REJECTED
+                || command.getStatus() == AttendanceCommandStatus.FAILED
+                || command.getStatus() == AttendanceCommandStatus.EXPIRED) {
+            return;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        command.setStatus(AttendanceCommandStatus.EXPIRED);
         command.setErrorCode(error == null ? null : error.code());
         command.setErrorTitle(error == null ? null : error.title());
         command.setErrorDetail(error == null ? null : error.detail());
@@ -100,6 +133,25 @@ public class AttendanceCommandStore {
     public AttendanceCommand getEntity(UUID requestId) {
         return repository.findById(requestId)
                 .orElseThrow(() -> new ApiException(TrainingErrorCode.ATTENDANCE_COMMAND_NOT_FOUND));
+    }
+
+    public <T> T readPayload(AttendanceCommand command, Class<T> type) {
+        return readTypedJson(command.getPayload(), type, "payload");
+    }
+
+    public <T> T readResult(AttendanceCommand command, Class<T> type) {
+        return readTypedJson(command.getResult(), type, "result");
+    }
+
+    private <T> T readTypedJson(String json, Class<T> type, String fieldName) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(json, type);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Unable to deserialize attendance command " + fieldName, exception);
+        }
     }
 
     private String writeJson(Object value) {

@@ -14,6 +14,7 @@ import org.springframework.amqp.rabbit.listener.RabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
 import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.util.ErrorHandler;
@@ -118,7 +119,10 @@ public class RabbitMQConfig {
     public RabbitListenerContainerFactory<SimpleMessageListenerContainer> rabbitListenerContainerFactory(
             ConnectionFactory connectionFactory,
             MessageConverter jsonMessageConverter,
-            ErrorHandler customRabbitErrorHandler
+            ErrorHandler customRabbitErrorHandler,
+            @Value("${app.rabbitmq.listener.concurrent-consumers:1}") int concurrentConsumers,
+            @Value("${app.rabbitmq.listener.max-concurrent-consumers:3}") int maxConcurrentConsumers,
+            @Value("${app.rabbitmq.listener.prefetch-count:1}") int prefetchCount
     ) {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
@@ -126,6 +130,9 @@ public class RabbitMQConfig {
         factory.setErrorHandler(customRabbitErrorHandler);
         factory.setDefaultRequeueRejected(false);
         factory.setMissingQueuesFatal(true);
+        factory.setConcurrentConsumers(concurrentConsumers);
+        factory.setMaxConcurrentConsumers(maxConcurrentConsumers);
+        factory.setPrefetchCount(prefetchCount);
         return factory;
     }
 }

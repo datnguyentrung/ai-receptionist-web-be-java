@@ -4,21 +4,28 @@ import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.domain.Training.ClassSession;
 import com.dat.ai_receptionist_web.domain.Training.CoachTimesheet;
 import com.dat.ai_receptionist_web.domain.Training.SessionAttendance;
+import com.dat.ai_receptionist_web.domain.Training.command.AttendanceCommand;
+import com.dat.ai_receptionist_web.domain.Training.command.AttendanceCommandStatus;
+import com.dat.ai_receptionist_web.domain.Training.command.AttendanceCommandType;
 import com.dat.ai_receptionist_web.dto.Training.CheckInCandidate;
 import com.dat.ai_receptionist_web.dto.Training.FaceCheckInResponse;
 import com.dat.ai_receptionist_web.dto.Training.command.FaceCheckInCommandMessage;
 import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.code.CoreErrorCode;
+import com.dat.ai_receptionist_web.error.code.TrainingErrorCode;
 import com.dat.ai_receptionist_web.repository.Core.PersonRepository;
 import com.dat.ai_receptionist_web.repository.Training.CoachTimesheetRepository;
 import com.dat.ai_receptionist_web.repository.Training.SessionAttendanceRepository;
 import com.dat.ai_receptionist_web.service.Core.PersonFaceImageUrlResolver;
 import com.dat.ai_receptionist_web.service.Training.command.AttendanceCommandService;
+import com.dat.ai_receptionist_web.service.Training.command.AttendanceCommandStore;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -34,6 +41,9 @@ public class FaceCheckInService {
     private final PersonRepository personRepository;
     private final PersonFaceImageUrlResolver faceImageUrlResolver;
     private final AttendanceCommandService attendanceCommandService;
+    private final AttendanceCommandStore attendanceCommandStore;
+    @Value("${app.face-check-in.expire-after:30s}")
+    private Duration expireAfter;
 
     @Transactional
     public FaceCheckInResponse checkIn(MultipartFile file) {
@@ -52,6 +62,22 @@ public class FaceCheckInService {
     }
 
     @Transactional
+    public FaceCheckInResponse get(UUID requestId) {
+        AttendanceCommand command = attendanceCommandStore.getEntity(requestId);
+        if (command.getCommandType() != AttendanceCommandType.FACE_CHECK_IN) {
+            throw new ApiException(TrainingErrorCode.ATTENDANCE_COMMAND_NOT_FOUND);
+        }
+        expireIfTimedOut(command);
+        return switch (command.getStatus()) {
+            case QUEUED -> openResponse(command, FaceCheckInResponse.Status.PENDING);
+            case PROCESSING -> openResponse(command, FaceCheckInResponse.Status.PROCESSING);
+            case SUCCEEDED, REJECTED -> attendanceCommandStore.readResult(command, FaceCheckInResponse.class);
+            case FAILED -> failedResponse(command);
+            case EXPIRED -> expiredResponse(command);
+        };
+    }
+
+    @Transactional
     public FaceCheckInResponse processQueuedCheckIn(UUID personId, float confidence, LocalDateTime requestedAt) {
         Person person = personRepository.findById(personId)
                 .orElseThrow(() -> new ApiException(CoreErrorCode.PERSON_NOT_FOUND));
@@ -59,7 +85,7 @@ public class FaceCheckInService {
             CheckInCandidate candidate = attendanceContextResolver.resolve(personId, requestedAt);
             return dispatch(person, confidence, candidate, requestedAt);
         } catch (ApiException exception) {
-            return failedResponse(person, confidence, exception);
+            return rejectedResponse(person, confidence, exception);
         }
     }
 
@@ -71,12 +97,23 @@ public class FaceCheckInService {
                     .isPresent();
             SessionAttendance attendance = sessionAttendanceService.checkInResolvedStudent(
                     candidate.classSessionId(), candidate.participationId(), now);
+            if (existed) {
+                return attendanceResponse(
+                        person,
+                        attendance,
+                        confidence,
+                        FaceCheckInResponse.Status.REJECTED,
+                        FaceCheckInResponse.Action.STUDENT_CHECK_IN,
+                        error(TrainingErrorCode.FACE_CHECK_IN_ALREADY_CHECKED_IN)
+                );
+            }
             return attendanceResponse(
                     person,
                     attendance,
                     confidence,
-                    existed ? FaceCheckInResponse.Status.ALREADY_CHECKED_IN : FaceCheckInResponse.Status.SUCCESS,
-                    FaceCheckInResponse.Action.STUDENT_CHECK_IN
+                    FaceCheckInResponse.Status.SUCCESS,
+                    FaceCheckInResponse.Action.STUDENT_CHECK_IN,
+                    null
             );
         }
 
@@ -93,7 +130,7 @@ public class FaceCheckInService {
         FaceCheckInResponse.Action action = timesheet.getCheckOutTime() == null
                 ? FaceCheckInResponse.Action.STAFF_TIMESHEET_CHECKED_IN
                 : FaceCheckInResponse.Action.STAFF_TIMESHEET_CHECKED_OUT;
-        return coachResponse(person, timesheet, confidence, status, action);
+        return coachResponse(person, timesheet, confidence, status, action, coachError(status, existingHadCheckOut));
     }
 
     private FaceCheckInResponse.Status resolveCoachStatus(
@@ -105,10 +142,10 @@ public class FaceCheckInService {
             return FaceCheckInResponse.Status.SUCCESS;
         }
         if (existingHadCheckOut) {
-            return FaceCheckInResponse.Status.ALREADY_CHECKED_OUT;
+            return FaceCheckInResponse.Status.REJECTED;
         }
         return current.getCheckOutTime() == null
-                ? FaceCheckInResponse.Status.ALREADY_CHECKED_IN
+                ? FaceCheckInResponse.Status.REJECTED
                 : FaceCheckInResponse.Status.SUCCESS;
     }
 
@@ -117,7 +154,8 @@ public class FaceCheckInService {
             SessionAttendance attendance,
             float confidence,
             FaceCheckInResponse.Status status,
-            FaceCheckInResponse.Action action
+            FaceCheckInResponse.Action action,
+            FaceCheckInResponse.ErrorSummary error
     ) {
         return new FaceCheckInResponse(
                 status,
@@ -130,8 +168,8 @@ public class FaceCheckInService {
                 null,
                 confidence,
                 attendance.getAttendanceStatus(),
-                status == FaceCheckInResponse.Status.SUCCESS ? "Face check-in completed" : "Already checked in",
-                null
+                error == null ? "Face check-in completed" : error.detail(),
+                error
         );
     }
 
@@ -140,7 +178,8 @@ public class FaceCheckInService {
             CoachTimesheet timesheet,
             float confidence,
             FaceCheckInResponse.Status status,
-            FaceCheckInResponse.Action action
+            FaceCheckInResponse.Action action,
+            FaceCheckInResponse.ErrorSummary error
     ) {
         return new FaceCheckInResponse(
                 status,
@@ -155,19 +194,19 @@ public class FaceCheckInService {
                 null,
                 confidence,
                 null,
-                status == FaceCheckInResponse.Status.SUCCESS ? "Coach timesheet updated" : status.name(),
-                null
+                error == null ? "Coach timesheet updated" : error.detail(),
+                error
         );
     }
 
-    private FaceCheckInResponse failedResponse(Person person, float confidence, ApiException exception) {
+    private FaceCheckInResponse rejectedResponse(Person person, float confidence, ApiException exception) {
         FaceCheckInResponse.ErrorSummary error = new FaceCheckInResponse.ErrorSummary(
                 exception.getErrorCode().code(),
                 exception.getErrorCode().title(),
                 exception.responseDetail()
         );
         return new FaceCheckInResponse(
-                FaceCheckInResponse.Status.FAILED,
+                FaceCheckInResponse.Status.REJECTED,
                 null,
                 personSummary(person),
                 null,
@@ -179,6 +218,104 @@ public class FaceCheckInService {
                 null,
                 exception.responseDetail(),
                 error
+        );
+    }
+
+    private FaceCheckInResponse openResponse(AttendanceCommand command, FaceCheckInResponse.Status status) {
+        FaceCheckInCommandMessage payload = attendanceCommandStore.readPayload(command, FaceCheckInCommandMessage.class);
+        Person person = personRepository.findById(payload.personId())
+                .orElseThrow(() -> new ApiException(CoreErrorCode.PERSON_NOT_FOUND));
+        return new FaceCheckInResponse(
+                status,
+                null,
+                personSummary(person),
+                null,
+                null,
+                null,
+                null,
+                command.getRequestId(),
+                payload.confidence(),
+                null,
+                status == FaceCheckInResponse.Status.PENDING
+                        ? "Face recognized. Attendance command queued"
+                        : "Attendance command is processing",
+                null
+        );
+    }
+
+    private FaceCheckInResponse expiredResponse(AttendanceCommand command) {
+        FaceCheckInCommandMessage payload = attendanceCommandStore.readPayload(command, FaceCheckInCommandMessage.class);
+        Person person = personRepository.findById(payload.personId())
+                .orElseThrow(() -> new ApiException(CoreErrorCode.PERSON_NOT_FOUND));
+        FaceCheckInResponse.ErrorSummary error = error(TrainingErrorCode.FACE_CHECK_IN_EXPIRED);
+        return new FaceCheckInResponse(
+                FaceCheckInResponse.Status.EXPIRED,
+                null,
+                personSummary(person),
+                null,
+                null,
+                null,
+                null,
+                command.getRequestId(),
+                payload.confidence(),
+                null,
+                error.detail(),
+                error
+        );
+    }
+
+    private FaceCheckInResponse failedResponse(AttendanceCommand command) {
+        FaceCheckInCommandMessage payload = attendanceCommandStore.readPayload(command, FaceCheckInCommandMessage.class);
+        Person person = personRepository.findById(payload.personId())
+                .orElseThrow(() -> new ApiException(CoreErrorCode.PERSON_NOT_FOUND));
+        FaceCheckInResponse.ErrorSummary error = new FaceCheckInResponse.ErrorSummary(
+                command.getErrorCode(),
+                command.getErrorTitle(),
+                command.getErrorDetail()
+        );
+        return new FaceCheckInResponse(
+                FaceCheckInResponse.Status.FAILED,
+                null,
+                personSummary(person),
+                null,
+                null,
+                null,
+                null,
+                command.getRequestId(),
+                payload.confidence(),
+                null,
+                error.detail(),
+                error
+        );
+    }
+
+    private void expireIfTimedOut(AttendanceCommand command) {
+        if ((command.getStatus() != AttendanceCommandStatus.QUEUED
+                && command.getStatus() != AttendanceCommandStatus.PROCESSING)
+                || command.getCreatedAt().plus(expireAfter).isAfter(LocalDateTime.now())) {
+            return;
+        }
+        attendanceCommandStore.markExpired(command.getRequestId(), error(TrainingErrorCode.FACE_CHECK_IN_EXPIRED));
+        command.setStatus(AttendanceCommandStatus.EXPIRED);
+    }
+
+    private FaceCheckInResponse.ErrorSummary coachError(
+            FaceCheckInResponse.Status status,
+            boolean existingHadCheckOut
+    ) {
+        if (status != FaceCheckInResponse.Status.REJECTED) {
+            return null;
+        }
+        return existingHadCheckOut
+                ? error(TrainingErrorCode.FACE_CHECK_IN_ALREADY_CHECKED_OUT)
+                : error(TrainingErrorCode.FACE_CHECK_IN_ALREADY_CHECKED_IN);
+    }
+
+    private FaceCheckInResponse.ErrorSummary error(TrainingErrorCode errorCode) {
+        return new FaceCheckInResponse.ErrorSummary(
+                errorCode.code(),
+                errorCode.title(),
+                errorCode.defaultDetail()
         );
     }
 

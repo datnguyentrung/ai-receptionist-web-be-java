@@ -22,11 +22,12 @@ public record FaceCheckInResponse(
         ErrorSummary error
 ) {
     public enum Status {
-        SUCCESS,
-        ALREADY_CHECKED_IN,
-        ALREADY_CHECKED_OUT,
         PENDING,
-        FAILED
+        PROCESSING,
+        SUCCESS,
+        REJECTED,
+        FAILED,
+        EXPIRED
     }
 
     public enum Action {

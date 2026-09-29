@@ -4,5 +4,7 @@ public enum AttendanceCommandStatus {
     QUEUED,
     PROCESSING,
     SUCCEEDED,
-    FAILED
+    REJECTED,
+    FAILED,
+    EXPIRED
 }

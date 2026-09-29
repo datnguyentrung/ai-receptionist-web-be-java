@@ -60,7 +60,9 @@ public enum TrainingErrorCode implements ErrorCode {
     FACE_CHECK_IN_ALREADY_CHECKED_IN("FACE_CHECK_IN_ALREADY_CHECKED_IN", HttpStatus.CONFLICT,
             "Already checked in", "This person has already checked in"),
     FACE_CHECK_IN_ALREADY_CHECKED_OUT("FACE_CHECK_IN_ALREADY_CHECKED_OUT", HttpStatus.CONFLICT,
-            "Already checked out", "This coach timesheet is already checked out");
+            "Already checked out", "This coach timesheet is already checked out"),
+    FACE_CHECK_IN_EXPIRED("FACE_CHECK_IN_EXPIRED", HttpStatus.REQUEST_TIMEOUT,
+            "Face check-in expired", "Face check-in request expired before it was completed");
 
     private final String code;
     private final HttpStatus status;

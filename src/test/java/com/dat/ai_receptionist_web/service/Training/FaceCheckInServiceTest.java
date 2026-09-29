@@ -5,8 +5,12 @@ import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.domain.Training.ClassSession;
 import com.dat.ai_receptionist_web.domain.Training.CoachTimesheet;
 import com.dat.ai_receptionist_web.domain.Training.SessionAttendance;
+import com.dat.ai_receptionist_web.domain.Training.command.AttendanceCommand;
+import com.dat.ai_receptionist_web.domain.Training.command.AttendanceCommandStatus;
+import com.dat.ai_receptionist_web.domain.Training.command.AttendanceCommandType;
 import com.dat.ai_receptionist_web.dto.Training.CheckInCandidate;
 import com.dat.ai_receptionist_web.dto.Training.FaceCheckInResponse;
+import com.dat.ai_receptionist_web.dto.Training.command.FaceCheckInCommandMessage;
 import com.dat.ai_receptionist_web.enums.Training.AssignmentType;
 import com.dat.ai_receptionist_web.enums.Training.AttendanceStatus;
 import com.dat.ai_receptionist_web.error.ApiException;
@@ -17,9 +21,12 @@ import com.dat.ai_receptionist_web.repository.Training.CoachTimesheetRepository;
 import com.dat.ai_receptionist_web.repository.Training.SessionAttendanceRepository;
 import com.dat.ai_receptionist_web.service.Core.PersonFaceImageUrlResolver;
 import com.dat.ai_receptionist_web.service.Training.command.AttendanceCommandService;
+import com.dat.ai_receptionist_web.service.Training.command.AttendanceCommandStore;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -42,6 +49,7 @@ class FaceCheckInServiceTest {
     private final PersonRepository personRepository = mock(PersonRepository.class);
     private final PersonFaceImageUrlResolver faceImageUrlResolver = mock(PersonFaceImageUrlResolver.class);
     private final AttendanceCommandService attendanceCommandService = mock(AttendanceCommandService.class);
+    private final AttendanceCommandStore attendanceCommandStore = mock(AttendanceCommandStore.class);
 
     private final FaceCheckInService service = new FaceCheckInService(
             faceIdentificationService,
@@ -52,7 +60,8 @@ class FaceCheckInServiceTest {
             coachTimesheetRepository,
             personRepository,
             faceImageUrlResolver,
-            attendanceCommandService
+            attendanceCommandService,
+            attendanceCommandStore
     );
 
     @Test
@@ -163,7 +172,7 @@ class FaceCheckInServiceTest {
     }
 
     @Test
-    void queuedNoActiveContextAfterIdentificationReturnsFailedResponseWithPersonAndError() {
+    void queuedNoActiveContextAfterIdentificationReturnsRejectedResponseWithPersonAndError() {
         UUID personId = UUID.randomUUID();
         float confidence = 0.79f;
         Person person = person(personId);
@@ -180,7 +189,7 @@ class FaceCheckInServiceTest {
                 LocalDateTime.of(2026, 9, 27, 18, 20)
         );
 
-        assertThat(response.status()).isEqualTo(FaceCheckInResponse.Status.FAILED);
+        assertThat(response.status()).isEqualTo(FaceCheckInResponse.Status.REJECTED);
         assertThat(response.person().personId()).isEqualTo(personId);
         assertThat(response.confidence()).isEqualTo(confidence);
         assertThat(response.error()).isNotNull();
@@ -190,7 +199,7 @@ class FaceCheckInServiceTest {
     }
 
     @Test
-    void queuedAmbiguousContextAfterIdentificationReturnsFailedResponseWithPersonAndError() {
+    void queuedAmbiguousContextAfterIdentificationReturnsRejectedResponseWithPersonAndError() {
         UUID personId = UUID.randomUUID();
         float confidence = 0.81f;
         Person person = person(personId);
@@ -207,11 +216,45 @@ class FaceCheckInServiceTest {
                 LocalDateTime.of(2026, 9, 27, 18, 20)
         );
 
-        assertThat(response.status()).isEqualTo(FaceCheckInResponse.Status.FAILED);
+        assertThat(response.status()).isEqualTo(FaceCheckInResponse.Status.REJECTED);
         assertThat(response.person().personId()).isEqualTo(personId);
         assertThat(response.confidence()).isEqualTo(confidence);
         assertThat(response.error()).isNotNull();
         assertThat(response.error().code()).isEqualTo("FACE_CHECK_IN_AMBIGUOUS_CONTEXT");
+    }
+
+    @Test
+    void getQueuedFaceCheckInReturnsPendingWithRecognizedPerson() {
+        UUID requestId = UUID.randomUUID();
+        UUID personId = UUID.randomUUID();
+        float confidence = 0.88f;
+        Person person = person(personId);
+        AttendanceCommand command = AttendanceCommand.builder()
+                .requestId(requestId)
+                .commandType(AttendanceCommandType.FACE_CHECK_IN)
+                .status(AttendanceCommandStatus.QUEUED)
+                .createdAt(LocalDateTime.now())
+                .build();
+        FaceCheckInCommandMessage payload = new FaceCheckInCommandMessage(
+                requestId,
+                personId,
+                confidence,
+                LocalDateTime.now()
+        );
+
+        ReflectionTestUtils.setField(service, "expireAfter", Duration.ofSeconds(30));
+        when(attendanceCommandStore.getEntity(requestId)).thenReturn(command);
+        when(attendanceCommandStore.readPayload(command, FaceCheckInCommandMessage.class)).thenReturn(payload);
+        when(personRepository.findById(personId)).thenReturn(Optional.of(person));
+        when(faceImageUrlResolver.resolve(personId, person.getFaceImagePath()))
+                .thenReturn("https://signed.example/face.jpg");
+
+        FaceCheckInResponse response = service.get(requestId);
+
+        assertThat(response.status()).isEqualTo(FaceCheckInResponse.Status.PENDING);
+        assertThat(response.requestId()).isEqualTo(requestId);
+        assertThat(response.person().personId()).isEqualTo(personId);
+        assertThat(response.confidence()).isEqualTo(confidence);
     }
 
     @Test

@@ -15,14 +15,11 @@ import java.util.UUID;
 @Mapper(componentModel = "spring", uses = {ClassScheduleMapper.class, PersonMapper.class})
 public interface CourseMapper {
     @Mapping(target = "primaryCoach", ignore = true)
-    @Mapping(target = "assistantCoaches", expression = "java(java.util.List.of())")
-    @Mapping(target = "teachingAssistants", expression = "java(java.util.List.of())")
     @Mapping(target = "manager", ignore = true)
+    @Mapping(target = "currentStudentCount", constant = "0")
     CourseDTO.Response toResponse(Course entity);
 
     @Mapping(target = "primaryCoach", source = "primaryCoach")
-    @Mapping(target = "assistantCoaches", source = "assistantCoaches")
-    @Mapping(target = "teachingAssistants", source = "teachingAssistants")
     @Mapping(target = "manager", source = "manager")
     @Mapping(target = "courseId", source = "entity.courseId")
     @Mapping(target = "classSchedule", source = "entity.classSchedule")
@@ -30,6 +27,7 @@ public interface CourseMapper {
     @Mapping(target = "nextScheduleEffectiveFrom", source = "entity.nextScheduleEffectiveFrom")
     @Mapping(target = "name", source = "entity.name")
     @Mapping(target = "capacity", source = "entity.capacity")
+    @Mapping(target = "currentStudentCount", source = "currentStudentCount")
     @Mapping(target = "status", source = "entity.status")
     @Mapping(target = "classSessionGeneratedUntil", source = "entity.classSessionGeneratedUntil")
     @Mapping(target = "createdAt", source = "entity.createdAt")
@@ -37,12 +35,12 @@ public interface CourseMapper {
     CourseDTO.Response toResponse(
             Course entity,
             Person primaryCoach,
-            List<Person> assistantCoaches,
-            List<Person> teachingAssistants,
-            Person manager
+            Person manager,
+            int currentStudentCount
     );
 
     @Mapping(target = "primaryCoach", ignore = true)
+    @Mapping(target = "currentStudentCount", constant = "0")
     CourseDTO.SimpleResponse toSimpleResponse(Course entity);
 
     @Mapping(target = "primaryCoach", source = "primaryCoach")
@@ -52,8 +50,9 @@ public interface CourseMapper {
     @Mapping(target = "nextScheduleEffectiveFrom", source = "entity.nextScheduleEffectiveFrom")
     @Mapping(target = "name", source = "entity.name")
     @Mapping(target = "capacity", source = "entity.capacity")
+    @Mapping(target = "currentStudentCount", source = "currentStudentCount")
     @Mapping(target = "status", source = "entity.status")
-    CourseDTO.SimpleResponse toSimpleResponse(Course entity, Person primaryCoach);
+    CourseDTO.SimpleResponse toSimpleResponse(Course entity, Person primaryCoach, int currentStudentCount);
 
     default CourseDTO.CourseScheduleChangeResponse toScheduleChangeResponse(
             Course course,

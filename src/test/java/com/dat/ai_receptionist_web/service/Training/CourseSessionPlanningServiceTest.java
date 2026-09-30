@@ -251,8 +251,8 @@ class CourseSessionPlanningServiceTest {
                 scheduleA.getStatus(), scheduleA.getStartTime(), scheduleA.getEndTime());
         return new CourseDTO.Response(
                 course.getCourseId(), schedule, null, null,
-                "Course A", 10, CourseStatus.ACTIVE, null,
-                null, List.of(), List.of(), null,
+                "Course A", 10, 0, CourseStatus.ACTIVE, null,
+                null, null,
                 null, null);
     }
 }

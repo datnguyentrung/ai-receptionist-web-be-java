@@ -44,13 +44,14 @@ public final class CourseDTO {
             ClassScheduleDTO.SimpleResponse nextClassSchedule,
             LocalDate nextScheduleEffectiveFrom,
             String name,
+
             int capacity,
+            int currentStudentCount,
+
             CourseStatus status,
             LocalDate classSessionGeneratedUntil,
-            PersonDTO.Response primaryCoach,
-            List<PersonDTO.Response> assistantCoaches,
-            List<PersonDTO.Response> teachingAssistants,
-            PersonDTO.Response manager,
+            PersonDTO.BriefResponse primaryCoach,
+            PersonDTO.BriefResponse manager,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
@@ -63,8 +64,9 @@ public final class CourseDTO {
             LocalDate nextScheduleEffectiveFrom,
             String name,
             int capacity,
+            int currentStudentCount,
             CourseStatus status,
-            PersonDTO.SimpleResponse primaryCoach
+            PersonDTO.BriefResponse primaryCoach
     ) {
     }
 

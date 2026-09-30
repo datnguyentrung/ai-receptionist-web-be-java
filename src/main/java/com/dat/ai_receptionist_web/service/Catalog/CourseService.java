@@ -13,6 +13,7 @@ import com.dat.ai_receptionist_web.mapper.Catalog.CourseMapper;
 import com.dat.ai_receptionist_web.repository.Catalog.ClassScheduleRepository;
 import com.dat.ai_receptionist_web.repository.Catalog.CourseRepository;
 import com.dat.ai_receptionist_web.repository.Training.CourseStaffAssignmentRepository;
+import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentRepository;
 import com.dat.ai_receptionist_web.service.Training.scheduling.CourseSessionPlanningService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -38,18 +39,24 @@ public class CourseService {
     private final ClassScheduleRepository classScheduleRepository;
     private final CourseSessionPlanningService planningService;
     private final CourseStaffAssignmentRepository courseStaffAssignmentRepository;
+    private final StudentEnrollmentRepository studentEnrollmentRepository;
 
     @Transactional(readOnly = true)
     public PageResponse<CourseDTO.SimpleResponse> list(Pageable pageable) {
         Page<Course> courses = repository.findAllDetailed(pageable);
+        List<UUID> courseIds = courses.getContent().stream()
+                .map(Course::getCourseId)
+                .toList();
+        LocalDate currentDate = LocalDate.now();
         Map<UUID, CourseStaffView> staffByCourseId = getStaffByCourseIds(
-                courses.getContent().stream()
-                        .map(Course::getCourseId)
-                        .collect(Collectors.toSet()),
-                LocalDate.now());
+                Set.copyOf(courseIds),
+                currentDate);
+        Map<UUID, Integer> currentStudentCountByCourseId =
+                getCurrentStudentCountByCourseIds(courseIds, currentDate);
         return PageResponse.of(courses, course -> mapper.toSimpleResponse(
                 course,
-                staffByCourseId.getOrDefault(course.getCourseId(), CourseStaffView.empty()).primaryCoach()));
+                staffByCourseId.getOrDefault(course.getCourseId(), CourseStaffView.empty()).primaryCoach(),
+                currentStudentCountByCourseId.getOrDefault(course.getCourseId(), 0)));
     }
 
     @Transactional(readOnly = true)
@@ -114,14 +121,17 @@ public class CourseService {
     }
 
     private CourseDTO.Response toResponseWithStaff(Course course) {
-        CourseStaffView staff = getStaffByCourseIds(Set.of(course.getCourseId()), LocalDate.now())
+        LocalDate currentDate = LocalDate.now();
+        CourseStaffView staff = getStaffByCourseIds(Set.of(course.getCourseId()), currentDate)
                 .getOrDefault(course.getCourseId(), CourseStaffView.empty());
+        int currentStudentCount = Math.toIntExact(studentEnrollmentRepository.countCurrentStudentsByCourseId(
+                course.getCourseId(),
+                currentDate));
         return mapper.toResponse(
                 course,
                 staff.primaryCoach(),
-                staff.assistantCoaches(),
-                staff.teachingAssistants(),
-                staff.manager());
+                staff.manager(),
+                currentStudentCount);
     }
 
     private Map<UUID, CourseStaffView> getStaffByCourseIds(Set<UUID> courseIds,
@@ -146,6 +156,19 @@ public class CourseService {
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
                         entry -> entry.getValue().build(),
+                        (left, right) -> left,
+                        LinkedHashMap::new));
+    }
+
+    private Map<UUID, Integer> getCurrentStudentCountByCourseIds(List<UUID> courseIds,
+                                                                 LocalDate currentDate) {
+        if (courseIds.isEmpty()) {
+            return Map.of();
+        }
+        return studentEnrollmentRepository.countCurrentStudentsByCourseIds(courseIds, currentDate).stream()
+                .collect(Collectors.toMap(
+                        StudentEnrollmentRepository.CourseStudentCount::getCourseId,
+                        count -> Math.toIntExact(count.getStudentCount()),
                         (left, right) -> left,
                         LinkedHashMap::new));
     }

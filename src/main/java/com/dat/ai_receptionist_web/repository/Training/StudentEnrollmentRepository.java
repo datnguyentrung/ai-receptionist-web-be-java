@@ -13,6 +13,44 @@ import java.util.UUID;
 
 public interface StudentEnrollmentRepository extends JpaRepository<StudentEnrollment, UUID> {
     long countByCoursePurchase_CoursePrice_Course_CourseId(UUID courseId);
+
+    @Query("""
+        select count(e)
+        from StudentEnrollment e
+        join e.coursePurchase p
+        join p.coursePrice pr
+        where pr.course.courseId = :courseId
+          and e.status = com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus.ACTIVE
+          and e.startDate <= :currentDate
+          and e.endDate >= :currentDate
+    """)
+    long countCurrentStudentsByCourseId(
+            @Param("courseId") UUID courseId,
+            @Param("currentDate") LocalDate currentDate
+    );
+
+    @Query("""
+        select pr.course.courseId as courseId, count(e) as studentCount
+        from StudentEnrollment e
+        join e.coursePurchase p
+        join p.coursePrice pr
+        where pr.course.courseId in :courseIds
+          and e.status = com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus.ACTIVE
+          and e.startDate <= :currentDate
+          and e.endDate >= :currentDate
+        group by pr.course.courseId
+    """)
+    List<CourseStudentCount> countCurrentStudentsByCourseIds(
+            @Param("courseIds") List<UUID> courseIds,
+            @Param("currentDate") LocalDate currentDate
+    );
+
+    interface CourseStudentCount {
+        UUID getCourseId();
+
+        long getStudentCount();
+    }
+
     Optional<StudentEnrollment> findByCoursePurchase_CoursePurchaseId(UUID coursePurchaseId);
 
     @Query("""

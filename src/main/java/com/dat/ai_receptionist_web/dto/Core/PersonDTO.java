@@ -78,7 +78,8 @@ public final class PersonDTO {
             String personCode,
             Belt currentBelt,
             PersonStatus status,
-            String faceImagePath
+            String faceImagePath,
+            PositionDTO.SimpleResponse position
     ) {
     }
 

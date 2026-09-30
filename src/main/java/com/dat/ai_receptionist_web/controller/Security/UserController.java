@@ -36,7 +36,9 @@ public class UserController {
      */
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).USER_READ.getCode())")
-    public UserDTO.Response get(@PathVariable UUID id) { return service.get(id); }
+    public UserDTO.Response get(@PathVariable UUID id) {
+        return service.get(id);
+    }
 
     /**
      * Tác dụng: Tạo mới bản ghi và trả về dữ liệu sau khi tạo.

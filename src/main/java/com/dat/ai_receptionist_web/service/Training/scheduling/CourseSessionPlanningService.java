@@ -3,6 +3,7 @@ package com.dat.ai_receptionist_web.service.Training.scheduling;
 import com.dat.ai_receptionist_web.domain.Catalog.ClassSchedule;
 import com.dat.ai_receptionist_web.domain.Catalog.Course;
 import com.dat.ai_receptionist_web.domain.Training.ClassSession;
+import com.dat.ai_receptionist_web.domain.Training.ClassSessionScheduleSnapshot;
 import com.dat.ai_receptionist_web.domain.Training.LeaveRequest;
 import com.dat.ai_receptionist_web.dto.Catalog.CourseDTO;
 import com.dat.ai_receptionist_web.enums.Catalog.CourseStatus;
@@ -203,6 +204,7 @@ public class CourseSessionPlanningService {
             }
             created.add(ClassSession.builder()
                     .course(course)
+                    .scheduleSnapshot(ClassSessionScheduleSnapshot.from(schedule))
                     .sessionDate(date)
                     .status(SessionStatus.SCHEDULED)
                     .attendanceClosed(false)

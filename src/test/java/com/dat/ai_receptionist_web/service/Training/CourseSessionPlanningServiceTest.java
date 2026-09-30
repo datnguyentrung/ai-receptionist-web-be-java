@@ -3,12 +3,15 @@ package com.dat.ai_receptionist_web.service.Training;
 import com.dat.ai_receptionist_web.domain.Catalog.ClassSchedule;
 import com.dat.ai_receptionist_web.domain.Catalog.Course;
 import com.dat.ai_receptionist_web.domain.Core.Person;
+import com.dat.ai_receptionist_web.domain.Core.Branch;
 import com.dat.ai_receptionist_web.domain.Training.ClassSession;
 import com.dat.ai_receptionist_web.domain.Training.LeaveRequest;
 import com.dat.ai_receptionist_web.dto.Catalog.ClassScheduleDTO;
 import com.dat.ai_receptionist_web.dto.Catalog.CourseDTO;
 import com.dat.ai_receptionist_web.enums.Catalog.CourseStatus;
 import com.dat.ai_receptionist_web.enums.Core.ScheduleStatus;
+import com.dat.ai_receptionist_web.enums.Core.ScheduleLevel;
+import com.dat.ai_receptionist_web.enums.Core.ScheduleLocation;
 import com.dat.ai_receptionist_web.enums.Core.Weekday;
 import com.dat.ai_receptionist_web.enums.Training.LeaveRequestStatus;
 import com.dat.ai_receptionist_web.enums.Training.ScheduleImpactType;
@@ -35,7 +38,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class CourseSessionPlanningServiceTest {
-    private static final LocalDate TODAY = LocalDate.of(2026, 8, 30); // Sunday
+    private static final LocalDate TODAY = LocalDate.now();
 
     private CourseRepository courseRepository;
     private ClassScheduleRepository classScheduleRepository;
@@ -61,10 +64,13 @@ class CourseSessionPlanningServiceTest {
                 courseRepository, classScheduleRepository, classSessionRepository,
                 leaveRequestRepository, changeNotifier, courseMapper);
 
+        Branch branch = Branch.builder().branchId(1L).build();
         scheduleA = ClassSchedule.builder().scheduleId(UUID.randomUUID())
+                .branch(branch).level(ScheduleLevel.BASIC).location(ScheduleLocation.INDOOR)
                 .weekday(Weekday.MONDAY).startTime(LocalTime.of(18, 0))
                 .endTime(LocalTime.of(19, 30)).status(ScheduleStatus.ACTIVE).build();
         scheduleB = ClassSchedule.builder().scheduleId(UUID.randomUUID())
+                .branch(branch).level(ScheduleLevel.ADVANCED).location(ScheduleLocation.OUTDOOR)
                 .weekday(Weekday.WEDNESDAY).startTime(LocalTime.of(19, 0))
                 .endTime(LocalTime.of(20, 30)).status(ScheduleStatus.ACTIVE).build();
 
@@ -117,6 +123,8 @@ class CourseSessionPlanningServiceTest {
             assertThat(session.getEndTime()).isEqualTo(LocalTime.of(20, 30));
             assertThat(session.getStatus()).isEqualTo(SessionStatus.SCHEDULED);
             assertThat(session.isAttendanceClosed()).isFalse();
+            assertThat(session.getScheduleSnapshot().getScheduleId()).isEqualTo(scheduleB.getScheduleId());
+            assertThat(session.getScheduleSnapshot().getLevel()).isEqualTo(ScheduleLevel.ADVANCED);
         });
         verify(changeNotifier).notifyAfterCommit(courseId, List.of());
     }

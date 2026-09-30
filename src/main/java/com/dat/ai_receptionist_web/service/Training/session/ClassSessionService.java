@@ -3,6 +3,7 @@ package com.dat.ai_receptionist_web.service.Training.session;
 import com.dat.ai_receptionist_web.domain.Catalog.Course;
 import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.domain.Training.ClassSession;
+import com.dat.ai_receptionist_web.domain.Training.ClassSessionScheduleSnapshot;
 import com.dat.ai_receptionist_web.domain.Training.CourseStaffAssignment;
 import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.dto.Training.ClassSessionDTO;
@@ -16,10 +17,12 @@ import com.dat.ai_receptionist_web.mapper.Training.ClassSessionMapper;
 import com.dat.ai_receptionist_web.repository.Catalog.CourseRepository;
 import com.dat.ai_receptionist_web.repository.Training.ClassSessionRepository;
 import com.dat.ai_receptionist_web.repository.Training.CourseStaffAssignmentRepository;
+import com.dat.ai_receptionist_web.repository.Training.SessionAttendanceRepository;
 import com.dat.ai_receptionist_web.service.Security.access.AccessContext;
 import com.dat.ai_receptionist_web.service.Security.access.CurrentAccessContextResolver;
 import com.dat.ai_receptionist_web.service.Training.access.ClassSessionAccessPolicy;
 import com.dat.ai_receptionist_web.service.Training.access.TrainingAccessScope;
+import com.dat.ai_receptionist_web.service.Training.scheduling.CourseScheduleResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -50,6 +53,8 @@ public class ClassSessionService {
     private final CurrentAccessContextResolver currentAccessContextResolver;
     private final ClassSessionAccessPolicy accessPolicy;
     private final CourseStaffAssignmentRepository courseStaffAssignmentRepository;
+    private final CourseScheduleResolver courseScheduleResolver;
+    private final SessionAttendanceRepository sessionAttendanceRepository;
 
     @Transactional(readOnly = true)
     public PageResponse<ClassSessionDTO.SimpleResponse> list(Pageable pageable) {
@@ -68,7 +73,28 @@ public class ClassSessionService {
     @Transactional(readOnly = true)
     public ClassSessionDTO.Response get(UUID id) {
         AccessContext context = currentAccessContextResolver.current();
-        return mapper.toResponse(findAccessible(id, context, accessPolicy.resolveReadScope(context)));
+        ClassSession session = findAccessible(id, context, accessPolicy.resolveReadScope(context));
+        ClassSessionRepository.LearningProgressRow progress =
+                repository.findLearningProgressByCourseId(session.getCourse().getCourseId());
+        return mapper.toResponse(session, toLearningProgress(progress));
+    }
+
+    @Transactional(readOnly = true)
+    public ClassSessionDTO.EvaluationResponse getEvaluation(UUID id) {
+        AccessContext context = currentAccessContextResolver.current();
+        ClassSession session = findAccessible(id, context, accessPolicy.resolveReadScope(context));
+        List<ClassSessionDTO.EvaluationStudent> students =
+                sessionAttendanceRepository.findClassSessionEvaluationRows(
+                                session.getClassSessionId(),
+                                session.getCourse().getCourseId(),
+                                session.getSessionDate())
+                        .stream()
+                        .map(this::toEvaluationStudent)
+                        .toList();
+        return new ClassSessionDTO.EvaluationResponse(
+                mapper.toSimpleResponse(session, null),
+                students
+        );
     }
 
     @Transactional
@@ -91,6 +117,8 @@ public class ClassSessionService {
         }
         ClassSession entity = ClassSession.builder()
                 .course(course)
+                .scheduleSnapshot(ClassSessionScheduleSnapshot.from(
+                        courseScheduleResolver.resolve(course, request.sessionDate())))
                 .sessionDate(request.sessionDate())
                 .status(request.status())
                 .attendanceClosed(false)
@@ -120,6 +148,8 @@ public class ClassSessionService {
             throw new ApiException(TrainingErrorCode.CLASS_SESSION_ALREADY_EXISTS);
         }
         mapper.updateEntity(request, entity);
+        entity.setScheduleSnapshot(ClassSessionScheduleSnapshot.from(
+                courseScheduleResolver.resolve(entity.getCourse(), request.sessionDate())));
         return mapper.toResponse(repository.save(entity));
     }
 
@@ -201,6 +231,54 @@ public class ClassSessionService {
                         session,
                         primaryCoachBySessionKey.get(SessionPrimaryCoachKey.of(session))))
                 .toList();
+    }
+
+    private ClassSessionDTO.LearningProgress toLearningProgress(
+            ClassSessionRepository.LearningProgressRow row
+    ) {
+        long total = row.getTotal();
+        long completed = row.getCompleted();
+        int percent = total == 0
+                ? 0
+                : (int) Math.min(Math.round((completed * 100.0) / total), 100L);
+        return new ClassSessionDTO.LearningProgress(completed, total, percent);
+    }
+
+    private ClassSessionDTO.EvaluationStudent toEvaluationStudent(
+            SessionAttendanceRepository.ClassSessionEvaluationRow row
+    ) {
+        ClassSessionDTO.EvaluationStudentEnrollment enrollment =
+                new ClassSessionDTO.EvaluationStudentEnrollment(
+                        row.getStudentEnrollmentId(),
+                        new com.dat.ai_receptionist_web.dto.Core.PersonDTO.SimpleResponse(
+                                row.getStudentPersonId(),
+                                row.getStudentFullName(),
+                                row.getStudentGender(),
+                                row.getStudentBirthDate(),
+                                row.getStudentPersonCode(),
+                                row.getStudentCurrentBelt(),
+                                row.getStudentStatus(),
+                                row.getStudentFaceImagePath()
+                        ),
+                        row.getCoursePurchaseId(),
+                        row.getEnrollmentStartDate(),
+                        row.getEnrollmentEndDate(),
+                        row.getEnrollmentStatus()
+                );
+        ClassSessionDTO.EvaluationAttendance attendance = row.getSessionAttendanceId() == null
+                ? null
+                : new ClassSessionDTO.EvaluationAttendance(
+                row.getSessionAttendanceId(),
+                row.getCheckInTime(),
+                row.getAttendanceStatus(),
+                row.getEvaluationStatus(),
+                row.getAttendanceNote()
+        );
+        return new ClassSessionDTO.EvaluationStudent(
+                enrollment,
+                attendance,
+                row.getSessionAttendanceId() != null
+        );
     }
 
     private void validateCalendarRange(LocalDate fromDate,

@@ -2,6 +2,9 @@ package com.dat.ai_receptionist_web.repository.Training;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDate;
@@ -12,23 +15,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 class TrainingPolicyRepositoryContractTest {
     @Test
     void sessionAttendanceAccessibleQueriesUseDbScopedPolicyPaths() throws Exception {
-        Query listQuery = SessionAttendanceRepository.class
+        EntityGraph listGraph = SessionAttendanceRepository.class
                 .getMethod(
-                        "findAccessible",
-                        UUID.class,
-                        UUID.class,
-                        boolean.class,
-                        boolean.class,
-                        boolean.class,
-                        boolean.class,
-                        LocalDate.class,
-                        LocalDate.class,
-                        UUID.class,
-                        UUID.class,
-                        UUID.class,
+                        "findAll",
+                        Specification.class,
+                        Specification.class,
                         Pageable.class
                 )
-                .getAnnotation(Query.class);
+                .getAnnotation(EntityGraph.class);
         Query detailQuery = SessionAttendanceRepository.class
                 .getMethod(
                         "findAccessibleById",
@@ -42,29 +36,19 @@ class TrainingPolicyRepositoryContractTest {
                 )
                 .getAnnotation(Query.class);
 
-        assertScopedAttendanceQuery(listQuery.value());
-        assertThat(listQuery.value())
-                .contains(
-                        "join fetch a.classSession",
-                        "left join fetch sessionCourse.classSchedule",
-                        "left join fetch sessionCourseSchedule.branch",
-                        "left join fetch sessionCourse.nextClassSchedule",
-                        "left join fetch sessionCourseNextSchedule.branch",
-                        "left join fetch a.studentEnrollment",
-                        "left join fetch e.studentPerson",
-                        "left join fetch e.classSchedule",
-                        "left join fetch enrollmentSchedule.branch",
-                        "left join fetch e.coursePurchase",
-                        "left join fetch purchase.coursePrice",
-                        "left join fetch a.courseStaffAssignment",
-                        "left join fetch participantAssignment.staffPerson",
-                        "left join fetch participantCourse.classSchedule",
-                        "left join fetch participantCourseSchedule.branch",
-                        "left join fetch participantCourse.nextClassSchedule",
-                        "left join fetch participantCourseNextSchedule.branch"
-                );
-        assertThat(listQuery.countQuery()).isNotBlank();
-        assertThat(listQuery.countQuery()).doesNotContain("fetch");
+        assertThat(JpaSpecificationExecutor.class)
+                .isAssignableFrom(SessionAttendanceRepository.class);
+        assertThat(listGraph).isNotNull();
+        assertThat(listGraph.attributePaths()).contains(
+                "classSession.course.classSchedule.branch",
+                "classSession.course.nextClassSchedule.branch",
+                "studentEnrollment.studentPerson",
+                "studentEnrollment.classSchedule.branch",
+                "studentEnrollment.coursePurchase",
+                "courseStaffAssignment.staffPerson",
+                "courseStaffAssignment.course.classSchedule.branch",
+                "courseStaffAssignment.course.nextClassSchedule.branch"
+        );
         assertScopedAttendanceQuery(detailQuery.value());
         assertThat(detailQuery.value())
                 .contains(
@@ -224,6 +208,46 @@ class TrainingPolicyRepositoryContractTest {
                         "left join fetch course.nextClassSchedule"
                 )
                 .doesNotContain("status != CANCELLED", "status <> CANCELLED", "stream().filter");
+    }
+
+    @Test
+    void classSessionLearningProgressUsesOneAggregateQuery() throws Exception {
+        Query progressQuery = ClassSessionRepository.class
+                .getMethod("findLearningProgressByCourseId", UUID.class)
+                .getAnnotation(Query.class);
+
+        assertThat(progressQuery).isNotNull();
+        assertThat(progressQuery.value())
+                .contains(
+                        "count(c) as total",
+                        "SessionStatus.COMPLETED",
+                        "c.course.courseId = :courseId",
+                        "SessionStatus.CANCELLED",
+                        "SessionStatus.TERMINATED")
+                .doesNotContain("fetch", "order by");
+    }
+
+    @Test
+    void classSessionEvaluationRowsUseProjectionLeftJoinQuery() throws Exception {
+        Query evaluationQuery = SessionAttendanceRepository.class
+                .getMethod("findClassSessionEvaluationRows", UUID.class, UUID.class, LocalDate.class)
+                .getAnnotation(Query.class);
+
+        assertThat(evaluationQuery).isNotNull();
+        assertThat(evaluationQuery.value())
+                .contains(
+                        "from StudentEnrollment e",
+                        "join e.studentPerson sp",
+                        "join e.coursePurchase p",
+                        "join p.coursePrice price",
+                        "left join SessionAttendance a",
+                        "a.classSession.classSessionId = :classSessionId",
+                        "a.studentEnrollment.studentEnrollmentId = e.studentEnrollmentId",
+                        "price.course.courseId = :courseId",
+                        "StudentEnrollmentStatus.ACTIVE",
+                        "order by lower(sp.fullName) asc, e.studentEnrollmentId asc"
+                )
+                .doesNotContain("fetch", "join fetch");
     }
 
     @Test

@@ -7,6 +7,7 @@ import com.dat.ai_receptionist_web.domain.Training.StudentEnrollment;
 import com.dat.ai_receptionist_web.domain.Training.command.AttendanceCommandType;
 import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.dto.Training.SessionAttendanceDTO;
+import com.dat.ai_receptionist_web.dto.Training.SessionAttendanceFilter;
 import com.dat.ai_receptionist_web.dto.Training.command.AttendanceCommandDTO;
 import com.dat.ai_receptionist_web.dto.Training.command.SessionAttendanceCommandMessage;
 import com.dat.ai_receptionist_web.enums.Training.AttendanceStatus;
@@ -14,11 +15,13 @@ import com.dat.ai_receptionist_web.enums.Training.EvaluationStatus;
 import com.dat.ai_receptionist_web.enums.Security.PermissionDefinition;
 import com.dat.ai_receptionist_web.enums.Training.AssignmentType;
 import com.dat.ai_receptionist_web.error.ApiException;
+import com.dat.ai_receptionist_web.error.code.GeneralErrorCode;
 import com.dat.ai_receptionist_web.error.code.TrainingErrorCode;
 import com.dat.ai_receptionist_web.mapper.Training.SessionAttendanceMapper;
 import com.dat.ai_receptionist_web.repository.Training.ClassSessionRepository;
 import com.dat.ai_receptionist_web.repository.Training.CourseStaffAssignmentRepository;
 import com.dat.ai_receptionist_web.repository.Training.SessionAttendanceRepository;
+import com.dat.ai_receptionist_web.repository.Training.SessionAttendanceQueryRepository.AttendanceStatsRow;
 import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentRepository;
 import com.dat.ai_receptionist_web.service.Core.PersonCodePolicy;
 import com.dat.ai_receptionist_web.service.Security.access.AccessContext;
@@ -26,20 +29,24 @@ import com.dat.ai_receptionist_web.service.Security.access.CurrentAccessContextR
 import com.dat.ai_receptionist_web.service.Training.command.AttendanceCommandService;
 import com.dat.ai_receptionist_web.service.Training.access.SessionAttendanceAccessPolicy;
 import com.dat.ai_receptionist_web.service.Training.access.TrainingAccessScope;
+import com.dat.ai_receptionist_web.specification.SessionAttendanceSpecification;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -50,6 +57,13 @@ public class SessionAttendanceService {
     private static final Sort DEFAULT_LIST_SORT = Sort.by(
             Sort.Order.desc("createdAt"),
             Sort.Order.desc("sessionAttendanceId")
+    );
+    private static final Map<String, String> ALLOWED_SORT_PROPERTIES = Map.of(
+            "createdAt", "createdAt",
+            "checkInTime", "checkInTime",
+            "attendanceStatus", "attendanceStatus",
+            "evaluationStatus", "evaluationStatus",
+            "sessionDate", "classSession.sessionDate"
     );
 
     private final SessionAttendanceRepository repository;
@@ -65,45 +79,34 @@ public class SessionAttendanceService {
 
     @Transactional(readOnly = true)
     public PageResponse<SessionAttendanceDTO.SimpleResponse> list(
-            LocalDate fromDate,
-            LocalDate toDate,
-            UUID courseId,
-            UUID studentPersonId,
-            UUID staffPersonId,
+            SessionAttendanceFilter filter,
             Pageable pageable
     ) {
         AccessContext context = currentAccessContextResolver.current();
         TrainingAccessScope scope = accessPolicy.resolveReadScope(context);
+        Specification<SessionAttendance> specification =
+                SessionAttendanceSpecification.matching(filter, context, scope);
         Pageable effectivePageable = withDefaultSort(pageable);
-        var page = repository.findAccessible(
-                context.userId(),
-                context.activePersonId(),
-                scope.unrestricted(),
-                scope.self(),
-                scope.dependents(),
-                scope.assignedCourses(),
-                fromDate,
-                toDate,
-                courseId,
-                studentPersonId,
-                staffPersonId,
-                effectivePageable
-        );
+        Page<SessionAttendance> page = repository.findAll(
+                specification, specification, effectivePageable);
         return PageResponse.of(page, mapper::toSimpleResponse);
     }
 
     @Transactional(readOnly = true)
     public SessionAttendanceDTO.AttendanceListResponse listWithStats(
-            LocalDate fromDate,
-            LocalDate toDate,
-            UUID courseId,
-            UUID studentPersonId,
-            UUID staffPersonId,
+            SessionAttendanceFilter filter,
             Pageable pageable
     ) {
+        AccessContext context = currentAccessContextResolver.current();
+        TrainingAccessScope scope = accessPolicy.resolveReadScope(context);
+        Specification<SessionAttendance> specification =
+                SessionAttendanceSpecification.matching(filter, context, scope);
+        Page<SessionAttendance> entityPage = repository.findAll(
+                specification, specification, withDefaultSort(pageable));
         PageResponse<SessionAttendanceDTO.SimpleResponse> page =
-                list(fromDate, toDate, courseId, studentPersonId, staffPersonId, pageable);
-        return new SessionAttendanceDTO.AttendanceListResponse(stats(page.getContent()), page);
+                PageResponse.of(entityPage, mapper::toSimpleResponse);
+        return new SessionAttendanceDTO.AttendanceListResponse(
+                toStats(repository.summarize(specification)), page);
     }
 
     @Transactional(readOnly = true)
@@ -448,10 +451,24 @@ public class SessionAttendanceService {
     }
 
     private Pageable withDefaultSort(Pageable pageable) {
-        if (pageable.getSort().isSorted()) {
+        if (pageable.isUnpaged()) {
             return pageable;
         }
-        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), DEFAULT_LIST_SORT);
+        if (pageable.getSort().isUnsorted()) {
+            return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), DEFAULT_LIST_SORT);
+        }
+        Sort mappedSort = Sort.by(pageable.getSort().stream()
+                .map(order -> {
+                    String mappedProperty = ALLOWED_SORT_PROPERTIES.get(order.getProperty());
+                    if (mappedProperty == null) {
+                        throw new ApiException(
+                                GeneralErrorCode.INVALID_REQUEST_PARAMETER,
+                                "Unsupported sort property: " + order.getProperty());
+                    }
+                    return order.withProperty(mappedProperty);
+                })
+                .toList());
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), mappedSort);
     }
 
     private SessionAttendanceDTO.Response toResponseForCurrentAccess(SessionAttendance entity) {
@@ -486,30 +503,22 @@ public class SessionAttendanceService {
                 .orElseThrow(() -> new ApiException(TrainingErrorCode.SESSION_ATTENDANCE_NOT_FOUND)));
     }
 
-    private SessionAttendanceDTO.AttendanceStats stats(List<SessionAttendanceDTO.SimpleResponse> records) {
-        long total = records.size();
-        long present = records.stream().filter(item -> item.attendanceStatus() == AttendanceStatus.PRESENT).count();
-        long absent = records.stream().filter(item -> item.attendanceStatus() == AttendanceStatus.ABSENT).count();
-        long excused = records.stream().filter(item -> item.attendanceStatus() == AttendanceStatus.EXCUSED).count();
-        long makeup = records.stream().filter(item -> item.attendanceStatus() == AttendanceStatus.MAKEUP).count();
-        long late = records.stream().filter(item -> item.attendanceStatus() == AttendanceStatus.LATE).count();
-        long good = records.stream().filter(item -> item.evaluationStatus() == EvaluationStatus.GOOD).count();
-        long average = records.stream().filter(item -> item.evaluationStatus() == EvaluationStatus.AVERAGE).count();
-        long weak = records.stream().filter(item -> item.evaluationStatus() == EvaluationStatus.WEAK).count();
-        long pending = records.stream().filter(item -> item.evaluationStatus() == EvaluationStatus.PENDING).count();
-        double rate = total == 0 ? 0.0 : ((double) (present + makeup + late) / total) * 100.0;
+    private SessionAttendanceDTO.AttendanceStats toStats(AttendanceStatsRow row) {
+        double rate = row.total() == 0
+                ? 0.0
+                : ((double) (row.present() + row.makeup() + row.late()) / row.total()) * 100.0;
         return new SessionAttendanceDTO.AttendanceStats(
-                total,
+                row.total(),
                 rate,
-                present,
-                absent,
-                excused,
-                makeup,
-                late,
-                good,
-                average,
-                weak,
-                pending
+                row.present(),
+                row.absent(),
+                row.excused(),
+                row.makeup(),
+                row.late(),
+                row.evaluationGood(),
+                row.evaluationAverage(),
+                row.evaluationWeak(),
+                row.evaluationPending()
         );
     }
 

@@ -12,7 +12,27 @@ import org.mapstruct.MappingTarget;
 
 @Mapper(componentModel = "spring", uses = {CourseMapper.class, PersonMapper.class})
 public interface ClassSessionMapper {
+    @Mapping(target = "learningProgress", ignore = true)
     ClassSessionDTO.Response toResponse(ClassSession entity);
+
+    default ClassSessionDTO.Response toResponse(
+            ClassSession entity,
+            ClassSessionDTO.LearningProgress learningProgress
+    ) {
+        ClassSessionDTO.Response base = toResponse(entity);
+        return new ClassSessionDTO.Response(
+                base.classSessionId(),
+                base.course(),
+                base.sessionDate(),
+                base.status(),
+                base.attendanceClosed(),
+                base.attendanceReopenedUntil(),
+                base.startTime(),
+                base.endTime(),
+                base.note(),
+                learningProgress
+        );
+    }
 
     @Mapping(target = "primaryCoach", ignore = true)
     ClassSessionDTO.SimpleResponse toSimpleResponse(ClassSession entity);

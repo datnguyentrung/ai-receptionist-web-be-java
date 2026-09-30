@@ -14,6 +14,26 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface ClassSessionRepository extends JpaRepository<ClassSession, UUID> {
+    @Query("""
+        select count(c) as total,
+               coalesce(sum(case
+                   when c.status = com.dat.ai_receptionist_web.enums.Training.SessionStatus.COMPLETED
+                   then 1 else 0 end), 0) as completed
+        from ClassSession c
+        where c.course.courseId = :courseId
+          and c.status not in (
+              com.dat.ai_receptionist_web.enums.Training.SessionStatus.CANCELLED,
+              com.dat.ai_receptionist_web.enums.Training.SessionStatus.TERMINATED
+          )
+    """)
+    LearningProgressRow findLearningProgressByCourseId(@Param("courseId") UUID courseId);
+
+    interface LearningProgressRow {
+        long getTotal();
+
+        long getCompleted();
+    }
+
     @Modifying
     @Query("""
         update ClassSession c

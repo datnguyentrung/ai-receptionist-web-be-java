@@ -1,18 +1,32 @@
 package com.dat.ai_receptionist_web.repository.Training;
 
 import com.dat.ai_receptionist_web.domain.Training.SessionAttendance;
+import com.dat.ai_receptionist_web.enums.Core.Belt;
+import com.dat.ai_receptionist_web.enums.Core.PersonStatus;
+import com.dat.ai_receptionist_web.enums.Training.AttendanceStatus;
+import com.dat.ai_receptionist_web.enums.Training.EvaluationStatus;
+import com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus;
+import org.jspecify.annotations.NonNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface SessionAttendanceRepository extends JpaRepository<SessionAttendance, UUID> {
+public interface SessionAttendanceRepository extends
+        JpaRepository<SessionAttendance, UUID>,
+        JpaSpecificationExecutor<SessionAttendance>,
+        SessionAttendanceQueryRepository {
+
     boolean existsByClassSession_ClassSessionIdAndStudentEnrollment_StudentEnrollmentId(
             UUID classSessionId, UUID studentEnrollmentId);
 
@@ -27,116 +41,98 @@ public interface SessionAttendanceRepository extends JpaRepository<SessionAttend
 
     List<SessionAttendance> findByClassSession_ClassSessionId(UUID classSessionId);
 
-    @Query(value = """
-        select a
-        from SessionAttendance a
-        join fetch a.classSession cs
-        left join fetch cs.course sessionCourse
-        left join fetch sessionCourse.classSchedule sessionCourseSchedule
-        left join fetch sessionCourseSchedule.branch
-        left join fetch sessionCourse.nextClassSchedule sessionCourseNextSchedule
-        left join fetch sessionCourseNextSchedule.branch
-        left join fetch a.studentEnrollment e
-        left join fetch e.studentPerson enrollmentStudent
-        left join fetch e.classSchedule enrollmentSchedule
-        left join fetch enrollmentSchedule.branch
-        left join fetch e.coursePurchase purchase
-        left join fetch purchase.coursePrice price
-        left join fetch price.course enrollmentCourse
-        left join fetch a.courseStaffAssignment participantAssignment
-        left join fetch participantAssignment.staffPerson participantStaff
-        left join fetch participantAssignment.course participantCourse
-        left join fetch participantCourse.classSchedule participantCourseSchedule
-        left join fetch participantCourseSchedule.branch
-        left join fetch participantCourse.nextClassSchedule participantCourseNextSchedule
-        left join fetch participantCourseNextSchedule.branch
-        where cs.sessionDate between :fromDate and :toDate
-          and (:courseId is null or cs.course.courseId = :courseId)
-          and (:studentPersonId is null and :staffPersonId is null
-               or :studentPersonId is not null and e.studentPerson.personId = :studentPersonId
-               or :staffPersonId is not null and participantAssignment.staffPerson.personId = :staffPersonId)
-          and (
-              :unrestricted = true
-              or (:self = true and e.studentPerson.personId = :activePersonId)
-              or (:self = true and participantAssignment.staffPerson.personId = :activePersonId)
-              or (
-                  :dependents = true
-                  and exists (
-                      select 1
-                      from UserPerson up
-                      where up.user.userId = :userId
-                        and up.person.personId = e.studentPerson.personId
-                        and up.relationshipType = com.dat.ai_receptionist_web.enums.Security.RelationshipType.GUARDIAN
-                        and up.active = true
-                  )
-              )
-              or (
-                  :assignedCourses = true
-                  and exists (
-                      select 1
-                      from CourseStaffAssignment csa
-                      where csa.staffPerson.personId = :activePersonId
-                        and csa.course.courseId = cs.course.courseId
-                        and csa.startDate <= cs.sessionDate
-                        and (csa.endDate is null or csa.endDate >= cs.sessionDate)
-                        and csa.assignmentStatus in (com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ACTIVE, com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ENDED)
-                  )
-              )
-          )
-    """,
-            countQuery = """
-        select count(a)
-        from SessionAttendance a
-        join a.classSession cs
-        left join a.studentEnrollment e
-        left join a.courseStaffAssignment participantAssignment
-        where cs.sessionDate between :fromDate and :toDate
-          and (:courseId is null or cs.course.courseId = :courseId)
-          and (:studentPersonId is null and :staffPersonId is null
-               or :studentPersonId is not null and e.studentPerson.personId = :studentPersonId
-               or :staffPersonId is not null and participantAssignment.staffPerson.personId = :staffPersonId)
-          and (
-              :unrestricted = true
-              or (:self = true and e.studentPerson.personId = :activePersonId)
-              or (:self = true and participantAssignment.staffPerson.personId = :activePersonId)
-              or (
-                  :dependents = true
-                  and exists (
-                      select 1
-                      from UserPerson up
-                      where up.user.userId = :userId
-                        and up.person.personId = e.studentPerson.personId
-                        and up.relationshipType = com.dat.ai_receptionist_web.enums.Security.RelationshipType.GUARDIAN
-                        and up.active = true
-                  )
-              )
-              or (
-                  :assignedCourses = true
-                  and exists (
-                      select 1
-                      from CourseStaffAssignment csa
-                      where csa.staffPerson.personId = :activePersonId
-                        and csa.course.courseId = cs.course.courseId
-                        and csa.startDate <= cs.sessionDate
-                        and (csa.endDate is null or csa.endDate >= cs.sessionDate)
-                        and csa.assignmentStatus in (com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ACTIVE, com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ENDED)
-                  )
-              )
-          )
+    @Query("""
+        select e.studentEnrollmentId as studentEnrollmentId,
+               sp.personId as studentPersonId,
+               sp.fullName as studentFullName,
+               sp.gender as studentGender,
+               sp.birthDate as studentBirthDate,
+               sp.personCode as studentPersonCode,
+               sp.currentBelt as studentCurrentBelt,
+               sp.status as studentStatus,
+               sp.faceImagePath as studentFaceImagePath,
+               p.coursePurchaseId as coursePurchaseId,
+               e.startDate as enrollmentStartDate,
+               e.endDate as enrollmentEndDate,
+               e.status as enrollmentStatus,
+               a.sessionAttendanceId as sessionAttendanceId,
+               a.checkInTime as checkInTime,
+               a.attendanceStatus as attendanceStatus,
+               a.evaluationStatus as evaluationStatus,
+               a.note as attendanceNote
+        from StudentEnrollment e
+        join e.studentPerson sp
+        join e.coursePurchase p
+        join p.coursePrice price
+        left join SessionAttendance a
+          on a.classSession.classSessionId = :classSessionId
+         and a.studentEnrollment.studentEnrollmentId = e.studentEnrollmentId
+        where price.course.courseId = :courseId
+          and e.status = com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus.ACTIVE
+          and e.startDate <= :sessionDate
+          and e.endDate >= :sessionDate
+        order by lower(sp.fullName) asc, e.studentEnrollmentId asc
     """)
-    Page<SessionAttendance> findAccessible(
-            @Param("userId") UUID userId,
-            @Param("activePersonId") UUID activePersonId,
-            @Param("unrestricted") boolean unrestricted,
-            @Param("self") boolean self,
-            @Param("dependents") boolean dependents,
-            @Param("assignedCourses") boolean assignedCourses,
-            @Param("fromDate") LocalDate fromDate,
-            @Param("toDate") LocalDate toDate,
+    List<ClassSessionEvaluationRow> findClassSessionEvaluationRows(
+            @Param("classSessionId") UUID classSessionId,
             @Param("courseId") UUID courseId,
-            @Param("studentPersonId") UUID studentPersonId,
-            @Param("staffPersonId") UUID staffPersonId,
-            Pageable pageable
+            @Param("sessionDate") LocalDate sessionDate
+    );
+
+    interface ClassSessionEvaluationRow {
+        UUID getStudentEnrollmentId();
+
+        UUID getStudentPersonId();
+
+        String getStudentFullName();
+
+        Boolean getStudentGender();
+
+        LocalDate getStudentBirthDate();
+
+        String getStudentPersonCode();
+
+        Belt getStudentCurrentBelt();
+
+        PersonStatus getStudentStatus();
+
+        String getStudentFaceImagePath();
+
+        UUID getCoursePurchaseId();
+
+        LocalDate getEnrollmentStartDate();
+
+        LocalDate getEnrollmentEndDate();
+
+        StudentEnrollmentStatus getEnrollmentStatus();
+
+        UUID getSessionAttendanceId();
+
+        LocalDateTime getCheckInTime();
+
+        AttendanceStatus getAttendanceStatus();
+
+        EvaluationStatus getEvaluationStatus();
+
+        String getAttendanceNote();
+    }
+
+    @Override
+    @NonNull
+    @EntityGraph(attributePaths = {
+            "classSession.course.classSchedule.branch",
+            "classSession.course.nextClassSchedule.branch",
+            "studentEnrollment.studentPerson",
+            "studentEnrollment.classSchedule.branch",
+            "studentEnrollment.coursePurchase",
+            "courseStaffAssignment.staffPerson",
+            "courseStaffAssignment.course.classSchedule.branch",
+            "courseStaffAssignment.course.nextClassSchedule.branch"
+    })
+    Page<SessionAttendance> findAll(
+            @NonNull Specification<SessionAttendance> specification,
+            @NonNull Specification<SessionAttendance> countSpecification,
+            @NonNull Pageable pageable
     );
 
     @Query("""

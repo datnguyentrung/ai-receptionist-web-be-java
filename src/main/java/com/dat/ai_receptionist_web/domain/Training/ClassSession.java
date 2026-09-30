@@ -21,7 +21,8 @@ import java.util.UUID;
         @Index(name = "idx_class_session_date_time", columnList = "session_date,start_time"),
         @Index(name = "idx_class_session_lifecycle", columnList = "status,session_date,start_time"),
         @Index(name = "idx_class_session_closure", columnList = "status,is_attendance_closed,session_date"),
-        @Index(name = "idx_class_session_course_session_date", columnList = "course_id,session_date")
+        @Index(name = "idx_class_session_course_session_date", columnList = "course_id,session_date"),
+        @Index(name = "idx_class_session_course_status", columnList = "course_id,status")
 })
 public class ClassSession {
     @Id
@@ -33,6 +34,9 @@ public class ClassSession {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
+
+    @Embedded
+    private ClassSessionScheduleSnapshot scheduleSnapshot;
 
     @Column(name = "session_date", nullable = false)
     private LocalDate sessionDate;

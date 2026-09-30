@@ -11,6 +11,7 @@ import com.dat.ai_receptionist_web.dto.Training.CourseStaffAssignmentDTO;
 import com.dat.ai_receptionist_web.dto.Training.SessionAttendanceDTO;
 import com.dat.ai_receptionist_web.dto.Training.StudentEnrollmentDTO;
 import com.dat.ai_receptionist_web.enums.Security.PermissionDefinition;
+import com.dat.ai_receptionist_web.dto.Training.SessionAttendanceFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,6 +28,15 @@ class TrainingAuthorizationContractTest {
     void protectedTrainingControllersUseCoarseRbacPreAuthorizeAnnotations() throws Exception {
         assertPermission(ClassSessionController.class, "list", PermissionDefinition.CLASS_SESSION_READ, Pageable.class);
         assertPermission(ClassSessionController.class, "get", PermissionDefinition.CLASS_SESSION_READ, UUID.class);
+        assertPermissions(
+                ClassSessionController.class,
+                "getEvaluation",
+                new PermissionDefinition[]{
+                        PermissionDefinition.CLASS_SESSION_READ,
+                        PermissionDefinition.SESSION_ATTENDANCE_READ
+                },
+                UUID.class
+        );
         assertPermission(ClassSessionController.class, "create", PermissionDefinition.CLASS_SESSION_CREATE,
                 ClassSessionDTO.CreateRequest.class);
         assertPermission(ClassSessionController.class, "update", PermissionDefinition.CLASS_SESSION_UPDATE,
@@ -107,11 +117,7 @@ class TrainingAuthorizationContractTest {
                 SessionAttendanceController.class,
                 "list",
                 PermissionDefinition.SESSION_ATTENDANCE_READ,
-                LocalDate.class,
-                LocalDate.class,
-                UUID.class,
-                UUID.class,
-                UUID.class,
+                SessionAttendanceFilter.class,
                 Pageable.class
         );
         assertPermission(
@@ -144,6 +150,19 @@ class TrainingAuthorizationContractTest {
         PreAuthorize annotation = controller.getMethod(methodName, parameterTypes).getAnnotation(PreAuthorize.class);
         assertThat(annotation).isNotNull();
         assertThat(annotation.value()).contains(permission.name(), ".getCode()");
+    }
+
+    private void assertPermissions(
+            Class<?> controller,
+            String methodName,
+            PermissionDefinition[] permissions,
+            Class<?>... parameterTypes
+    ) throws Exception {
+        PreAuthorize annotation = controller.getMethod(methodName, parameterTypes).getAnnotation(PreAuthorize.class);
+        assertThat(annotation).isNotNull();
+        for (PermissionDefinition permission : permissions) {
+            assertThat(annotation.value()).contains(permission.name(), ".getCode()");
+        }
     }
 
     private void assertOutOfScopeReturnsNotFound(

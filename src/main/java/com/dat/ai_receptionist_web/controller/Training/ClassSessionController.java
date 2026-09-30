@@ -32,6 +32,15 @@ public class ClassSessionController {
         return service.get(id);
     }
 
+    @GetMapping("/{id}/evaluation")
+    @PreAuthorize("""
+            hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).CLASS_SESSION_READ.getCode())
+            and hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).SESSION_ATTENDANCE_READ.getCode())
+            """)
+    public ClassSessionDTO.EvaluationResponse getEvaluation(@PathVariable UUID id) {
+        return service.getEvaluation(id);
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).CLASS_SESSION_CREATE.getCode())")

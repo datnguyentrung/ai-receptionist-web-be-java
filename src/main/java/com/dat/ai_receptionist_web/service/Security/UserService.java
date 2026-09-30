@@ -72,13 +72,13 @@ public class UserService {
         Set<UUID> userIds = users.getContent().stream()
                 .map(User::getUserId)
                 .collect(Collectors.toSet());
-        Map<UUID, List<PersonDTO.BriefResponse>> personsByUserId = userIds.isEmpty()
+        Map<UUID, List<PersonDTO.SimpleResponse>> personsByUserId = userIds.isEmpty()
                 ? Map.of()
                 : userPersonRepository.findAllActiveByUserIds(userIds).stream()
                 .collect(Collectors.groupingBy(
                         userPerson -> userPerson.getUser().getUserId(),
                         Collectors.mapping(
-                                userPerson -> personMapper.toBriefResponse(userPerson.getPerson()),
+                                userPerson -> personMapper.toSimpleResponse(userPerson.getPerson()),
                                 Collectors.toList()
                         )
                 ));
@@ -118,10 +118,10 @@ public class UserService {
     }
 
     private UserDTO.Response toResponse(User user) {
-        List<PersonDTO.BriefResponse> persons = userPersonRepository
+        List<PersonDTO.SimpleResponse> persons = userPersonRepository
                 .findAllByUser_UserIdAndActiveTrue(user.getUserId())
                 .stream()
-                .map(userPerson -> personMapper.toBriefResponse(userPerson.getPerson()))
+                .map(userPerson -> personMapper.toSimpleResponse(userPerson.getPerson()))
                 .toList();
         List<RoleDTO.BriefResponse> roles = userRoleRepository
                 .findAllDetailedByUserId(user.getUserId())

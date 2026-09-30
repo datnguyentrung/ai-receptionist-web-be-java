@@ -4,6 +4,7 @@ import com.dat.ai_receptionist_web.client.PythonBackendClient;
 import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.domain.Finance.Wallet;
 import com.dat.ai_receptionist_web.dto.Core.PersonDTO;
+import com.dat.ai_receptionist_web.dto.Core.PersonListFilter;
 import com.dat.ai_receptionist_web.enums.Core.*;
 import com.dat.ai_receptionist_web.enums.Finance.WalletStatus;
 import com.dat.ai_receptionist_web.mapper.Core.PersonMapper;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -69,9 +71,9 @@ class PersonServiceTest {
         Pageable pageable = Pageable.unpaged();
         Person person = Person.builder().personId(UUID.randomUUID()).fullName("Nguyen Van A").build();
         PersonDTO.SimpleResponse response = new PersonDTO.SimpleResponse(person.getPersonId(), "Nguyen Van A",
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
 
-        when(people.findByPosition_PositionId(positionId, pageable)).thenReturn(new PageImpl<>(List.of(person)));
+        when(people.findAll(any(Specification.class), eq(pageable))).thenReturn(new PageImpl<>(List.of(person)));
         when(personMapper.toSimpleResponse(person)).thenReturn(response);
 
         PersonService service = new PersonService(people, wallets, personMapper,
@@ -82,7 +84,42 @@ class PersonServiceTest {
         var result = service.list(positionId, pageable);
 
         assertThat(result.getContent()).containsExactly(response);
-        verify(people).findByPosition_PositionId(positionId, pageable);
+        verify(people).findAll(any(Specification.class), eq(pageable));
         verify(people, never()).findAll(pageable);
+    }
+
+    @Test
+    void listsPeopleWithCombinedFiltersUsingSpecification() {
+        PersonRepository people = mock(PersonRepository.class);
+        WalletRepository wallets = mock(WalletRepository.class);
+        PersonMapper personMapper = mock(PersonMapper.class);
+        UUID positionId = UUID.randomUUID();
+        Pageable pageable = Pageable.unpaged();
+        Person person = Person.builder().personId(UUID.randomUUID()).fullName("Tran Van B").build();
+        PersonDTO.SimpleResponse response = new PersonDTO.SimpleResponse(person.getPersonId(), "Tran Van B",
+                true, null, null, Belt.C9, PersonStatus.ACTIVE, null, null);
+        PersonListFilter filter = new PersonListFilter(
+                positionId,
+                "Tran",
+                PersonStatus.ACTIVE,
+                Belt.C9,
+                true,
+                false
+        );
+
+        when(people.findAll(any(Specification.class), eq(pageable))).thenReturn(new PageImpl<>(List.of(person)));
+        when(personMapper.toSimpleResponse(person)).thenReturn(response);
+
+        PersonService service = new PersonService(people, wallets, personMapper,
+                new PersonCodePolicy(), mock(PositionRepository.class), mock(PythonBackendClient.class),
+                mock(SupabaseStorageService.class), mock(PersonAvatarUrlCacheService.class),
+                mock(PersonFaceImageUrlResolver.class));
+
+        var result = service.list(filter, pageable);
+
+        assertThat(result.getContent()).containsExactly(response);
+        ArgumentCaptor<Specification<Person>> specification = ArgumentCaptor.forClass(Specification.class);
+        verify(people).findAll(specification.capture(), eq(pageable));
+        assertThat(specification.getValue()).isNotNull();
     }
 }

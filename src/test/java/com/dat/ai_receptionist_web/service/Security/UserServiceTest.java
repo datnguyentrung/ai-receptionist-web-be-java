@@ -81,10 +81,13 @@ class UserServiceTest {
                 .active(true)
                 .build();
         UserRole userRole = new UserRole(new UserRole.Key(userId, "MANAGER"), user, role);
-        PersonDTO.BriefResponse personResponse = new PersonDTO.BriefResponse(
+        PersonDTO.SimpleResponse personResponse = new PersonDTO.SimpleResponse(
                 personId,
                 "Nguyen Van A",
+                null,
+                null,
                 "HV001",
+                null,
                 null,
                 null,
                 null
@@ -93,7 +96,7 @@ class UserServiceTest {
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(userPersonRepository.findAllByUser_UserIdAndActiveTrue(userId)).thenReturn(List.of(userPerson));
-        when(personMapper.toBriefResponse(person)).thenReturn(personResponse);
+        when(personMapper.toSimpleResponse(person)).thenReturn(personResponse);
         when(userRoleRepository.findAllDetailedByUserId(userId)).thenReturn(List.of(userRole));
         when(roleMapper.toBriefResponse(role)).thenReturn(roleResponse);
 
@@ -108,7 +111,7 @@ class UserServiceTest {
     }
 
     @Test
-    void listFetchesBriefPersonsForCurrentUserPageInOneBatch() {
+    void listFetchesSimplePersonsForCurrentUserPageInOneBatch() {
         UUID userId = UUID.randomUUID();
         UUID otherUserId = UUID.randomUUID();
         UUID personId = UUID.randomUUID();
@@ -125,10 +128,13 @@ class UserServiceTest {
                 .person(person)
                 .active(true)
                 .build();
-        PersonDTO.BriefResponse personResponse = new PersonDTO.BriefResponse(
+        PersonDTO.SimpleResponse personResponse = new PersonDTO.SimpleResponse(
                 personId,
                 "Nguyen Van A",
+                null,
+                null,
                 "HV001",
+                null,
                 null,
                 null,
                 null
@@ -136,7 +142,7 @@ class UserServiceTest {
 
         when(userRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(user, otherUser), pageable, 2));
         when(userPersonRepository.findAllActiveByUserIds(Set.of(userId, otherUserId))).thenReturn(List.of(userPerson));
-        when(personMapper.toBriefResponse(person)).thenReturn(personResponse);
+        when(personMapper.toSimpleResponse(person)).thenReturn(personResponse);
 
         var response = service.list(pageable);
 

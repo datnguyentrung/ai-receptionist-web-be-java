@@ -51,7 +51,8 @@ public abstract class PersonMapper {
                 entity.getPersonCode(),
                 entity.getCurrentBelt(),
                 entity.getStatus(),
-                signedFaceImageUrl(entity)
+                signedFaceImageUrl(entity),
+                positionMapper.toSimpleResponse(entity.getPosition())
         );
     }
 

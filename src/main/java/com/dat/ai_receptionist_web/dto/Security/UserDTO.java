@@ -48,7 +48,7 @@ public final class UserDTO {
             LocalDateTime lastLoginAt,
             LocalDateTime createdAt,
             LocalDateTime updatedAt,
-            List<PersonDTO.BriefResponse> persons,
+            List<PersonDTO.SimpleResponse> persons,
             List<RoleDTO.BriefResponse> roles
     ) {
     }
@@ -58,7 +58,7 @@ public final class UserDTO {
             String phoneNumber,
             UserStatus status,
             LocalDateTime lastLoginAt,
-            List<PersonDTO.BriefResponse> persons
+            List<PersonDTO.SimpleResponse> persons
     ) {
     }
 }

@@ -6,6 +6,7 @@ import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.domain.Core.Position;
 import com.dat.ai_receptionist_web.domain.Finance.Wallet;
 import com.dat.ai_receptionist_web.dto.Core.PersonDTO;
+import com.dat.ai_receptionist_web.dto.Core.PersonListFilter;
 import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.enums.Core.PersonStatus;
 import com.dat.ai_receptionist_web.enums.Finance.WalletStatus;
@@ -15,6 +16,7 @@ import com.dat.ai_receptionist_web.mapper.Core.PersonMapper;
 import com.dat.ai_receptionist_web.repository.Core.PersonRepository;
 import com.dat.ai_receptionist_web.repository.Core.PositionRepository;
 import com.dat.ai_receptionist_web.repository.Finance.WalletRepository;
+import com.dat.ai_receptionist_web.specification.PersonSpecification;
 import com.dat.ai_receptionist_web.util.AccountUtil;
 import com.dat.ai_receptionist_web.util.converter.NameConverter;
 import lombok.RequiredArgsConstructor;
@@ -100,15 +102,17 @@ public class PersonService {
      */
     @Transactional(readOnly = true)
     public PageResponse<PersonDTO.SimpleResponse> list(Pageable pageable) {
-        return PageResponse.of(personRepository.findAll(pageable), personMapper::toSimpleResponse);
+        return list(new PersonListFilter(null, null, null, null, null, null), pageable);
     }
 
     @Transactional(readOnly = true)
     public PageResponse<PersonDTO.SimpleResponse> list(UUID positionId, Pageable pageable) {
-        if (positionId == null) {
-            return list(pageable);
-        }
-        return PageResponse.of(personRepository.findByPosition_PositionId(positionId, pageable),
+        return list(new PersonListFilter(positionId, null, null, null, null, null), pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<PersonDTO.SimpleResponse> list(PersonListFilter filter, Pageable pageable) {
+        return PageResponse.of(personRepository.findAll(PersonSpecification.matching(filter), pageable),
                 personMapper::toSimpleResponse);
     }
 

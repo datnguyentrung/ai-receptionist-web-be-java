@@ -258,7 +258,8 @@ public class ClassSessionService {
                                 row.getStudentPersonCode(),
                                 row.getStudentCurrentBelt(),
                                 row.getStudentStatus(),
-                                row.getStudentFaceImagePath()
+                                row.getStudentFaceImagePath(),
+                                null
                         ),
                         row.getCoursePurchaseId(),
                         row.getEnrollmentStartDate(),

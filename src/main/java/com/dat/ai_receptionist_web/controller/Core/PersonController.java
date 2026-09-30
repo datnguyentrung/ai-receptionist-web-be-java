@@ -1,7 +1,10 @@
 package com.dat.ai_receptionist_web.controller.Core;
 
 import com.dat.ai_receptionist_web.dto.Core.PersonDTO;
+import com.dat.ai_receptionist_web.dto.Core.PersonListFilter;
 import com.dat.ai_receptionist_web.dto.PageResponse;
+import com.dat.ai_receptionist_web.enums.Core.Belt;
+import com.dat.ai_receptionist_web.enums.Core.PersonStatus;
 import com.dat.ai_receptionist_web.service.Core.PersonService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.util.UUID;
 
 @RestController
@@ -26,9 +30,26 @@ public class PersonController {
      */
     @GetMapping
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).PERSON_READ.getCode())")
-    public PageResponse<PersonDTO.SimpleResponse> list(@RequestParam(required = false) UUID positionId,
-                                                       Pageable pageable) {
-        return service.list(positionId, pageable);
+    public PageResponse<PersonDTO.SimpleResponse> list(
+            @RequestParam(required = false) UUID positionId,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) PersonStatus status,
+            @RequestParam(required = false) Belt currentBelt,
+            @RequestParam(required = false) Boolean gender,
+            @RequestParam(required = false) Boolean isStudent,
+            Pageable pageable
+    ) {
+        return service.list(
+                new PersonListFilter(
+                        positionId,
+                        search,
+                        status,
+                        currentBelt,
+                        gender,
+                        isStudent
+                ),
+                pageable
+        );
     }
 
     /**
@@ -38,7 +59,9 @@ public class PersonController {
      */
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).PERSON_READ.getCode())")
-    public PersonDTO.Response get(@PathVariable UUID id) { return service.get(id); }
+    public PersonDTO.Response get(@PathVariable UUID id) {
+        return service.get(id);
+    }
 
     /**
      * Tác dụng: Tạo mới bản ghi và trả về dữ liệu sau khi tạo.
@@ -48,7 +71,9 @@ public class PersonController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).PERSON_CREATE.getCode())")
-    public PersonDTO.Response create(@Valid @RequestBody PersonDTO.CreateRequest request) { return service.create(request); }
+    public PersonDTO.Response create(@Valid @RequestBody PersonDTO.CreateRequest request) {
+        return service.create(request);
+    }
 
     /**
      * Tác dụng: Cập nhật bản ghi hiện có và trả về dữ liệu sau khi cập nhật.
@@ -57,7 +82,15 @@ public class PersonController {
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).PERSON_UPDATE.getCode())")
-    public PersonDTO.Response update(@PathVariable UUID id, @Valid @RequestBody PersonDTO.UpdateRequest request) { return service.update(id, request); }
+    public PersonDTO.Response update(
+            @PathVariable UUID id,
+            @Valid @RequestBody PersonDTO.UpdateRequest request
+    ) {
+        return service.update(
+                id,
+                request
+        );
+    }
 
     /**
      * Tác dụng: Xóa hoặc vô hiệu hóa bản ghi theo định danh đầu vào.
@@ -67,7 +100,9 @@ public class PersonController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).PERSON_DELETE.getCode())")
-    public void delete(@PathVariable UUID id) { service.delete(id); }
+    public void delete(@PathVariable UUID id) {
+        service.delete(id);
+    }
 
     @PostMapping(value = "/identify", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).PERSON_READ.getCode())")
@@ -75,7 +110,10 @@ public class PersonController {
             @RequestPart(value = "file", required = false) MultipartFile file,
             @RequestParam(value = "personCode", required = false) String personCode
     ) {
-        return service.identifyPerson(file, personCode);
+        return service.identifyPerson(
+                file,
+                personCode
+        );
     }
 
     @PatchMapping(value = "/{personId}/face-embedding", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -84,7 +122,10 @@ public class PersonController {
             @PathVariable UUID personId,
             @RequestPart("file") MultipartFile file
     ) {
-        return service.updateFaceEmbedding(file, personId);
+        return service.updateFaceEmbedding(
+                file,
+                personId
+        );
     }
 
     @GetMapping("/{personId}/face-image-url")

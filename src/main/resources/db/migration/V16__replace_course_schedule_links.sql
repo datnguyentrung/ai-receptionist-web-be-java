@@ -1,4 +1,4 @@
--- COURSE_SCHEDULE is the dated operating timetable of a course. CLASS_SESSION
+-- Version 16: COURSE_SCHEDULE is the dated operating timetable of a course. CLASS_SESSION
 -- remains the dated lesson generated from it.
 CREATE TABLE catalog.course_schedule (
     course_schedule_id UUID PRIMARY KEY,

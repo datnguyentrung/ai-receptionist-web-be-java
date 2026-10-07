@@ -39,13 +39,14 @@ WHERE c.next_schedule_id IS NOT NULL;
 INSERT INTO catalog.course_schedule (
     course_schedule_id, course_id, class_schedule_id, start_date, end_date, status, created_at, updated_at
 )
-SELECT gen_random_uuid(), cp.course_id, e.class_schedule_id, e.start_date, e.end_date,
+SELECT gen_random_uuid(), price.course_id, e.class_schedule_id, e.start_date, e.end_date,
        'INACTIVE', e.created_at, e.updated_at
 FROM training.student_enrollment e
 JOIN finance.course_purchase cp ON cp.course_purchase_id = e.course_purchase_id
+JOIN catalog.course_price price ON price.course_price_id = cp.course_price_id
 WHERE NOT EXISTS (
     SELECT 1 FROM catalog.course_schedule cs
-    WHERE cs.course_id = cp.course_id AND cs.class_schedule_id = e.class_schedule_id
+    WHERE cs.course_id = price.course_id AND cs.class_schedule_id = e.class_schedule_id
 );
 
 CREATE TABLE training.student_enrollment_schedule (
@@ -63,10 +64,11 @@ INSERT INTO training.student_enrollment_schedule (
 SELECT gen_random_uuid(), e.student_enrollment_id, cs.course_schedule_id
 FROM training.student_enrollment e
 JOIN finance.course_purchase cp ON cp.course_purchase_id = e.course_purchase_id
+JOIN catalog.course_price price ON price.course_price_id = cp.course_price_id
 JOIN LATERAL (
     SELECT candidate.course_schedule_id
     FROM catalog.course_schedule candidate
-    WHERE candidate.course_id = cp.course_id
+    WHERE candidate.course_id = price.course_id
       AND candidate.class_schedule_id = e.class_schedule_id
     ORDER BY (candidate.start_date <= e.start_date) DESC, candidate.start_date DESC
     LIMIT 1

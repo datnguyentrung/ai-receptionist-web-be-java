@@ -4,8 +4,10 @@ import com.dat.ai_receptionist_web.domain.Catalog.*;
 import com.dat.ai_receptionist_web.domain.Finance.*;
 import com.dat.ai_receptionist_web.domain.Security.User;
 import com.dat.ai_receptionist_web.domain.Training.StudentEnrollment;
+import com.dat.ai_receptionist_web.domain.Training.StudentEnrollmentSchedule;
 import com.dat.ai_receptionist_web.dto.Finance.WalletCommandDTO;
 import com.dat.ai_receptionist_web.enums.Catalog.*;
+import com.dat.ai_receptionist_web.enums.Core.ScheduleStatus;
 import com.dat.ai_receptionist_web.enums.Finance.*;
 import com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus;
 import com.dat.ai_receptionist_web.repository.Catalog.*;
@@ -26,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.*;
 import java.util.UUID;
+import java.util.LinkedHashSet;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +38,7 @@ public class WalletCommandService {
     private final CoursePurchaseRepository purchaseRepository;
     private final CoursePriceRepository coursePriceRepository;
     private final CourseRepository courseRepository;
+    private final CourseScheduleRepository courseScheduleRepository;
     private final StudentEnrollmentRepository enrollmentRepository;
     private final UserRepository userRepository;
     private final PersonCodePolicy personCodePolicy;
@@ -117,16 +121,38 @@ public class WalletCommandService {
                 .debitTransaction(transaction)
                 .build());
         LocalDate start = LocalDate.now();
-        StudentEnrollment enrollment = enrollmentRepository.save(StudentEnrollment.builder()
+        LocalDate end = start.plusMonths(price.getDurationMonths());
+        StudentEnrollment enrollment = StudentEnrollment.builder()
                 .studentPerson(wallet.getPerson())
                 .coursePurchase(purchase)
-                .classSchedule(course.getClassSchedule())
                 .startDate(start)
-                .endDate(start.plusMonths(price.getDurationMonths()))
+                .endDate(end)
                 .status(StudentEnrollmentStatus.ACTIVE)
-                .build());
+                .build();
+        enrollment.replaceSchedules(resolvePurchaseSchedules(course, request.courseScheduleIds(), start, end));
+        enrollment = enrollmentRepository.save(enrollment);
         wallet.setBalance(after);
         return walletCommandMapper.toTransactionResponse(transaction, purchase, enrollment);
+    }
+
+    private LinkedHashSet<StudentEnrollmentSchedule> resolvePurchaseSchedules(
+            Course course, java.util.List<UUID> ids, LocalDate start, LocalDate end) {
+        if (ids == null || ids.isEmpty()) {
+            throw failure(CatalogErrorCode.COURSE_SCHEDULE_CHANGE_CONFLICT);
+        }
+        LinkedHashSet<StudentEnrollmentSchedule> result = new LinkedHashSet<>();
+        for (UUID id : new LinkedHashSet<>(ids)) {
+            CourseSchedule schedule = courseScheduleRepository.findById(id)
+                    .orElseThrow(() -> failure(CatalogErrorCode.CLASS_SCHEDULE_NOT_FOUND));
+            if (!schedule.getCourse().getCourseId().equals(course.getCourseId())
+                    || schedule.getStatus() != ScheduleStatus.ACTIVE
+                    || schedule.getStartDate().isAfter(end)
+                    || (schedule.getEndDate() != null && schedule.getEndDate().isBefore(start))) {
+                throw failure(CatalogErrorCode.COURSE_SCHEDULE_CHANGE_CONFLICT);
+            }
+            result.add(StudentEnrollmentSchedule.builder().courseSchedule(schedule).build());
+        }
+        return result;
     }
 
     /**

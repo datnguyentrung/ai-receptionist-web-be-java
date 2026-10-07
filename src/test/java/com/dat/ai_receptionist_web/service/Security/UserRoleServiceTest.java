@@ -63,6 +63,7 @@ class UserRoleServiceTest {
         verify(userRepository).findAllByUserIdInForUpdate(Set.of(userId));
         verify(userRepository).incrementAuthorizationVersion(userId);
 
+        @SuppressWarnings("unchecked")
         ArgumentCaptor<List<UserRole>> saved = ArgumentCaptor.forClass(List.class);
         verify(userRoleRepository).saveAll(saved.capture());
         assertThat(saved.getValue()).hasSize(1);

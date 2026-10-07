@@ -8,9 +8,11 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.UUID;
+import java.util.Comparator;
+import java.util.List;
 
 @Getter
 @Setter
@@ -19,11 +21,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "course", schema = "catalog", indexes = {
-        @Index(name = "idx_course_next_schedule_effective", columnList = "next_schedule_effective_from"),
-        @Index(name = "idx_course_schedule_status", columnList = "schedule_id,status"),
-        @Index(name = "idx_course_next_schedule", columnList = "next_schedule_id")
-})
+@Table(name = "course", schema = "catalog")
 public class Course {
     @Id
     @GeneratedValue
@@ -31,16 +29,27 @@ public class Course {
     @Column(name = "course_id", nullable = false, updatable = false)
     private UUID courseId;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "schedule_id", nullable = false)
-    private ClassSchedule classSchedule;
+    @OneToMany(mappedBy = "course", fetch = FetchType.LAZY)
+    private List<CourseSchedule> courseSchedules;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "next_schedule_id")
-    private ClassSchedule nextClassSchedule;
+    /** Transitional read helper for legacy service code; API contracts expose courseSchedules only. */
+    @Transient
+    public ClassSchedule getClassSchedule() {
+        return courseSchedules == null ? null : courseSchedules.stream()
+                .filter(schedule -> schedule.getEndDate() == null)
+                .max(Comparator.comparing(CourseSchedule::getStartDate))
+                .map(CourseSchedule::getClassSchedule)
+                .orElseGet(() -> courseSchedules.isEmpty() ? null : courseSchedules.get(0).getClassSchedule());
+    }
 
-    @Column(name = "next_schedule_effective_from")
-    private LocalDate nextScheduleEffectiveFrom;
+    @Transient public ClassSchedule getNextClassSchedule() { return null; }
+    @Transient public LocalDate getNextScheduleEffectiveFrom() { return null; }
+    /** @deprecated schedule mutations are now performed through CourseScheduleService. */
+    @Deprecated public void setClassSchedule(ClassSchedule ignored) { throw new UnsupportedOperationException("Use COURSE_SCHEDULE"); }
+    /** @deprecated schedule mutations are now performed through CourseScheduleService. */
+    @Deprecated public void setNextClassSchedule(ClassSchedule ignored) { throw new UnsupportedOperationException("Use COURSE_SCHEDULE"); }
+    /** @deprecated schedule mutations are now performed through CourseScheduleService. */
+    @Deprecated public void setNextScheduleEffectiveFrom(LocalDate ignored) { throw new UnsupportedOperationException("Use COURSE_SCHEDULE"); }
 
     @Column(name = "name", nullable = false, length = 255)
     private String name;

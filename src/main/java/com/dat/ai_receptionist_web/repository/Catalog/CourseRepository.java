@@ -15,10 +15,9 @@ public interface CourseRepository extends JpaRepository<Course, UUID> {
     @Query(value = """
         select c
         from Course c
-        join fetch c.classSchedule classSchedule
-        join fetch classSchedule.branch
-        left join fetch c.nextClassSchedule nextClassSchedule
-        left join fetch nextClassSchedule.branch
+        left join fetch c.courseSchedules courseSchedule
+        left join fetch courseSchedule.classSchedule classSchedule
+        left join fetch classSchedule.branch
     """,
             countQuery = """
         select count(c)
@@ -44,15 +43,4 @@ public interface CourseRepository extends JpaRepository<Course, UUID> {
             @Param("threshold") LocalDate threshold
     );
 
-    @Query("""
-        SELECT c
-        FROM Course c
-        WHERE c.nextScheduleEffectiveFrom IS NOT NULL
-          AND c.nextScheduleEffectiveFrom <= :today
-    """)
-    List<Course> findCoursesWithPendingScheduleDue(@Param("today") LocalDate today);
-
-    long countByClassSchedule_ScheduleIdAndStatusNot(UUID scheduleId, CourseStatus status);
-
-    long countByNextClassSchedule_ScheduleId(UUID scheduleId);
 }

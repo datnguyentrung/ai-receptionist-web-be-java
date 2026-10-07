@@ -1,22 +1,18 @@
 package com.dat.ai_receptionist_web.service.Training.scheduling;
 
-import com.dat.ai_receptionist_web.domain.Catalog.ClassSchedule;
 import com.dat.ai_receptionist_web.domain.Catalog.Course;
+import com.dat.ai_receptionist_web.domain.Catalog.CourseSchedule;
 import com.dat.ai_receptionist_web.domain.Training.ClassSession;
 import com.dat.ai_receptionist_web.domain.Training.ClassSessionScheduleSnapshot;
 import com.dat.ai_receptionist_web.domain.Training.LeaveRequest;
-import com.dat.ai_receptionist_web.dto.Catalog.CourseDTO;
 import com.dat.ai_receptionist_web.enums.Catalog.CourseStatus;
-import com.dat.ai_receptionist_web.enums.Core.ScheduleStatus;
 import com.dat.ai_receptionist_web.enums.Core.Weekday;
 import com.dat.ai_receptionist_web.enums.Training.ScheduleImpactType;
 import com.dat.ai_receptionist_web.enums.Training.SessionStatus;
 import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.code.CatalogErrorCode;
-import com.dat.ai_receptionist_web.error.code.TrainingErrorCode;
-import com.dat.ai_receptionist_web.mapper.Catalog.CourseMapper;
-import com.dat.ai_receptionist_web.repository.Catalog.ClassScheduleRepository;
 import com.dat.ai_receptionist_web.repository.Catalog.CourseRepository;
+import com.dat.ai_receptionist_web.repository.Catalog.CourseScheduleRepository;
 import com.dat.ai_receptionist_web.repository.Training.ClassSessionRepository;
 import com.dat.ai_receptionist_web.repository.Training.LeaveRequestRepository;
 import lombok.RequiredArgsConstructor;
@@ -40,100 +36,12 @@ public class CourseSessionPlanningService {
     public static final int CLASS_SESSION_GENERATION_HORIZON_DAYS = 90;
 
     private final CourseRepository courseRepository;
-    private final ClassScheduleRepository classScheduleRepository;
+    private final CourseScheduleRepository courseScheduleRepository;
     private final ClassSessionRepository classSessionRepository;
     private final LeaveRequestRepository leaveRequestRepository;
-    private final CourseScheduleChangeNotifier changeNotifier;
-    private final CourseMapper courseMapper;
-
-    @Transactional
-    public CourseDTO.CourseScheduleChangeResponse changeSchedule(
-            UUID courseId, UUID scheduleId, LocalDate effectiveFrom) {
-        Course course = lock(courseId);
-        requireActive(course);
-        ClassSchedule newSchedule = requireActiveSchedule(scheduleId);
-        LocalDate today = LocalDate.now();
-
-        if (newSchedule.getScheduleId().equals(course.getClassSchedule().getScheduleId())) {
-            return courseMapper.toScheduleChangeResponse(course, List.of(), List.of());
-        }
-        if (course.getNextClassSchedule() != null
-                && newSchedule.getScheduleId().equals(course.getNextClassSchedule().getScheduleId())
-                && effectiveFrom.equals(course.getNextScheduleEffectiveFrom())) {
-            return courseMapper.toScheduleChangeResponse(course, List.of(), List.of());
-        }
-
-        LocalDate effectiveDate = effectiveFrom.isAfter(today) ? effectiveFrom : today;
-        List<ClassSession> cancelled;
-
-        if (effectiveFrom.isAfter(today)) {
-            LocalDate oldEffective = course.getNextScheduleEffectiveFrom();
-            LocalDate cancelStart = oldEffective != null && oldEffective.isBefore(effectiveDate)
-                    ? oldEffective : effectiveDate;
-            cancelled = cancelUpcomingSessions(course.getCourseId(), cancelStart, today, LocalTime.now());
-
-            if (oldEffective != null && oldEffective.isBefore(effectiveDate)) {
-                generateSessions(course, course.getClassSchedule(), oldEffective, effectiveDate.minusDays(1));
-            }
-            LocalDate currentFrom = course.getClassSessionGeneratedUntil() == null
-                    ? today : course.getClassSessionGeneratedUntil().plusDays(1);
-            if (currentFrom.isBefore(effectiveDate)) {
-                generateSessions(course, course.getClassSchedule(), currentFrom, effectiveDate.minusDays(1));
-            }
-            course.setNextClassSchedule(newSchedule);
-            course.setNextScheduleEffectiveFrom(effectiveFrom);
-        } else {
-            cancelled = cancelUpcomingSessions(course.getCourseId(), today, today, LocalTime.now());
-            course.setClassSchedule(newSchedule);
-            course.setNextClassSchedule(null);
-            course.setNextScheduleEffectiveFrom(null);
-        }
-
-        List<CourseScheduleChangeNotifier.AffectedLeaveRequest> affected =
-                detectAffectedLeaveRequests(cancelled);
-        LocalDate horizon = today.plusDays(CLASS_SESSION_GENERATION_HORIZON_DAYS);
-        List<UUID> generated = generateSessions(course, newSchedule, effectiveDate, horizon);
-        course.setClassSessionGeneratedUntil(horizon);
-        courseRepository.save(course);
-
-        changeNotifier.notifyAfterCommit(course.getCourseId(), affected);
-
-        return courseMapper.toScheduleChangeResponse(
-                course,
-                cancelled.stream().map(ClassSession::getClassSessionId).toList(),
-                generated
-        );
-    }
-
-    @Transactional
-    public void cancelPendingScheduleChange(UUID courseId) {
-        Course course = lock(courseId);
-        if (course.getNextClassSchedule() == null) {
-            return;
-        }
-        LocalDate today = LocalDate.now();
-        LocalDate oldEffective = course.getNextScheduleEffectiveFrom();
-        ClassSchedule toSchedule = course.getClassSchedule();
-
-        List<ClassSession> cancelled = cancelUpcomingSessions(
-                course.getCourseId(), oldEffective, today, LocalTime.now());
-        List<CourseScheduleChangeNotifier.AffectedLeaveRequest> affected =
-                detectAffectedLeaveRequests(cancelled);
-        LocalDate horizon = today.plusDays(CLASS_SESSION_GENERATION_HORIZON_DAYS);
-        List<UUID> generated = generateSessions(course, toSchedule, oldEffective, horizon);
-        course.setNextClassSchedule(null);
-        course.setNextScheduleEffectiveFrom(null);
-        course.setClassSessionGeneratedUntil(horizon);
-        courseRepository.save(course);
-
-        changeNotifier.notifyAfterCommit(course.getCourseId(), affected);
-        log.info("Cancelled pending schedule change for course {}, cancelled={}, generated={}, affectedLeaves={}",
-                courseId, cancelled.size(), generated.size(), affected.size());
-    }
 
     @Transactional
     public void maintainGenerationHorizon() {
-        applyDueScheduleChanges();
         LocalDate today = LocalDate.now();
         LocalDate threshold = today.plusDays(CLASS_SESSION_GENERATION_THRESHOLD_DAYS);
         LocalDate horizon = today.plusDays(CLASS_SESSION_GENERATION_HORIZON_DAYS);
@@ -147,34 +55,18 @@ public class CourseSessionPlanningService {
             }
             LocalDate from = locked.getClassSessionGeneratedUntil() == null
                     ? today : locked.getClassSessionGeneratedUntil().plusDays(1);
-            LocalDate effectiveFrom = locked.getNextScheduleEffectiveFrom();
-            if (effectiveFrom != null) {
-                LocalDate currentUntil = effectiveFrom.minusDays(1);
-                if (!from.isAfter(currentUntil)) {
-                    generateSessions(locked, locked.getClassSchedule(), from, currentUntil);
+            if (!from.isAfter(horizon)) {
+                for (CourseSchedule schedule : courseScheduleRepository.findDetailedByCourseId(locked.getCourseId())) {
+                    if (schedule.getStatus() != com.dat.ai_receptionist_web.enums.Core.ScheduleStatus.ACTIVE) {
+                        continue;
+                    }
+                    LocalDate scheduleFrom = from.isAfter(schedule.getStartDate()) ? from : schedule.getStartDate();
+                    LocalDate scheduleUntil = schedule.getEndDate() != null && schedule.getEndDate().isBefore(horizon)
+                            ? schedule.getEndDate() : horizon;
+                    generateSessions(locked, schedule, scheduleFrom, scheduleUntil);
                 }
-                if (!from.isAfter(horizon)) {
-                    LocalDate pendingFrom = effectiveFrom.isAfter(from) ? effectiveFrom : from;
-                    generateSessions(locked, locked.getNextClassSchedule(), pendingFrom, horizon);
-                }
-            } else if (!from.isAfter(horizon)) {
-                generateSessions(locked, locked.getClassSchedule(), from, horizon);
             }
             locked.setClassSessionGeneratedUntil(horizon);
-            courseRepository.save(locked);
-        }
-    }
-
-    private void applyDueScheduleChanges() {
-        List<Course> due = courseRepository.findCoursesWithPendingScheduleDue(LocalDate.now());
-        for (Course course : due) {
-            Course locked = lock(course.getCourseId());
-            if (locked.getNextClassSchedule() == null) {
-                continue;
-            }
-            locked.setClassSchedule(locked.getNextClassSchedule());
-            locked.setNextClassSchedule(null);
-            locked.setNextScheduleEffectiveFrom(null);
             courseRepository.save(locked);
         }
     }
@@ -188,7 +80,7 @@ public class CourseSessionPlanningService {
     }
 
     private List<UUID> generateSessions(
-            Course course, ClassSchedule schedule, LocalDate from, LocalDate until) {
+            Course course, CourseSchedule courseSchedule, LocalDate from, LocalDate until) {
         if (from == null || until == null || from.isAfter(until)) {
             return List.of();
         }
@@ -199,17 +91,18 @@ public class CourseSessionPlanningService {
             if (existing.contains(date)) {
                 continue;
             }
-            if (Weekday.fromJavaDayOfWeek(date.getDayOfWeek()) != schedule.getWeekday()) {
+            if (Weekday.fromJavaDayOfWeek(date.getDayOfWeek()) != courseSchedule.getClassSchedule().getWeekday()) {
                 continue;
             }
             created.add(ClassSession.builder()
                     .course(course)
-                    .scheduleSnapshot(ClassSessionScheduleSnapshot.from(schedule))
+                    .courseSchedule(courseSchedule)
+                    .scheduleSnapshot(ClassSessionScheduleSnapshot.from(courseSchedule.getClassSchedule()))
                     .sessionDate(date)
                     .status(SessionStatus.SCHEDULED)
                     .attendanceClosed(false)
-                    .startTime(schedule.getStartTime())
-                    .endTime(schedule.getEndTime())
+                    .startTime(courseSchedule.getClassSchedule().getStartTime())
+                    .endTime(courseSchedule.getClassSchedule().getEndTime())
                     .build());
         }
         classSessionRepository.saveAll(created);
@@ -255,22 +148,6 @@ public class CourseSessionPlanningService {
     private Course lock(UUID courseId) {
         return courseRepository.findByIdForUpdate(courseId)
                 .orElseThrow(() -> new ApiException(CatalogErrorCode.COURSE_NOT_FOUND));
-    }
-
-    private void requireActive(Course course) {
-        if (course.getStatus() != CourseStatus.ACTIVE) {
-            throw new ApiException(TrainingErrorCode.COURSE_NOT_ACTIVE);
-        }
-    }
-
-    private ClassSchedule requireActiveSchedule(UUID scheduleId) {
-        ClassSchedule schedule = classScheduleRepository.findById(scheduleId)
-                .orElseThrow(() -> new ApiException(CatalogErrorCode.CLASS_SCHEDULE_NOT_FOUND));
-        if (schedule.getStatus() != ScheduleStatus.ACTIVE) {
-            throw new ApiException(CatalogErrorCode.COURSE_SCHEDULE_CHANGE_CONFLICT,
-                    "Class schedule must be ACTIVE");
-        }
-        return schedule;
     }
 
 }

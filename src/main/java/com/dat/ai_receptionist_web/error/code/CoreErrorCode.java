@@ -30,8 +30,6 @@ public enum CoreErrorCode implements ErrorCode {
             "Image file is invalid"),
     EMPTY_IMAGE_FILE("EMPTY_IMAGE_FILE", HttpStatus.BAD_REQUEST, "Empty image file",
             "Image file must not be empty"),
-    FILE_TOO_LARGE("FILE_TOO_LARGE", HttpStatus.PAYLOAD_TOO_LARGE, "File too large",
-            "File exceeds the allowed size"),
     UNSUPPORTED_IMAGE_TYPE("UNSUPPORTED_IMAGE_TYPE", HttpStatus.UNSUPPORTED_MEDIA_TYPE,
             "Unsupported image type", "Only JPEG, PNG and WebP images are supported"),
     IMAGE_DECODE_FAILED("IMAGE_DECODE_FAILED", HttpStatus.UNPROCESSABLE_ENTITY,

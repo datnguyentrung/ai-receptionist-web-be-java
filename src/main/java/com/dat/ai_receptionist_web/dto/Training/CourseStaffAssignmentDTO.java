@@ -1,6 +1,6 @@
 package com.dat.ai_receptionist_web.dto.Training;
 
-import com.dat.ai_receptionist_web.dto.Catalog.CourseDTO;
+import com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO;
 import com.dat.ai_receptionist_web.dto.Core.PersonDTO;
 import com.dat.ai_receptionist_web.enums.Training.AssignmentType;
 import com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus;
@@ -16,7 +16,7 @@ public final class CourseStaffAssignmentDTO {
 
     public record CreateRequest(
             @NotNull UUID staffPersonId,
-            @NotNull UUID courseId,
+            @NotNull UUID courseScheduleId,
             @NotNull AssignmentType assignmentType,
             @NotNull LocalDate startDate,
             LocalDate endDate,
@@ -27,7 +27,7 @@ public final class CourseStaffAssignmentDTO {
 
     public record UpdateRequest(
             @NotNull UUID staffPersonId,
-            @NotNull UUID courseId,
+            @NotNull UUID courseScheduleId,
             @NotNull AssignmentType assignmentType,
             @NotNull LocalDate startDate,
             LocalDate endDate,
@@ -39,7 +39,7 @@ public final class CourseStaffAssignmentDTO {
     public record Response(
             UUID courseStaffAssignmentId,
             PersonDTO.Response staffPerson,
-            CourseDTO.Response course,
+            CourseScheduleDTO.Response courseSchedule,
             AssignmentType assignmentType,
             LocalDate startDate,
             LocalDate endDate,
@@ -53,7 +53,7 @@ public final class CourseStaffAssignmentDTO {
     public record SimpleResponse(
             UUID courseStaffAssignmentId,
             PersonDTO.SimpleResponse staffPerson,
-            CourseDTO.SimpleResponse course,
+            CourseScheduleDTO.SimpleResponse courseSchedule,
             AssignmentType assignmentType,
             LocalDate startDate,
             LocalDate endDate,

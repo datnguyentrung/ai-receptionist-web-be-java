@@ -9,7 +9,7 @@ import com.dat.ai_receptionist_web.error.code.CoreErrorCode;
 import com.dat.ai_receptionist_web.error.code.FinanceErrorCode;
 import com.dat.ai_receptionist_web.error.code.TrainingErrorCode;
 import com.dat.ai_receptionist_web.mapper.Training.StudentEnrollmentMapper;
-import com.dat.ai_receptionist_web.repository.Catalog.ClassScheduleRepository;
+import com.dat.ai_receptionist_web.repository.Catalog.CourseScheduleRepository;
 import com.dat.ai_receptionist_web.repository.Core.PersonRepository;
 import com.dat.ai_receptionist_web.repository.Finance.CoursePurchaseRepository;
 import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentRepository;
@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.UUID;
+import java.util.LinkedHashSet;
 
 @Service
 @RequiredArgsConstructor
@@ -33,7 +34,7 @@ public class StudentEnrollmentService {
     private final StudentEnrollmentMapper mapper;
     private final PersonRepository personRepository;
     private final CoursePurchaseRepository coursePurchaseRepository;
-    private final ClassScheduleRepository classScheduleRepository;
+    private final CourseScheduleRepository courseScheduleRepository;
     private final PersonCodePolicy personCodePolicy;
     private final CurrentAccessContextResolver currentAccessContextResolver;
     private final StudentEnrollmentAccessPolicy accessPolicy;
@@ -86,19 +87,16 @@ public class StudentEnrollmentService {
         personCodePolicy.requireStudent(studentPerson);
         var purchase = coursePurchaseRepository.findById(request.coursePurchaseId())
                 .orElseThrow(() -> new ApiException(FinanceErrorCode.COURSE_PURCHASE_NOT_FOUND));
-        var schedule = classScheduleRepository.findById(request.classScheduleId())
-                .orElseThrow(() -> new ApiException(CatalogErrorCode.CLASS_SCHEDULE_NOT_FOUND));
-
         UUID courseId = purchase.getCoursePrice().getCourse().getCourseId();
         accessPolicy.requireCanManageCoursePeriod(context, courseId, request.startDate(), request.endDate());
 
         var entity = new com.dat.ai_receptionist_web.domain.Training.StudentEnrollment();
         entity.setStudentPerson(studentPerson);
         entity.setCoursePurchase(purchase);
-        entity.setClassSchedule(schedule);
         entity.setStartDate(request.startDate());
         entity.setEndDate(request.endDate());
         entity.setStatus(request.status());
+        entity.replaceSchedules(resolveSchedules(courseId, request.courseScheduleIds(), request.startDate(), request.endDate()));
         return mapper.toResponse(repository.save(entity));
     }
 
@@ -111,15 +109,12 @@ public class StudentEnrollmentService {
         personCodePolicy.requireStudent(studentPerson);
         var purchase = coursePurchaseRepository.findById(request.coursePurchaseId())
                 .orElseThrow(() -> new ApiException(FinanceErrorCode.COURSE_PURCHASE_NOT_FOUND));
-        var schedule = classScheduleRepository.findById(request.classScheduleId())
-                .orElseThrow(() -> new ApiException(CatalogErrorCode.CLASS_SCHEDULE_NOT_FOUND));
-
         UUID courseId = purchase.getCoursePrice().getCourse().getCourseId();
         accessPolicy.requireCanManageCoursePeriod(context, courseId, request.startDate(), request.endDate());
 
         entity.setStudentPerson(studentPerson);
         entity.setCoursePurchase(purchase);
-        entity.setClassSchedule(schedule);
+        entity.replaceSchedules(resolveSchedules(courseId, request.courseScheduleIds(), request.startDate(), request.endDate()));
         mapper.updateEntity(request, entity);
         return mapper.toResponse(repository.save(entity));
     }
@@ -145,5 +140,25 @@ public class StudentEnrollmentService {
                 false,
                 scope.assignedCourses()
         ).orElseThrow(() -> new ApiException(TrainingErrorCode.STUDENT_ENROLLMENT_NOT_FOUND));
+    }
+
+    private LinkedHashSet<com.dat.ai_receptionist_web.domain.Training.StudentEnrollmentSchedule> resolveSchedules(
+            UUID courseId, java.util.List<UUID> scheduleIds, LocalDate start, LocalDate end) {
+        if (scheduleIds == null || scheduleIds.isEmpty()) {
+            throw new ApiException(CatalogErrorCode.COURSE_SCHEDULE_CHANGE_CONFLICT, "At least one course schedule is required");
+        }
+        LinkedHashSet<com.dat.ai_receptionist_web.domain.Training.StudentEnrollmentSchedule> links = new LinkedHashSet<>();
+        for (UUID id : new LinkedHashSet<>(scheduleIds)) {
+            var courseSchedule = courseScheduleRepository.findById(id)
+                    .orElseThrow(() -> new ApiException(CatalogErrorCode.CLASS_SCHEDULE_NOT_FOUND));
+            if (!courseSchedule.getCourse().getCourseId().equals(courseId)
+                    || courseSchedule.getStartDate().isAfter(end)
+                    || (courseSchedule.getEndDate() != null && courseSchedule.getEndDate().isBefore(start))) {
+                throw new ApiException(CatalogErrorCode.COURSE_SCHEDULE_CHANGE_CONFLICT, "Course schedule does not apply to enrollment period");
+            }
+            links.add(com.dat.ai_receptionist_web.domain.Training.StudentEnrollmentSchedule.builder()
+                    .courseSchedule(courseSchedule).build());
+        }
+        return links;
     }
 }

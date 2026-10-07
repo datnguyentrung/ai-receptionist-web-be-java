@@ -1,23 +1,24 @@
 package com.dat.ai_receptionist_web.service.Catalog;
 
-import com.dat.ai_receptionist_web.domain.Catalog.ClassSchedule;
-import com.dat.ai_receptionist_web.dto.Catalog.ClassScheduleDTO;
-import com.dat.ai_receptionist_web.dto.PageResponse;
-import com.dat.ai_receptionist_web.enums.Core.ScheduleStatus;
-import com.dat.ai_receptionist_web.enums.Catalog.CourseStatus;
-import com.dat.ai_receptionist_web.error.ApiException;
-import com.dat.ai_receptionist_web.error.code.CatalogErrorCode;
-import com.dat.ai_receptionist_web.error.code.CoreErrorCode;
-import com.dat.ai_receptionist_web.mapper.Catalog.ClassScheduleMapper;
-import com.dat.ai_receptionist_web.repository.Catalog.CourseRepository;
-import com.dat.ai_receptionist_web.repository.Catalog.ClassScheduleRepository;
-import com.dat.ai_receptionist_web.repository.Core.BranchRepository;
-import lombok.RequiredArgsConstructor;
+import java.util.UUID;
+
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
+import com.dat.ai_receptionist_web.domain.Catalog.ClassSchedule;
+import com.dat.ai_receptionist_web.dto.PageResponse;
+import com.dat.ai_receptionist_web.dto.Catalog.ClassScheduleDTO;
+import com.dat.ai_receptionist_web.enums.Core.ScheduleStatus;
+import com.dat.ai_receptionist_web.error.ApiException;
+import com.dat.ai_receptionist_web.error.code.CatalogErrorCode;
+import com.dat.ai_receptionist_web.error.code.CoreErrorCode;
+import com.dat.ai_receptionist_web.mapper.Catalog.ClassScheduleMapper;
+import com.dat.ai_receptionist_web.repository.Catalog.ClassScheduleRepository;
+import com.dat.ai_receptionist_web.repository.Catalog.CourseScheduleRepository;
+import com.dat.ai_receptionist_web.repository.Core.BranchRepository;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -25,16 +26,18 @@ public class ClassScheduleService {
     private final ClassScheduleRepository classScheduleRepository;
     private final ClassScheduleMapper classScheduleMapper;
     private final BranchRepository branchRepository;
-    private final CourseRepository courseRepository;
+    private final CourseScheduleRepository courseScheduleRepository;
 
     /**
      * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
      * Input: Nhận Pageable pageable từ caller hoặc request.
-     * Output: Trả về PageResponse<ClassScheduleDTO.SimpleResponse> theo kết quả xử lý.
+     * Output: Trả về PageResponse<ClassScheduleDTO.SimpleResponse> theo kết quả xử
+     * lý.
      */
     @Transactional(readOnly = true)
     public PageResponse<ClassScheduleDTO.SimpleResponse> list(Pageable pageable) {
-        return PageResponse.of(classScheduleRepository.findAllDetailed(pageable), classScheduleMapper::toSimpleResponse);
+        return PageResponse.of(classScheduleRepository.findAllDetailed(pageable),
+                classScheduleMapper::toSimpleResponse);
     }
 
     /**
@@ -68,7 +71,8 @@ public class ClassScheduleService {
 
     /**
      * Tác dụng: Cập nhật bản ghi hiện có và trả về dữ liệu sau khi cập nhật.
-     * Input: Nhận UUID id, ClassScheduleDTO.UpdateRequest request từ caller hoặc request.
+     * Input: Nhận UUID id, ClassScheduleDTO.UpdateRequest request từ caller hoặc
+     * request.
      * Output: Trả về ClassScheduleDTO.Response theo kết quả xử lý.
      */
     @Transactional
@@ -84,7 +88,8 @@ public class ClassScheduleService {
     /**
      * Tác dụng: Xóa hoặc vô hiệu hóa bản ghi theo định danh đầu vào.
      * Input: Nhận UUID id từ caller hoặc request.
-     * Output: Không trả về dữ liệu; cập nhật trạng thái hoặc ném lỗi khi xử lý thất bại.
+     * Output: Không trả về dữ liệu; cập nhật trạng thái hoặc ném lỗi khi xử lý thất
+     * bại.
      */
     @Transactional
     public void delete(UUID id) {
@@ -104,14 +109,10 @@ public class ClassScheduleService {
     }
 
     private void requireNotReferenced(UUID scheduleId) {
-        long referenced = courseRepository.countByClassSchedule_ScheduleIdAndStatusNot(
-                        scheduleId, CourseStatus.CANCELLED)
-                + courseRepository.countByNextClassSchedule_ScheduleId(scheduleId);
+        long referenced = courseScheduleRepository.countByClassSchedule_ScheduleId(scheduleId);
         if (referenced > 0) {
             throw new ApiException(CatalogErrorCode.COURSE_SCHEDULE_CHANGE_CONFLICT,
                     "Class schedule is used by a course; change it through the course schedule API");
         }
     }
 }
-
-

@@ -3,6 +3,7 @@ package com.dat.ai_receptionist_web.service.Core;
 import com.dat.ai_receptionist_web.config.Supabase.SupabaseProperties;
 import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.code.CoreErrorCode;
+import com.dat.ai_receptionist_web.error.code.GeneralErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -47,7 +48,7 @@ public class SupabaseStorageService {
             throw new ApiException(CoreErrorCode.EMPTY_IMAGE_FILE);
         }
         if (file.getSize() > properties.getStorage().getMaxFileSize()) {
-            throw new ApiException(CoreErrorCode.FILE_TOO_LARGE);
+            throw new ApiException(GeneralErrorCode.FILE_TOO_LARGE);
         }
 
         String contentType = file.getContentType();

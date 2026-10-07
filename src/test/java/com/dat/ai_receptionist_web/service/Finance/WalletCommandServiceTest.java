@@ -34,6 +34,7 @@ class WalletCommandServiceTest {
     private CoursePurchaseRepository purchases;
     private CoursePriceRepository prices;
     private CourseRepository courses;
+    private CourseScheduleRepository courseSchedules;
     private StudentEnrollmentRepository enrollments;
     private UserRepository users;
     private WalletCommandService service;
@@ -45,10 +46,11 @@ class WalletCommandServiceTest {
         purchases = mock(CoursePurchaseRepository.class);
         prices = mock(CoursePriceRepository.class);
         courses = mock(CourseRepository.class);
+        courseSchedules = mock(CourseScheduleRepository.class);
         enrollments = mock(StudentEnrollmentRepository.class);
         users = mock(UserRepository.class);
         service = new WalletCommandService(wallets, transactions, purchases, prices, courses,
-                enrollments, users, new PersonCodePolicy(), new WalletCommandMapper() {
+                courseSchedules, enrollments, users, new PersonCodePolicy(), new WalletCommandMapper() {
                 });
     }
 
@@ -57,12 +59,17 @@ class WalletCommandServiceTest {
         UUID personId = UUID.randomUUID();
         UUID actorId = UUID.randomUUID();
         UUID priceId = UUID.randomUUID();
+        UUID scheduleId = UUID.randomUUID();
         Person person = Person.builder().personId(personId).personCode("VQ_anv_010100").build();
         Wallet wallet = Wallet.builder().walletId(UUID.randomUUID()).person(person)
                 .balance(new BigDecimal("1000000")).status(WalletStatus.ACTIVE).build();
-        ClassSchedule schedule = ClassSchedule.builder().scheduleId(UUID.randomUUID()).build();
-        Course course = Course.builder().courseId(UUID.randomUUID()).classSchedule(schedule)
+        Course course = Course.builder().courseId(UUID.randomUUID())
                 .capacity(20).status(CourseStatus.ACTIVE).build();
+        CourseSchedule schedule = CourseSchedule.builder().courseScheduleId(scheduleId).course(course)
+                .status(com.dat.ai_receptionist_web.enums.Core.ScheduleStatus.ACTIVE)
+                .startDate(java.time.LocalDate.now().minusDays(1))
+                .endDate(java.time.LocalDate.now().plusMonths(6))
+                .build();
         CoursePrice price = CoursePrice.builder().coursePriceId(priceId).course(course)
                 .durationMonths(3).sessionCount(24).finalPrice(new BigDecimal("800000"))
                 .status(CoursePriceStatus.ACTIVE).build();
@@ -71,6 +78,7 @@ class WalletCommandServiceTest {
         when(wallets.findByPersonIdForUpdate(personId)).thenReturn(Optional.of(wallet));
         when(prices.findForPurchase(priceId)).thenReturn(Optional.of(price));
         when(courses.findByIdForUpdate(course.getCourseId())).thenReturn(Optional.of(course));
+        when(courseSchedules.findById(scheduleId)).thenReturn(Optional.of(schedule));
         when(transactions.findByTypeAndExternalReference(any(), anyString())).thenReturn(Optional.empty());
         when(enrollments.countByCoursePurchase_CoursePrice_Course_CourseId(course.getCourseId())).thenReturn(0L);
         when(users.findById(actorId)).thenReturn(Optional.of(actor));
@@ -91,7 +99,7 @@ class WalletCommandServiceTest {
         });
 
         WalletCommandDTO.TransactionResponse result = service.purchaseCourse(
-                new WalletCommandDTO.CoursePurchaseRequest(personId, priceId, "purchase-001", null), actorId);
+                new WalletCommandDTO.CoursePurchaseRequest(personId, priceId, List.of(scheduleId), "purchase-001", null), actorId);
 
         assertThat(result.type()).isEqualTo(WalletTransactionType.COURSE_PURCHASE);
         assertThat(result.direction()).isEqualTo(WalletTransactionDirection.DEBIT);
@@ -178,14 +186,14 @@ class WalletCommandServiceTest {
 
         WalletCommandDTO.TransactionResponse retry = service.purchaseCourse(
                 new WalletCommandDTO.CoursePurchaseRequest(personId, originalPriceId,
-                        "purchase-001", null), UUID.randomUUID());
+                        List.of(UUID.randomUUID()), "purchase-001", null), UUID.randomUUID());
 
         assertThat(retry.coursePurchaseId()).isEqualTo(purchase.getCoursePurchaseId());
         verifyNoInteractions(prices, courses, users);
 
         assertThatThrownBy(() -> service.purchaseCourse(
                 new WalletCommandDTO.CoursePurchaseRequest(personId, UUID.randomUUID(),
-                        "purchase-001", null), UUID.randomUUID()))
+                        List.of(UUID.randomUUID()), "purchase-001", null), UUID.randomUUID()))
                 .isInstanceOfSatisfying(ApiException.class, exception ->
                         assertThat(exception.getErrorCode()).isEqualTo(FinanceErrorCode.IDEMPOTENCY_CONFLICT));
     }

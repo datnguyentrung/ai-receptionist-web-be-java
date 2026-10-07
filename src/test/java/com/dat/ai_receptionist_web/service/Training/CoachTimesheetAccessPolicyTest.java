@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.service.Training;
 
 import com.dat.ai_receptionist_web.domain.Catalog.Course;
+import com.dat.ai_receptionist_web.domain.Catalog.CourseSchedule;
 import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.domain.Training.ClassSession;
 import com.dat.ai_receptionist_web.domain.Training.CourseStaffAssignment;
@@ -28,24 +29,26 @@ class CoachTimesheetAccessPolicyTest {
     @Test
     void endedAssignmentStillAllowsHistoricalSessionInsidePeriod() {
         UUID courseId = UUID.randomUUID();
+        UUID scheduleId = UUID.randomUUID();
         UUID staffPersonId = UUID.randomUUID();
 
         assertThatCode(() -> policy.requireCanCreate(
                 context(staffPersonId),
-                session(courseId, LocalDate.of(2026, 3, 15)),
-                assignment(staffPersonId, courseId, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31))
+                session(courseId, scheduleId, LocalDate.of(2026, 3, 15)),
+                assignment(staffPersonId, courseId, scheduleId, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31))
         )).doesNotThrowAnyException();
     }
 
     @Test
     void assignmentOutsideSessionDateDeniesTimesheet() {
         UUID courseId = UUID.randomUUID();
+        UUID scheduleId = UUID.randomUUID();
         UUID staffPersonId = UUID.randomUUID();
 
         assertThatThrownBy(() -> policy.requireCanCreate(
                 context(staffPersonId),
-                session(courseId, LocalDate.of(2026, 4, 15)),
-                assignment(staffPersonId, courseId, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31))
+                session(courseId, scheduleId, LocalDate.of(2026, 4, 15)),
+                assignment(staffPersonId, courseId, scheduleId, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31))
         ))
                 .isInstanceOf(ApiException.class)
                 .extracting("errorCode")
@@ -64,15 +67,16 @@ class CoachTimesheetAccessPolicyTest {
     @Test
     void pendingSuspendedAndCancelledAssignmentsDoNotGrantAccess() {
         UUID courseId = UUID.randomUUID();
+        UUID scheduleId = UUID.randomUUID();
         UUID staffPersonId = UUID.randomUUID();
-        ClassSession session = session(courseId, LocalDate.of(2026, 3, 15));
+        ClassSession session = session(courseId, scheduleId, LocalDate.of(2026, 3, 15));
 
         for (CourseStaffAssignmentStatus status : new CourseStaffAssignmentStatus[]{
                 CourseStaffAssignmentStatus.PENDING,
                 CourseStaffAssignmentStatus.SUSPENDED,
                 CourseStaffAssignmentStatus.CANCELLED
         }) {
-            CourseStaffAssignment assignment = assignment(staffPersonId, courseId,
+            CourseStaffAssignment assignment = assignment(staffPersonId, courseId, scheduleId,
                     LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
             assignment.setAssignmentStatus(status);
 
@@ -94,9 +98,15 @@ class CoachTimesheetAccessPolicyTest {
         );
     }
 
-    private ClassSession session(UUID courseId, LocalDate sessionDate) {
+    private ClassSession session(UUID courseId, UUID scheduleId, LocalDate sessionDate) {
+        Course course = Course.builder().courseId(courseId).build();
+        CourseSchedule schedule = CourseSchedule.builder()
+                .courseScheduleId(scheduleId)
+                .course(course)
+                .build();
         return ClassSession.builder()
-                .course(Course.builder().courseId(courseId).build())
+                .course(course)
+                .courseSchedule(schedule)
                 .sessionDate(sessionDate)
                 .status(SessionStatus.ACTIVE)
                 .startTime(LocalTime.of(8, 0))
@@ -104,10 +114,15 @@ class CoachTimesheetAccessPolicyTest {
                 .build();
     }
 
-    private CourseStaffAssignment assignment(UUID staffPersonId, UUID courseId, LocalDate startDate, LocalDate endDate) {
+    private CourseStaffAssignment assignment(UUID staffPersonId, UUID courseId, UUID scheduleId, LocalDate startDate, LocalDate endDate) {
+        Course course = Course.builder().courseId(courseId).build();
+        CourseSchedule schedule = CourseSchedule.builder()
+                .courseScheduleId(scheduleId)
+                .course(course)
+                .build();
         return CourseStaffAssignment.builder()
                 .staffPerson(Person.builder().personId(staffPersonId).personCode("VQT_001").build())
-                .course(Course.builder().courseId(courseId).build())
+                .courseSchedule(schedule)
                 .assignmentType(AssignmentType.PRIMARY_COACH)
                 .startDate(startDate)
                 .endDate(endDate)

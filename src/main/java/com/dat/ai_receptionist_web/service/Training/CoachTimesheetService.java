@@ -74,7 +74,7 @@ public class CoachTimesheetService {
         CoachTimesheet entity = new CoachTimesheet();
         var session = classSessionRepository.findById(request.classSessionId())
                 .orElseThrow(() -> new ApiException(TrainingErrorCode.CLASS_SESSION_NOT_FOUND));
-        CourseStaffAssignment assignment = resolveAssignment(context, session.getCourse().getCourseId(),
+        CourseStaffAssignment assignment = resolveAssignment(context, session.getCourseSchedule().getCourseScheduleId(),
                 session.getSessionDate());
         personCodePolicy.requireSystemEmployee(assignment.getStaffPerson());
         accessPolicy.requireCanCreate(context, session, assignment);
@@ -136,13 +136,13 @@ public class CoachTimesheetService {
         ).orElseThrow(() -> new ApiException(TrainingErrorCode.COACH_TIMESHEET_NOT_FOUND));
     }
 
-    private CourseStaffAssignment resolveAssignment(AccessContext context, UUID courseId, LocalDate sessionDate) {
+    private CourseStaffAssignment resolveAssignment(AccessContext context, UUID courseScheduleId, LocalDate sessionDate) {
         if (context.activePersonId() == null) {
             throw new ApiException(TrainingErrorCode.COURSE_STAFF_ASSIGNMENT_NOT_EFFECTIVE);
         }
-        var assignments = courseStaffAssignmentRepository.findEffectiveAssignmentsForStaffCourseTypeOnDate(
+        var assignments = courseStaffAssignmentRepository.findEffectiveAssignmentsForStaffCourseScheduleTypeOnDate(
                 context.activePersonId(),
-                courseId,
+                courseScheduleId,
                 AssignmentType.PRIMARY_COACH,
                 sessionDate
         );
@@ -206,7 +206,7 @@ public class CoachTimesheetService {
     }
 
     private void requireResolvedStaffAssignment(ClassSession session, CourseStaffAssignment assignment) {
-        if (!assignment.getCourse().getCourseId().equals(session.getCourse().getCourseId())
+        if (!assignment.getCourseSchedule().getCourseScheduleId().equals(session.getCourseSchedule().getCourseScheduleId())
                 || assignment.getStartDate().isAfter(session.getSessionDate())
                 || (assignment.getEndDate() != null && assignment.getEndDate().isBefore(session.getSessionDate()))
                 || !assignment.getAssignmentStatus().isActiveLike()) {

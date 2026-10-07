@@ -1,6 +1,6 @@
 package com.dat.ai_receptionist_web.dto.Training;
 
-import com.dat.ai_receptionist_web.dto.Catalog.ClassScheduleDTO;
+import com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO;
 import com.dat.ai_receptionist_web.dto.Core.PersonDTO;
 import com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus;
 import jakarta.validation.constraints.NotNull;
@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.List;
 
 public final class StudentEnrollmentDTO {
     private StudentEnrollmentDTO() {
@@ -19,7 +20,7 @@ public final class StudentEnrollmentDTO {
             @NotNull
             UUID coursePurchaseId,
             @NotNull
-            UUID classScheduleId,
+            @NotNull List<UUID> courseScheduleIds,
             @NotNull
             LocalDate startDate,
             @NotNull
@@ -35,7 +36,7 @@ public final class StudentEnrollmentDTO {
             @NotNull
             UUID coursePurchaseId,
             @NotNull
-            UUID classScheduleId,
+            @NotNull List<UUID> courseScheduleIds,
             @NotNull
             LocalDate startDate,
             @NotNull
@@ -49,7 +50,7 @@ public final class StudentEnrollmentDTO {
             UUID studentEnrollmentId,
             PersonDTO.Response studentPerson,
             UUID coursePurchaseId,
-            ClassScheduleDTO.Response classSchedule,
+            List<CourseScheduleDTO.Response> courseSchedules,
             LocalDate startDate,
             LocalDate endDate,
             StudentEnrollmentStatus status,
@@ -62,7 +63,7 @@ public final class StudentEnrollmentDTO {
             UUID studentEnrollmentId,
             PersonDTO.SimpleResponse studentPerson,
             UUID coursePurchaseId,
-            ClassScheduleDTO.SimpleResponse classSchedule,
+            List<CourseScheduleDTO.SimpleResponse> courseSchedules,
             LocalDate startDate,
             LocalDate endDate,
             StudentEnrollmentStatus status

@@ -76,23 +76,21 @@ JOIN LATERAL (
 
 ALTER TABLE training.class_session ADD COLUMN course_schedule_id UUID;
 UPDATE training.class_session session
-SET course_schedule_id = selected.course_schedule_id
-FROM LATERAL (
+SET course_schedule_id = (
     SELECT cs.course_schedule_id
     FROM catalog.course_schedule cs
     WHERE cs.course_id = session.course_id
       AND cs.class_schedule_id = session.schedule_snapshot_id
     ORDER BY (cs.start_date <= session.session_date) DESC, cs.start_date DESC
     LIMIT 1
-) selected;
+);
 -- A snapshot always exists after V13; this fallback protects anomalous legacy rows.
 UPDATE training.class_session session
-SET course_schedule_id = selected.course_schedule_id
-FROM LATERAL (
+SET course_schedule_id = (
     SELECT cs.course_schedule_id FROM catalog.course_schedule cs
     WHERE cs.course_id = session.course_id
     ORDER BY cs.start_date DESC LIMIT 1
-) selected
+)
 WHERE session.course_schedule_id IS NULL;
 ALTER TABLE training.class_session
     ALTER COLUMN course_schedule_id SET NOT NULL,
@@ -108,14 +106,13 @@ CREATE UNIQUE INDEX uk_class_session_course_schedule_date_active
 -- period. Existing references retain the assignment id.
 ALTER TABLE training.course_staff_assignment ADD COLUMN course_schedule_id UUID;
 UPDATE training.course_staff_assignment assignment
-SET course_schedule_id = selected.course_schedule_id
-FROM LATERAL (
+SET course_schedule_id = (
     SELECT cs.course_schedule_id FROM catalog.course_schedule cs
     WHERE cs.course_id = assignment.course_id
       AND cs.start_date <= assignment.start_date
       AND (cs.end_date IS NULL OR cs.end_date >= assignment.start_date)
     ORDER BY cs.start_date DESC LIMIT 1
-) selected;
+);
 ALTER TABLE training.course_staff_assignment
     ALTER COLUMN course_schedule_id SET NOT NULL,
     ADD CONSTRAINT fk_course_staff_assignment_course_schedule

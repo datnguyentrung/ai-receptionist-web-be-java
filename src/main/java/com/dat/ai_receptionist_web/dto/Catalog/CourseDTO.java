@@ -5,8 +5,8 @@ import com.dat.ai_receptionist_web.enums.Catalog.CourseStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -15,8 +15,8 @@ public final class CourseDTO {
     }
 
     public record CreateRequest(
-            @NotNull(message = "Class schedule ID is required")
-            UUID classScheduleId,
+            @NotNull(message = "At least one course schedule is required")
+            List<CourseScheduleDTO.UpsertRequest> courseSchedules,
 
             @NotBlank(message = "Name is required")
             String name,
@@ -40,9 +40,7 @@ public final class CourseDTO {
 
     public record Response(
             UUID courseId,
-            ClassScheduleDTO.Response classSchedule,
-            ClassScheduleDTO.SimpleResponse nextClassSchedule,
-            LocalDate nextScheduleEffectiveFrom,
+            List<CourseScheduleDTO.Response> courseSchedules,
             String name,
             int capacity,
             CourseStatus status,
@@ -58,9 +56,7 @@ public final class CourseDTO {
 
     public record SimpleResponse(
             UUID courseId,
-            ClassScheduleDTO.SimpleResponse classSchedule,
-            ClassScheduleDTO.SimpleResponse nextClassSchedule,
-            LocalDate nextScheduleEffectiveFrom,
+            List<CourseScheduleDTO.SimpleResponse> courseSchedules,
             String name,
             int capacity,
             CourseStatus status,
@@ -68,19 +64,8 @@ public final class CourseDTO {
     ) {
     }
 
-    public record ScheduleChangeRequest(
-            @NotNull(message = "Class schedule ID is required")
-            UUID classScheduleId,
+    /** Internal compatibility type while the session planner is migrated. Not exposed by CourseController. */
+    public record ScheduleChangeRequest(UUID classScheduleId, LocalDate effectiveFrom) {}
+    public record CourseScheduleChangeResponse(Response course, List<UUID> cancelledSessionIds, List<UUID> generatedSessionIds) {}
 
-            @NotNull(message = "Effective from is required")
-            LocalDate effectiveFrom
-    ) {
-    }
-
-    public record CourseScheduleChangeResponse(
-            Response course,
-            java.util.List<UUID> cancelledSessionIds,
-            java.util.List<UUID> generatedSessionIds
-    ) {
-    }
 }

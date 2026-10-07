@@ -1,6 +1,5 @@
 package com.dat.ai_receptionist_web.domain.Training;
 
-import com.dat.ai_receptionist_web.domain.Catalog.ClassSchedule;
 import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.domain.Finance.CoursePurchase;
 import com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus;
@@ -14,6 +13,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -25,7 +26,6 @@ import java.util.UUID;
 @Table(name = "student_enrollment", schema = "training", uniqueConstraints =
         @UniqueConstraint(name = "uk_enrollment_course_purchase", columnNames = "course_purchase_id"),
         indexes = {
-                @Index(name = "idx_enrollment_schedule", columnList = "class_schedule_id"),
                 @Index(name = "idx_student_enrollment_student_period",
                         columnList = "student_person_id,start_date,end_date"),
                 @Index(name = "idx_enrollment_status_period", columnList = "status,start_date,end_date")
@@ -45,9 +45,17 @@ public class StudentEnrollment {
     @JoinColumn(name = "course_purchase_id", nullable = false)
     private CoursePurchase coursePurchase;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "class_schedule_id", nullable = false)
-    private ClassSchedule classSchedule;
+    @OneToMany(mappedBy = "studentEnrollment", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<StudentEnrollmentSchedule> schedules = new LinkedHashSet<>();
+
+    public void replaceSchedules(Set<StudentEnrollmentSchedule> selected) {
+        schedules.clear();
+        selected.forEach(link -> {
+            link.setStudentEnrollment(this);
+            schedules.add(link);
+        });
+    }
 
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;

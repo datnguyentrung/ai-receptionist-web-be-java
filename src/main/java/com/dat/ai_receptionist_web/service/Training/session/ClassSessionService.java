@@ -330,7 +330,7 @@ public class ClassSessionService {
                         courseIds, fromDate, toDate);
         Map<UUID, List<CourseStaffAssignment>> assignmentsByCourseId = assignments.stream()
                 .collect(Collectors.groupingBy(
-                        assignment -> assignment.getCourse().getCourseId(),
+                        assignment -> assignment.getCourseSchedule().getCourse().getCourseId(),
                         LinkedHashMap::new,
                         Collectors.toList()));
 

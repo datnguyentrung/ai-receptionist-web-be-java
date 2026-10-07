@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.service.Catalog;
 
 import com.dat.ai_receptionist_web.domain.Catalog.Course;
+import com.dat.ai_receptionist_web.domain.Catalog.CourseSchedule;
 import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.domain.Training.CourseStaffAssignment;
 import com.dat.ai_receptionist_web.dto.Catalog.CourseDTO;
@@ -43,8 +44,12 @@ class CourseServiceTest {
                 .personId(UUID.randomUUID())
                 .fullName("Coach A")
                 .build();
-        CourseStaffAssignment assignment = CourseStaffAssignment.builder()
+        CourseSchedule schedule = CourseSchedule.builder()
+                .courseScheduleId(UUID.randomUUID())
                 .course(course)
+                .build();
+        CourseStaffAssignment assignment = CourseStaffAssignment.builder()
+                .courseSchedule(schedule)
                 .staffPerson(coach)
                 .assignmentType(AssignmentType.PRIMARY_COACH)
                 .assignmentStatus(CourseStaffAssignmentStatus.ACTIVE)
@@ -52,9 +57,7 @@ class CourseServiceTest {
                 .build();
         CourseDTO.SimpleResponse response = new CourseDTO.SimpleResponse(
                 course.getCourseId(),
-                null,
-                null,
-                null,
+                List.of(),
                 course.getName(),
                 0,
                 CourseStatus.ACTIVE,
@@ -66,11 +69,14 @@ class CourseServiceTest {
                 anyCollection(),
                 eq(LocalDate.now()))).thenReturn(List.of(assignment));
         when(mapper.toSimpleResponse(course, coach)).thenReturn(response);
+        when(mapper.withSchedules(eq(response), anyList())).thenReturn(response);
 
         CourseService service = new CourseService(
                 repository,
                 mapper,
                 mock(ClassScheduleRepository.class),
+                mock(com.dat.ai_receptionist_web.repository.Catalog.CourseScheduleRepository.class),
+                mock(com.dat.ai_receptionist_web.mapper.Catalog.CourseScheduleMapper.class),
                 planningService,
                 assignmentRepository);
 

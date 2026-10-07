@@ -63,6 +63,12 @@ public class SessionAttendanceAccessPolicy {
         if (enrollment.getStartDate().isAfter(sessionDate) || enrollment.getEndDate().isBefore(sessionDate)) {
             throw new ApiException(TrainingErrorCode.STUDENT_ENROLLMENT_NOT_EFFECTIVE);
         }
+        boolean selected = enrollment.getSchedules().stream().anyMatch(link ->
+                Objects.equals(link.getCourseSchedule().getCourseScheduleId(),
+                        session.getCourseSchedule().getCourseScheduleId()));
+        if (!selected) {
+            throw new ApiException(TrainingErrorCode.STUDENT_ENROLLMENT_NOT_EFFECTIVE);
+        }
     }
 
     private void requireParticipantEffective(
@@ -78,8 +84,8 @@ public class SessionAttendanceAccessPolicy {
             return;
         }
         UUIDs.requireEqual(
-                session.getCourse().getCourseId(),
-                participantAssignment.getCourse().getCourseId(),
+                session.getCourseSchedule().getCourseScheduleId(),
+                participantAssignment.getCourseSchedule().getCourseScheduleId(),
                 TrainingErrorCode.COURSE_STAFF_ASSIGNMENT_NOT_EFFECTIVE
         );
         if (participantAssignment.getAssignmentType() != AssignmentType.ASSISTANT_COACH

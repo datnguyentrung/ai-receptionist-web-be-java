@@ -27,10 +27,9 @@ class ListFetchGraphContractTest {
         assertDetailedListQuery(ClassScheduleRepository.class,
                 "join fetch cs.branch");
         assertDetailedListQuery(CourseRepository.class,
-                "join fetch c.classSchedule",
-                "join fetch classSchedule.branch",
-                "left join fetch c.nextClassSchedule",
-                "left join fetch nextClassSchedule.branch");
+                "left join fetch c.courseSchedules courseSchedule",
+                "left join fetch courseSchedule.classSchedule classSchedule",
+                "left join fetch classSchedule.branch");
         assertDetailedListQuery(CoursePriceRepository.class,
                 "join fetch cp.course",
                 "join fetch course.classSchedule",

@@ -296,20 +296,20 @@ class TrainingPolicyRepositoryContractTest {
         assertThat(listQuery.value())
                 .contains(
                         "left join fetch a.staffPerson",
-                        "left join fetch a.course",
-                        "left join fetch course.classSchedule",
-                        "left join fetch courseSchedule.branch",
-                        "left join fetch course.nextClassSchedule",
-                        "left join fetch courseNextSchedule.branch"
+                        "left join fetch a.courseSchedule",
+                        "left join fetch courseSchedule.course",
+                        "left join fetch courseSchedule.classSchedule",
+                        "left join fetch classSchedule.branch"
                 )
                 .doesNotContain("left join fetch staffPerson.position");
         assertThat(detailQuery.value())
                 .contains(
                         "left join fetch a.staffPerson",
                         "left join fetch staffPerson.position",
-                        "left join fetch a.course",
-                        "left join fetch course.classSchedule",
-                        "left join fetch course.nextClassSchedule"
+                        "left join fetch a.courseSchedule",
+                        "left join fetch courseSchedule.course",
+                        "left join fetch courseSchedule.classSchedule",
+                        "left join fetch classSchedule.branch"
                 );
     }
 
@@ -328,7 +328,7 @@ class TrainingPolicyRepositoryContractTest {
                 .contains(
                         "join fetch a.staffPerson",
                         "left join fetch staffPerson.position",
-                        "a.course.courseId in :courseIds",
+                        "a.courseSchedule.course.courseId in :courseIds",
                         "a.assignmentType in :assignmentTypes",
                         "a.startDate <= :effectiveDate",
                         "a.endDate is null or a.endDate >= :effectiveDate",
@@ -427,7 +427,7 @@ class TrainingPolicyRepositoryContractTest {
         assertThat(query)
                 .contains("a.staffPerson.personId = :activePersonId")
                 .contains("managerAssignment.assignmentType = com.dat.ai_receptionist_web.enums.Training.AssignmentType.MANAGER")
-                .contains("managerAssignment.course.courseId = a.course.courseId")
+                .contains("managerAssignment.courseSchedule.course.courseId = a.courseSchedule.course.courseId")
                 .contains("managerAssignment.startDate <= a.endDate")
                 .contains("managerAssignment.endDate is null or managerAssignment.endDate >= a.startDate")
                 .contains("CourseStaffAssignmentStatus.ACTIVE", "CourseStaffAssignmentStatus.ENDED")

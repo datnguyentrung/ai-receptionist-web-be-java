@@ -9,7 +9,7 @@ import com.dat.ai_receptionist_web.error.code.CatalogErrorCode;
 import com.dat.ai_receptionist_web.error.code.CoreErrorCode;
 import com.dat.ai_receptionist_web.error.code.TrainingErrorCode;
 import com.dat.ai_receptionist_web.mapper.Training.CourseStaffAssignmentMapper;
-import com.dat.ai_receptionist_web.repository.Catalog.CourseRepository;
+import com.dat.ai_receptionist_web.repository.Catalog.CourseScheduleRepository;
 import com.dat.ai_receptionist_web.repository.Core.PersonRepository;
 import com.dat.ai_receptionist_web.repository.Training.CourseStaffAssignmentRepository;
 import com.dat.ai_receptionist_web.service.Core.PersonCodePolicy;
@@ -30,7 +30,7 @@ public class CourseStaffAssignmentService {
     private final CourseStaffAssignmentRepository repository;
     private final CourseStaffAssignmentMapper mapper;
     private final PersonRepository personRepository;
-    private final CourseRepository courseRepository;
+    private final CourseScheduleRepository courseScheduleRepository;
     private final PersonCodePolicy personCodePolicy;
     private final CurrentAccessContextResolver currentAccessContextResolver;
     private final CourseStaffAssignmentAccessPolicy accessPolicy;
@@ -58,13 +58,13 @@ public class CourseStaffAssignmentService {
     public CourseStaffAssignmentDTO.Response create(CourseStaffAssignmentDTO.CreateRequest request) {
         AccessContext context = currentAccessContextResolver.current();
         accessPolicy.requireCanManagePeriod(
-                context, request.courseId(), request.startDate(), request.endDate());
+                context, courseId(request.courseScheduleId()), request.startDate(), request.endDate());
         CourseStaffAssignment entity = new CourseStaffAssignment();
         var staffPerson = personRepository.findById(request.staffPersonId())
                 .orElseThrow(() -> new ApiException(CoreErrorCode.PERSON_NOT_FOUND));
         personCodePolicy.requireSystemEmployee(staffPerson);
         entity.setStaffPerson(staffPerson);
-        entity.setCourse(courseRepository.findById(request.courseId())
+        entity.setCourseSchedule(courseScheduleRepository.findById(request.courseScheduleId())
                 .orElseThrow(() -> new ApiException(CatalogErrorCode.COURSE_NOT_FOUND)));
         entity.setAssignmentType(request.assignmentType());
         entity.setStartDate(request.startDate());
@@ -79,12 +79,12 @@ public class CourseStaffAssignmentService {
         AccessContext context = currentAccessContextResolver.current();
         var entity = findAccessible(id, context, accessPolicy.resolveWriteScope(context));
         accessPolicy.requireCanManagePeriod(
-                context, request.courseId(), request.startDate(), request.endDate());
+                context, courseId(request.courseScheduleId()), request.startDate(), request.endDate());
         var staffPerson = personRepository.findById(request.staffPersonId())
                 .orElseThrow(() -> new ApiException(CoreErrorCode.PERSON_NOT_FOUND));
         personCodePolicy.requireSystemEmployee(staffPerson);
         entity.setStaffPerson(staffPerson);
-        entity.setCourse(courseRepository.findById(request.courseId())
+        entity.setCourseSchedule(courseScheduleRepository.findById(request.courseScheduleId())
                 .orElseThrow(() -> new ApiException(CatalogErrorCode.COURSE_NOT_FOUND)));
         mapper.updateEntity(request, entity);
         return mapper.toResponse(repository.save(entity));
@@ -95,7 +95,7 @@ public class CourseStaffAssignmentService {
         AccessContext context = currentAccessContextResolver.current();
         var entity = findAccessible(id, context, accessPolicy.resolveWriteScope(context));
         accessPolicy.requireCanManagePeriod(
-                context, entity.getCourse().getCourseId(), entity.getStartDate(), entity.getEndDate());
+                context, entity.getCourseSchedule().getCourse().getCourseId(), entity.getStartDate(), entity.getEndDate());
         entity.setAssignmentStatus(CourseStaffAssignmentStatus.CANCELLED);
     }
 
@@ -111,5 +111,11 @@ public class CourseStaffAssignmentService {
                 scope.self(),
                 scope.managedCourses()
         ).orElseThrow(() -> new ApiException(TrainingErrorCode.COURSE_STAFF_ASSIGNMENT_NOT_FOUND));
+    }
+
+    private UUID courseId(UUID courseScheduleId) {
+        return courseScheduleRepository.findById(courseScheduleId)
+                .orElseThrow(() -> new ApiException(CatalogErrorCode.COURSE_NOT_FOUND))
+                .getCourse().getCourseId();
     }
 }

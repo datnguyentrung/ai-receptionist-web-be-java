@@ -50,6 +50,7 @@ class RolePermissionServiceAssignmentTest {
         verify(roleRepository, times(1)).incrementPermissionVersion("SUPER_ADMIN");
         verify(rolePermissionRepository, never()).deleteByRoleCodeAndPermissionCodeIn(anyString(), anySet());
 
+        @SuppressWarnings("unchecked")
         ArgumentCaptor<List<RolePermission>> saved = ArgumentCaptor.forClass(List.class);
         verify(rolePermissionRepository).saveAll(saved.capture());
         assertThat(saved.getValue()).hasSize(2);

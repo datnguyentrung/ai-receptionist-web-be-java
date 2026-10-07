@@ -1,13 +1,42 @@
 package com.dat.ai_receptionist_web.service.Report;
 
-import com.dat.ai_receptionist_web.dto.Report.FacebookDTO.*;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Service;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import com.dat.ai_receptionist_web.dto.Report.FacebookDTO.AggregatedInsights;
+import com.dat.ai_receptionist_web.dto.Report.FacebookDTO.AggregatedPostInsights;
+import com.dat.ai_receptionist_web.dto.Report.FacebookDTO.AttachmentItem;
+import com.dat.ai_receptionist_web.dto.Report.FacebookDTO.AttachmentsWrapper;
+import com.dat.ai_receptionist_web.dto.Report.FacebookDTO.CommentsInfo;
+import com.dat.ai_receptionist_web.dto.Report.FacebookDTO.CommentsSummary;
+import com.dat.ai_receptionist_web.dto.Report.FacebookDTO.InsightValue;
+import com.dat.ai_receptionist_web.dto.Report.FacebookDTO.PostInsightItem;
+import com.dat.ai_receptionist_web.dto.Report.FacebookDTO.PostInsightsParsed;
+import com.dat.ai_receptionist_web.dto.Report.FacebookDTO.PostInsightsWrapper;
+import com.dat.ai_receptionist_web.dto.Report.FacebookDTO.PostSummary;
+import com.dat.ai_receptionist_web.dto.Report.FacebookDTO.Posts;
+import com.dat.ai_receptionist_web.dto.Report.FacebookDTO.PostsResponse;
+import com.dat.ai_receptionist_web.dto.Report.FacebookDTO.SharesInfo;
+import com.dat.ai_receptionist_web.dto.Report.FacebookDTO.VideoInsightItem;
+import com.dat.ai_receptionist_web.dto.Report.FacebookDTO.VideoInsightsParsed;
+import com.dat.ai_receptionist_web.dto.Report.FacebookDTO.VideoInsightsWrapper;
+import com.dat.ai_receptionist_web.dto.Report.FacebookDTO.VideoSummary;
+import com.dat.ai_receptionist_web.dto.Report.FacebookDTO.Videos;
+import com.dat.ai_receptionist_web.dto.Report.FacebookDTO.VideosResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
@@ -64,7 +93,8 @@ public class FacebookService {
 
     /**
      * Parse danh sÃ¡ch VideoInsightItem thÃ nh VideoInsightsParsed
-     * Má»—i item cÃ³ name, values[0].value cÃ³ thá»ƒ lÃ  Long, Map<String,Long>, Map<String,Double>
+     * Má»—i item cÃ³ name, values[0].value cÃ³ thá»ƒ lÃ  Long, Map<String,Long>,
+     * Map<String,Double>
      */
     public VideoInsightsParsed parseInsights(List<VideoInsightItem> items) {
         if (items == null || items.isEmpty()) {
@@ -74,7 +104,8 @@ public class FacebookService {
         VideoInsightsParsed.VideoInsightsParsedBuilder builder = VideoInsightsParsed.builder();
 
         for (VideoInsightItem item : items) {
-            if (item == null || item.getName() == null) continue;
+            if (item == null || item.getName() == null)
+                continue;
 
             Object rawValue = extractRawValue(item);
 
@@ -115,14 +146,16 @@ public class FacebookService {
 
     /**
      * Láº¥y value Ä‘áº§u tiÃªn tá»« values[] cá»§a má»™t InsightItem
-     * Facebook luÃ´n tráº£ vá» values lÃ  array cÃ³ 1 pháº§n tá»­ vá»›i period=lifetime
+     * Facebook luÃ´n tráº£ vá» values lÃ  array cÃ³ 1 pháº§n tá»­ vá»›i
+     * period=lifetime
      */
     private Object extractRawValue(VideoInsightItem item) {
         if (item.getValues() == null || item.getValues().isEmpty()) {
             return null;
         }
         InsightValue insightValue = item.getValues().getFirst();
-        if (insightValue == null) return null;
+        if (insightValue == null)
+            return null;
         return insightValue.getValue();
     }
 
@@ -174,11 +207,13 @@ public class FacebookService {
      */
     @SuppressWarnings("unchecked")
     private Map<String, Long> parseReactionMap(Object value) {
-        if (value == null) return Collections.emptyMap();
+        if (value == null)
+            return Collections.emptyMap();
 
         // Empty object {} -> khÃ´ng cÃ³ reaction nÃ o
         if (value instanceof Map<?, ?> rawMap) {
-            if (rawMap.isEmpty()) return Collections.emptyMap();
+            if (rawMap.isEmpty())
+                return Collections.emptyMap();
 
             Map<String, Long> result = new LinkedHashMap<>();
             for (Map.Entry<?, ?> entry : rawMap.entrySet()) {
@@ -194,7 +229,8 @@ public class FacebookService {
                         log.warn("Cannot parse reaction count for key '{}': {}", key, v);
                     }
                 }
-                if (count != null) result.put(key, count);
+                if (count != null)
+                    result.put(key, count);
             }
             return result;
         }
@@ -208,7 +244,7 @@ public class FacebookService {
      * TÃ¡ch thÃ nh shares vÃ  comments riÃªng biá»‡t
      */
     private void parseSocialActions(Object value,
-                                    VideoInsightsParsed.VideoInsightsParsedBuilder builder) {
+            VideoInsightsParsed.VideoInsightsParsedBuilder builder) {
         if (value == null) {
             builder.shares(0L).comments(0L);
             return;
@@ -248,10 +284,12 @@ public class FacebookService {
      * Sá»‘ key phá»¥ thuá»™c vÃ o Ä‘á»™ dÃ i video nÃªn khÃ´ng cá»‘ Ä‘á»‹nh
      */
     private Map<String, Double> parseRetentionGraph(Object value) {
-        if (value == null) return Collections.emptyMap();
+        if (value == null)
+            return Collections.emptyMap();
 
         if (value instanceof Map<?, ?> rawMap) {
-            if (rawMap.isEmpty()) return Collections.emptyMap();
+            if (rawMap.isEmpty())
+                return Collections.emptyMap();
 
             // Sort theo key numeric Ä‘á»ƒ dá»… Ä‘á»c
             Map<String, Double> result = new TreeMap<>(
@@ -261,8 +299,7 @@ public class FacebookService {
                         } catch (NumberFormatException e) {
                             return Integer.MAX_VALUE;
                         }
-                    })
-            );
+                    }));
 
             for (Map.Entry<?, ?> entry : rawMap.entrySet()) {
                 String second = String.valueOf(entry.getKey());
@@ -281,7 +318,8 @@ public class FacebookService {
                     }
                 }
 
-                if (ratio != null) result.put(second, ratio);
+                if (ratio != null)
+                    result.put(second, ratio);
             }
             return result;
         }
@@ -296,7 +334,8 @@ public class FacebookService {
      * TÃ­nh tá»•ng reactions tá»« likesByReactionType
      */
     public long computeTotalReactions(VideoInsightsParsed parsed) {
-        if (parsed.getLikesByReactionType() == null) return 0L;
+        if (parsed.getLikesByReactionType() == null)
+            return 0L;
         return parsed.getLikesByReactionType().values().stream()
                 .mapToLong(Long::longValue)
                 .sum();
@@ -308,7 +347,8 @@ public class FacebookService {
      */
     public double computeEngagementRate(VideoInsightsParsed parsed) {
         long totalPlays = Optional.ofNullable(parsed.getTotalPlays()).orElse(0L);
-        if (totalPlays == 0L) return 0.0;
+        if (totalPlays == 0L)
+            return 0.0;
 
         long reactions = computeTotalReactions(parsed);
         long comments = Optional.ofNullable(parsed.getComments()).orElse(0L);
@@ -331,7 +371,8 @@ public class FacebookService {
      */
     public double computeWatchThroughRate(VideoInsightsParsed parsed) {
         Double lengthSeconds = parsed.getLengthSeconds();
-        if (lengthSeconds == null || lengthSeconds == 0.0) return 0.0;
+        if (lengthSeconds == null || lengthSeconds == 0.0)
+            return 0.0;
 
         double avgWatchSeconds = computeAvgWatchTimeSeconds(parsed);
         return (avgWatchSeconds / lengthSeconds) * 100.0;
@@ -343,7 +384,8 @@ public class FacebookService {
      */
     public Double getRetentionAtSecond(VideoInsightsParsed parsed, int second) {
         Map<String, Double> graph = parsed.getRetentionGraph();
-        if (graph == null || graph.isEmpty()) return null;
+        if (graph == null || graph.isEmpty())
+            return null;
         return graph.get(String.valueOf(second));
     }
 
@@ -353,7 +395,8 @@ public class FacebookService {
      */
     public int findBiggestDropOffSecond(VideoInsightsParsed parsed) {
         Map<String, Double> graph = parsed.getRetentionGraph();
-        if (graph == null || graph.size() < 2) return -1;
+        if (graph == null || graph.size() < 2)
+            return -1;
 
         List<Map.Entry<String, Double>> entries = new ArrayList<>(graph.entrySet());
         int maxDropSecond = -1;
@@ -509,7 +552,8 @@ public class FacebookService {
     // ==================== POST CORE PARSE ====================
 
     /**
-     * Parse danh sÃ¡ch PostInsightItem thÃ nh PostInsightsParsed (chá»‰ pháº§n insights,
+     * Parse danh sÃ¡ch PostInsightItem thÃ nh PostInsightsParsed (chá»‰ pháº§n
+     * insights,
      * chÆ°a cÃ³ postId/message/shareCount/commentCount/mediaTypes)
      * Má»—i item cÃ³ name, values[0].value lÃ  Map<String, Long>
      */
@@ -524,7 +568,8 @@ public class FacebookService {
         }
 
         for (PostInsightItem item : items) {
-            if (item == null || item.getName() == null) continue;
+            if (item == null || item.getName() == null)
+                continue;
 
             Object rawValue = extractRawPostValue(item);
 
@@ -555,20 +600,25 @@ public class FacebookService {
             return null;
         }
         InsightValue insightValue = item.getValues().getFirst();
-        if (insightValue == null) return null;
+        if (insightValue == null)
+            return null;
         return insightValue.getValue();
     }
 
     /**
-     * Parse Map<String, Long> tá»•ng quÃ¡t, dÃ¹ng chung cho reactionsByType vÃ  clicksByType
+     * Parse Map<String, Long> tá»•ng quÃ¡t, dÃ¹ng chung cho reactionsByType vÃ 
+     * clicksByType
      * Input: {"like": 16, "love": 5} hoáº·c {"other clicks": 22, "photo view": 195}
-     * Input cÅ©ng cÃ³ thá»ƒ lÃ  {} (empty object) khi post khÃ´ng cÃ³ reaction/click nÃ o
+     * Input cÅ©ng cÃ³ thá»ƒ lÃ  {} (empty object) khi post khÃ´ng cÃ³
+     * reaction/click nÃ o
      */
     private Map<String, Long> parseStringLongMap(Object value) {
-        if (value == null) return Collections.emptyMap();
+        if (value == null)
+            return Collections.emptyMap();
 
         if (value instanceof Map<?, ?> rawMap) {
-            if (rawMap.isEmpty()) return Collections.emptyMap();
+            if (rawMap.isEmpty())
+                return Collections.emptyMap();
 
             Map<String, Long> result = new LinkedHashMap<>();
             for (Map.Entry<?, ?> entry : rawMap.entrySet()) {
@@ -584,7 +634,8 @@ public class FacebookService {
                         log.warn("Cannot parse count for key '{}': {}", key, v);
                     }
                 }
-                if (count != null) result.put(key, count);
+                if (count != null)
+                    result.put(key, count);
             }
             return result;
         }
@@ -599,7 +650,8 @@ public class FacebookService {
      * TÃ­nh tá»•ng reactions tá»« reactionsByType
      */
     public long computeTotalPostReactions(PostInsightsParsed parsed) {
-        if (parsed.getReactionsByType() == null) return 0L;
+        if (parsed.getReactionsByType() == null)
+            return 0L;
         return parsed.getReactionsByType().values().stream()
                 .mapToLong(Long::longValue)
                 .sum();
@@ -609,7 +661,8 @@ public class FacebookService {
      * TÃ­nh tá»•ng clicks tá»« clicksByType
      */
     public long computeTotalPostClicks(PostInsightsParsed parsed) {
-        if (parsed.getClicksByType() == null) return 0L;
+        if (parsed.getClicksByType() == null)
+            return 0L;
         return parsed.getClicksByType().values().stream()
                 .mapToLong(Long::longValue)
                 .sum();
@@ -717,17 +770,20 @@ public class FacebookService {
      * Output: Trả về String theo kết quả xử lý.
      */
     private String truncate(String text) {
-        if (text == null) return null;
+        if (text == null)
+            return null;
         return text.length() <= 100 ? text : text.substring(0, 100) + "...";
     }
 
     /**
      * Tác dụng: Thực hiện logic sumLong của lớp hiện tại.
-     * Input: Nhận List<VideoInsightsParsed> list, java.util.function.Function<VideoInsightsParsed, Long> getter từ caller hoặc request.
+     * Input: Nhận List<VideoInsightsParsed> list,
+     * java.util.function.Function<VideoInsightsParsed, Long> getter từ caller hoặc
+     * request.
      * Output: Trả về giá trị long biểu thị kết quả tính toán hoặc số lượng.
      */
     private long sumLong(List<VideoInsightsParsed> list,
-                         java.util.function.Function<VideoInsightsParsed, Long> getter) {
+            java.util.function.Function<VideoInsightsParsed, Long> getter) {
         return list.stream()
                 .mapToLong(v -> Optional.ofNullable(getter.apply(v)).orElse(0L))
                 .sum();
@@ -735,15 +791,15 @@ public class FacebookService {
 
     /**
      * Tác dụng: Thực hiện logic sumLongPost của lớp hiện tại.
-     * Input: Nhận List<PostInsightsParsed> list, java.util.function.Function<PostInsightsParsed, Long> getter từ caller hoặc request.
+     * Input: Nhận List<PostInsightsParsed> list,
+     * java.util.function.Function<PostInsightsParsed, Long> getter từ caller hoặc
+     * request.
      * Output: Trả về giá trị long biểu thị kết quả tính toán hoặc số lượng.
      */
     private long sumLongPost(List<PostInsightsParsed> list,
-                             java.util.function.Function<PostInsightsParsed, Long> getter) {
+            java.util.function.Function<PostInsightsParsed, Long> getter) {
         return list.stream()
                 .mapToLong(v -> Optional.ofNullable(getter.apply(v)).orElse(0L))
                 .sum();
     }
 }
-
-

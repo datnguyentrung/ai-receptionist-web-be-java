@@ -20,7 +20,7 @@ public interface CourseStaffAssignmentRepository extends JpaRepository<CourseSta
         from CourseStaffAssignment a
         join fetch a.staffPerson staffPerson
         left join fetch staffPerson.position
-        where a.course.courseId in :courseIds
+        where a.courseSchedule.course.courseId in :courseIds
           and a.assignmentType in :assignmentTypes
           and a.startDate <= :effectiveDate
           and (a.endDate is null or a.endDate >= :effectiveDate)
@@ -28,7 +28,7 @@ public interface CourseStaffAssignmentRepository extends JpaRepository<CourseSta
               com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ACTIVE,
               com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ENDED
           )
-        order by a.course.courseId, a.assignmentType, a.startDate desc, a.courseStaffAssignmentId
+        order by a.courseSchedule.course.courseId, a.assignmentType, a.startDate desc, a.courseStaffAssignmentId
     """)
     List<CourseStaffAssignment> findEffectiveStaffByCourseIdsAndDate(
             @Param("courseIds") Collection<UUID> courseIds,
@@ -41,7 +41,7 @@ public interface CourseStaffAssignmentRepository extends JpaRepository<CourseSta
         from CourseStaffAssignment a
         join fetch a.staffPerson staffPerson
         left join fetch staffPerson.position
-        where a.course.courseId in :courseIds
+        where a.courseSchedule.course.courseId in :courseIds
           and a.assignmentType = com.dat.ai_receptionist_web.enums.Training.AssignmentType.PRIMARY_COACH
           and a.startDate <= :toDate
           and (a.endDate is null or a.endDate >= :fromDate)
@@ -49,7 +49,7 @@ public interface CourseStaffAssignmentRepository extends JpaRepository<CourseSta
               com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ACTIVE,
               com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ENDED
           )
-        order by a.course.courseId, a.startDate desc, a.courseStaffAssignmentId
+        order by a.courseSchedule.course.courseId, a.startDate desc, a.courseStaffAssignmentId
     """)
     List<CourseStaffAssignment> findEffectivePrimaryCoachAssignmentsForCourseIdsBetween(
             @Param("courseIds") Collection<UUID> courseIds,
@@ -61,7 +61,7 @@ public interface CourseStaffAssignmentRepository extends JpaRepository<CourseSta
         select a
         from CourseStaffAssignment a
         where a.staffPerson.personId = :staffPersonId
-          and a.course.courseId = :courseId
+          and a.courseSchedule.course.courseId = :courseId
           and a.startDate <= :sessionDate
           and (a.endDate is null or a.endDate >= :sessionDate)
           and a.assignmentStatus in (
@@ -80,7 +80,7 @@ public interface CourseStaffAssignmentRepository extends JpaRepository<CourseSta
         select a
         from CourseStaffAssignment a
         where a.staffPerson.personId = :staffPersonId
-          and a.course.courseId = :courseId
+          and a.courseSchedule.course.courseId = :courseId
           and a.assignmentType = :assignmentType
           and a.startDate <= :sessionDate
           and (a.endDate is null or a.endDate >= :sessionDate)
@@ -98,9 +98,29 @@ public interface CourseStaffAssignmentRepository extends JpaRepository<CourseSta
     );
 
     @Query("""
+        select a from CourseStaffAssignment a
+        where a.staffPerson.personId = :staffPersonId
+          and a.courseSchedule.courseScheduleId = :courseScheduleId
+          and a.assignmentType = :assignmentType
+          and a.startDate <= :sessionDate
+          and (a.endDate is null or a.endDate >= :sessionDate)
+          and a.assignmentStatus in (
+              com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ACTIVE,
+              com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ENDED
+          )
+        order by a.startDate desc, a.courseStaffAssignmentId
+    """)
+    List<CourseStaffAssignment> findEffectiveAssignmentsForStaffCourseScheduleTypeOnDate(
+            @Param("staffPersonId") UUID staffPersonId,
+            @Param("courseScheduleId") UUID courseScheduleId,
+            @Param("assignmentType") AssignmentType assignmentType,
+            @Param("sessionDate") LocalDate sessionDate
+    );
+
+    @Query("""
         select a
         from CourseStaffAssignment a
-        where a.course.courseId = :courseId
+        where a.courseSchedule.course.courseId = :courseId
           and a.assignmentType = com.dat.ai_receptionist_web.enums.Training.AssignmentType.ASSISTANT_COACH
           and a.startDate <= :sessionDate
           and (a.endDate is null or a.endDate >= :sessionDate)
@@ -119,7 +139,7 @@ public interface CourseStaffAssignmentRepository extends JpaRepository<CourseSta
         select count(a) > 0
         from CourseStaffAssignment a
         where a.staffPerson.personId = :staffPersonId
-          and a.course.courseId = :courseId
+          and a.courseSchedule.course.courseId = :courseId
           and a.startDate <= :toDate
           and (a.endDate is null or a.endDate >= :fromDate)
           and a.assignmentStatus in (
@@ -138,7 +158,7 @@ public interface CourseStaffAssignmentRepository extends JpaRepository<CourseSta
         select count(a) > 0
         from CourseStaffAssignment a
         where a.staffPerson.personId = :staffPersonId
-          and a.course.courseId = :courseId
+          and a.courseSchedule.course.courseId = :courseId
           and a.assignmentType = com.dat.ai_receptionist_web.enums.Training.AssignmentType.MANAGER
           and a.startDate <= :startDate
           and (:endDate is null and a.endDate is null
@@ -159,11 +179,10 @@ public interface CourseStaffAssignmentRepository extends JpaRepository<CourseSta
         select a
         from CourseStaffAssignment a
         left join fetch a.staffPerson staffPerson
-        left join fetch a.course course
-        left join fetch course.classSchedule courseSchedule
-        left join fetch courseSchedule.branch
-        left join fetch course.nextClassSchedule courseNextSchedule
-        left join fetch courseNextSchedule.branch
+        left join fetch a.courseSchedule courseSchedule
+        left join fetch courseSchedule.course course
+        left join fetch courseSchedule.classSchedule classSchedule
+        left join fetch classSchedule.branch
         where :unrestricted = true
            or (:self = true and a.staffPerson.personId = :activePersonId)
            or (
@@ -172,7 +191,7 @@ public interface CourseStaffAssignmentRepository extends JpaRepository<CourseSta
                    select 1
                    from CourseStaffAssignment managerAssignment
                    where managerAssignment.staffPerson.personId = :activePersonId
-                     and managerAssignment.course.courseId = a.course.courseId
+                     and managerAssignment.courseSchedule.course.courseId = a.courseSchedule.course.courseId
                      and managerAssignment.assignmentType = com.dat.ai_receptionist_web.enums.Training.AssignmentType.MANAGER
                      and (a.endDate is null or managerAssignment.startDate <= a.endDate)
                      and (managerAssignment.endDate is null or managerAssignment.endDate >= a.startDate)
@@ -196,11 +215,10 @@ public interface CourseStaffAssignmentRepository extends JpaRepository<CourseSta
         from CourseStaffAssignment a
         left join fetch a.staffPerson staffPerson
         left join fetch staffPerson.position
-        left join fetch a.course course
-        left join fetch course.classSchedule courseSchedule
-        left join fetch courseSchedule.branch
-        left join fetch course.nextClassSchedule courseNextSchedule
-        left join fetch courseNextSchedule.branch
+        left join fetch a.courseSchedule courseSchedule
+        left join fetch courseSchedule.course course
+        left join fetch courseSchedule.classSchedule classSchedule
+        left join fetch classSchedule.branch
         where a.courseStaffAssignmentId = :id
           and (
               :unrestricted = true
@@ -211,7 +229,7 @@ public interface CourseStaffAssignmentRepository extends JpaRepository<CourseSta
                       select 1
                       from CourseStaffAssignment managerAssignment
                       where managerAssignment.staffPerson.personId = :activePersonId
-                        and managerAssignment.course.courseId = a.course.courseId
+                        and managerAssignment.courseSchedule.course.courseId = a.courseSchedule.course.courseId
                         and managerAssignment.assignmentType = com.dat.ai_receptionist_web.enums.Training.AssignmentType.MANAGER
                         and (a.endDate is null or managerAssignment.startDate <= a.endDate)
                         and (managerAssignment.endDate is null or managerAssignment.endDate >= a.startDate)

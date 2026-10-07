@@ -54,18 +54,28 @@ public class CourseController {
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).COURSE_UPDATE.getCode())")
     public CourseDTO.Response update(@PathVariable UUID id, @Valid @RequestBody CourseDTO.UpdateRequest request) { return service.update(id, request); }
 
-    @PutMapping("/{id}/schedule")
+    @PostMapping("/{id}/schedules")
+    @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).COURSE_UPDATE.getCode())")
-    public CourseDTO.CourseScheduleChangeResponse changeSchedule(
-            @PathVariable UUID id, @Valid @RequestBody CourseDTO.ScheduleChangeRequest request) {
-        return service.changeSchedule(id, request);
+    public com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO.Response addSchedule(
+            @PathVariable UUID id,
+            @Valid @RequestBody com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO.UpsertRequest request) {
+        return service.addSchedule(id, request);
     }
 
-    @DeleteMapping("/{id}/schedule/pending")
+    @PutMapping("/{courseId}/schedules/{scheduleId}")
+    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).COURSE_UPDATE.getCode())")
+    public com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO.Response updateSchedule(
+            @PathVariable UUID courseId, @PathVariable UUID scheduleId,
+            @Valid @RequestBody com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO.UpsertRequest request) {
+        return service.updateSchedule(courseId, scheduleId, request);
+    }
+
+    @DeleteMapping("/{courseId}/schedules/{scheduleId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).COURSE_UPDATE.getCode())")
-    public void cancelPendingScheduleChange(@PathVariable UUID id) {
-        service.cancelPendingScheduleChange(id);
+    public void deactivateSchedule(@PathVariable UUID courseId, @PathVariable UUID scheduleId) {
+        service.deactivateSchedule(courseId, scheduleId);
     }
 
     /**

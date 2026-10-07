@@ -10,7 +10,9 @@ import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.enums.Core.PersonStatus;
 import com.dat.ai_receptionist_web.enums.Finance.WalletStatus;
 import com.dat.ai_receptionist_web.error.ApiException;
+import com.dat.ai_receptionist_web.error.ErrorCode;
 import com.dat.ai_receptionist_web.error.code.CoreErrorCode;
+import com.dat.ai_receptionist_web.error.code.GeneralErrorCode;
 import com.dat.ai_receptionist_web.mapper.Core.PersonMapper;
 import com.dat.ai_receptionist_web.repository.Core.PersonRepository;
 import com.dat.ai_receptionist_web.repository.Core.PositionRepository;
@@ -286,8 +288,8 @@ public class PersonService {
                 : new NearestPersonMatch(match.getPersonId(), confidence);
     }
 
-    private CoreErrorCode resolvePythonBackendErrorCode(PythonBackendClientException exception) {
-        CoreErrorCode backendError = resolveFaceEmbeddingErrorCode(exception.getBackendErrorCode());
+    private ErrorCode resolvePythonBackendErrorCode(PythonBackendClientException exception) {
+        ErrorCode backendError = resolveFaceEmbeddingErrorCode(exception.getBackendErrorCode());
         if (backendError != null) {
             return backendError;
         }
@@ -296,13 +298,16 @@ public class PersonService {
                 : CoreErrorCode.PYTHON_BACKEND_ERROR;
     }
 
-    private static CoreErrorCode resolveFaceEmbeddingErrorCode(String backendErrorCode) {
+    private static ErrorCode resolveFaceEmbeddingErrorCode(String backendErrorCode) {
         if (!StringUtils.hasText(backendErrorCode)) {
             return null;
         }
+        if ("FILE_TOO_LARGE".equalsIgnoreCase(backendErrorCode.trim())) {
+            return GeneralErrorCode.FILE_TOO_LARGE;
+        }
         try {
             return switch (CoreErrorCode.valueOf(backendErrorCode.trim().toUpperCase(Locale.ROOT))) {
-                case INVALID_IMAGE_FILE, EMPTY_IMAGE_FILE, FILE_TOO_LARGE, UNSUPPORTED_IMAGE_TYPE,
+                case INVALID_IMAGE_FILE, EMPTY_IMAGE_FILE, UNSUPPORTED_IMAGE_TYPE,
                      IMAGE_DECODE_FAILED, FACE_NOT_DETECTED, MULTIPLE_FACES_DETECTED,
                      FACE_EMBEDDING_FAILED, INVALID_EMBEDDING, MODEL_NOT_INITIALIZED ->
                         CoreErrorCode.valueOf(backendErrorCode.trim().toUpperCase(Locale.ROOT));
@@ -377,5 +382,3 @@ public class PersonService {
         }
     }
 }
-
-

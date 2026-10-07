@@ -65,6 +65,7 @@ class NotificationServiceTest {
                 UUID.randomUUID().toString(), "{}", Set.of(userId), null, null));
 
         assertThat(response.recipientCount()).isEqualTo(1);
+        @SuppressWarnings("unchecked")
         ArgumentCaptor<Iterable<NotificationRecipient>> captor = ArgumentCaptor.forClass(Iterable.class);
         verify(recipientService).saveAll(captor.capture());
         NotificationRecipient recipient = captor.getValue().iterator().next();

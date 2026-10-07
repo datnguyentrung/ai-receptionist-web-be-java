@@ -125,7 +125,8 @@ class ClassSessionAccessPolicyTest {
     ) {
         return CourseStaffAssignment.builder()
                 .staffPerson(Person.builder().personId(staffPersonId).build())
-                .course(Course.builder().courseId(courseId).build())
+                .courseSchedule(com.dat.ai_receptionist_web.domain.Catalog.CourseSchedule.builder()
+                        .course(Course.builder().courseId(courseId).build()).build())
                 .assignmentType(AssignmentType.PRIMARY_COACH)
                 .startDate(LocalDate.of(2026, 3, 1))
                 .endDate(LocalDate.of(2026, 3, 31))

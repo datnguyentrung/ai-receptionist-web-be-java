@@ -102,6 +102,7 @@ class ClassSessionLifecycleServiceTest {
         int closed = service.closeDueSessions();
 
         assertThat(closed).isEqualTo(1);
+        @SuppressWarnings("unchecked")
         ArgumentCaptor<List<SessionAttendance>> captor = ArgumentCaptor.forClass(List.class);
         verify(attendanceRepository).saveAll(captor.capture());
         assertThat(captor.getValue()).hasSize(1);

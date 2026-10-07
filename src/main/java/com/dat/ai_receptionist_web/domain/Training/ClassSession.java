@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Training;
 
 import com.dat.ai_receptionist_web.domain.Catalog.Course;
+import com.dat.ai_receptionist_web.domain.Catalog.CourseSchedule;
 import com.dat.ai_receptionist_web.enums.Training.SessionStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -34,6 +35,10 @@ public class ClassSession {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "course_schedule_id", nullable = false)
+    private CourseSchedule courseSchedule;
 
     @Embedded
     private ClassSessionScheduleSnapshot scheduleSnapshot;

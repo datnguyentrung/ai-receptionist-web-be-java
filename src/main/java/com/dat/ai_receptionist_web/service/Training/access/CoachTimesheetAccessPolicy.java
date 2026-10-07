@@ -54,7 +54,8 @@ public class CoachTimesheetAccessPolicy {
         if (context.activePersonId() == null
                 || assignment == null
                 || !Objects.equals(assignment.getStaffPerson().getPersonId(), context.activePersonId())
-                || !Objects.equals(assignment.getCourse().getCourseId(), session.getCourse().getCourseId())
+                || !Objects.equals(assignment.getCourseSchedule().getCourseScheduleId(),
+                session.getCourseSchedule().getCourseScheduleId())
                 || assignment.getStartDate().isAfter(session.getSessionDate())
                 || (assignment.getEndDate() != null && assignment.getEndDate().isBefore(session.getSessionDate()))
                 || !assignment.getAssignmentStatus().allowsPolicyAccess()) {

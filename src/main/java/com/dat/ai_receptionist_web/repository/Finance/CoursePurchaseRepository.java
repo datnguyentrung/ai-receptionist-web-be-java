@@ -15,10 +15,9 @@ public interface CoursePurchaseRepository extends JpaRepository<CoursePurchase, 
             join fetch purchase.studentPerson
             join fetch purchase.coursePrice coursePrice
             join fetch coursePrice.course course
-            join fetch course.classSchedule classSchedule
+            left join fetch course.courseSchedules courseSchedule
+            left join fetch courseSchedule.classSchedule classSchedule
             join fetch classSchedule.branch
-            left join fetch course.nextClassSchedule nextClassSchedule
-            left join fetch nextClassSchedule.branch
             join fetch purchase.debitTransaction
             """,
             countQuery = """

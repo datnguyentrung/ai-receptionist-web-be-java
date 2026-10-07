@@ -131,7 +131,7 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, UUID
                   select 1
                   from CourseStaffAssignment a
                   where a.staffPerson.personId = :activePersonId
-                    and a.course.courseId = c.course.courseId
+                    and a.courseSchedule.courseScheduleId = c.courseSchedule.courseScheduleId
                     and a.startDate <= c.sessionDate
                     and (a.endDate is null or a.endDate >= c.sessionDate)
                     and a.assignmentStatus in (
@@ -152,17 +152,16 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, UUID
     @Query("""
         select c
         from ClassSession c
-        left join fetch c.course course
-        left join fetch course.classSchedule courseSchedule
-        left join fetch courseSchedule.branch
-        left join fetch course.nextClassSchedule courseNextSchedule
-        left join fetch courseNextSchedule.branch
+        left join fetch c.course
+        left join fetch c.courseSchedule courseSchedule
+        left join fetch courseSchedule.classSchedule classSchedule
+        left join fetch classSchedule.branch
         where :unrestricted = true
            or exists (
                select 1
                from CourseStaffAssignment a
                where a.staffPerson.personId = :activePersonId
-                 and a.course.courseId = c.course.courseId
+                 and a.courseSchedule.courseScheduleId = c.courseSchedule.courseScheduleId
                  and a.startDate <= c.sessionDate
                  and (a.endDate is null or a.endDate >= c.sessionDate)
                  and a.assignmentStatus in (
@@ -180,11 +179,10 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, UUID
     @Query("""
         select c
         from ClassSession c
-        left join fetch c.course course
-        left join fetch course.classSchedule courseSchedule
-        left join fetch courseSchedule.branch
-        left join fetch course.nextClassSchedule courseNextSchedule
-        left join fetch courseNextSchedule.branch
+        left join fetch c.course
+        left join fetch c.courseSchedule courseSchedule
+        left join fetch courseSchedule.classSchedule classSchedule
+        left join fetch classSchedule.branch
         where c.classSessionId = :id
           and (
               :unrestricted = true
@@ -192,7 +190,7 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, UUID
                   select 1
                   from CourseStaffAssignment a
                   where a.staffPerson.personId = :activePersonId
-                    and a.course.courseId = c.course.courseId
+                    and a.courseSchedule.courseScheduleId = c.courseSchedule.courseScheduleId
                     and a.startDate <= c.sessionDate
                     and (a.endDate is null or a.endDate >= c.sessionDate)
                     and a.assignmentStatus in (

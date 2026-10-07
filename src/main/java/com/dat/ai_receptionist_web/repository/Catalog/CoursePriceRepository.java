@@ -13,10 +13,9 @@ public interface CoursePriceRepository extends JpaRepository<CoursePrice, UUID> 
             select cp
             from CoursePrice cp
             join fetch cp.course course
-            join fetch course.classSchedule classSchedule
+            left join fetch course.courseSchedules courseSchedule
+            left join fetch courseSchedule.classSchedule classSchedule
             join fetch classSchedule.branch
-            left join fetch course.nextClassSchedule nextClassSchedule
-            left join fetch nextClassSchedule.branch
             """,
             countQuery = """
             select count(cp)
@@ -24,7 +23,7 @@ public interface CoursePriceRepository extends JpaRepository<CoursePrice, UUID> 
             """)
     Page<CoursePrice> findAllDetailed(Pageable pageable);
 
-    @EntityGraph(attributePaths = {"course", "course.classSchedule"})
+    @EntityGraph(attributePaths = {"course", "course.courseSchedules", "course.courseSchedules.classSchedule"})
     @Query("select cp from CoursePrice cp where cp.coursePriceId = :id")
     Optional<CoursePrice> findForPurchase(@Param("id") UUID id);
 }

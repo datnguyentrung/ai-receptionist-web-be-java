@@ -120,14 +120,12 @@ public interface SessionAttendanceRepository extends
     @Override
     @NonNull
     @EntityGraph(attributePaths = {
-            "classSession.course.classSchedule.branch",
-            "classSession.course.nextClassSchedule.branch",
+            "classSession.courseSchedule.classSchedule.branch",
             "studentEnrollment.studentPerson",
-            "studentEnrollment.classSchedule.branch",
+            "studentEnrollment.schedules.courseSchedule.classSchedule.branch",
             "studentEnrollment.coursePurchase",
             "courseStaffAssignment.staffPerson",
-            "courseStaffAssignment.course.classSchedule.branch",
-            "courseStaffAssignment.course.nextClassSchedule.branch"
+            "courseStaffAssignment.courseSchedule.classSchedule.branch"
     })
     Page<SessionAttendance> findAll(
             @NonNull Specification<SessionAttendance> specification,
@@ -139,25 +137,24 @@ public interface SessionAttendanceRepository extends
         select a
         from SessionAttendance a
         join fetch a.classSession cs
-        left join fetch cs.course sessionCourse
-        left join fetch sessionCourse.classSchedule sessionCourseSchedule
-        left join fetch sessionCourseSchedule.branch
-        left join fetch sessionCourse.nextClassSchedule sessionCourseNextSchedule
-        left join fetch sessionCourseNextSchedule.branch
+        left join fetch cs.course
+        left join fetch cs.courseSchedule sessionCourseSchedule
+        left join fetch sessionCourseSchedule.classSchedule sessionClassSchedule
+        left join fetch sessionClassSchedule.branch
         left join fetch a.studentEnrollment e
         left join fetch e.studentPerson enrollmentStudent
         left join fetch enrollmentStudent.position
-        left join fetch e.classSchedule enrollmentSchedule
+        left join fetch e.schedules enrollmentScheduleLink
+        left join fetch enrollmentScheduleLink.courseSchedule enrollmentCourseSchedule
+        left join fetch enrollmentCourseSchedule.classSchedule enrollmentSchedule
         left join fetch enrollmentSchedule.branch
         left join fetch e.coursePurchase
         left join fetch a.courseStaffAssignment participantAssignment
         left join fetch participantAssignment.staffPerson participantStaff
         left join fetch participantStaff.position
-        left join fetch participantAssignment.course participantCourse
-        left join fetch participantCourse.classSchedule participantCourseSchedule
-        left join fetch participantCourseSchedule.branch
-        left join fetch participantCourse.nextClassSchedule participantCourseNextSchedule
-        left join fetch participantCourseNextSchedule.branch
+        left join fetch participantAssignment.courseSchedule participantCourseSchedule
+        left join fetch participantCourseSchedule.classSchedule participantClassSchedule
+        left join fetch participantClassSchedule.branch
         where a.sessionAttendanceId = :id
           and (
               :unrestricted = true
@@ -180,7 +177,7 @@ public interface SessionAttendanceRepository extends
                       select 1
                       from CourseStaffAssignment csa
                       where csa.staffPerson.personId = :activePersonId
-                        and csa.course.courseId = cs.course.courseId
+                        and csa.courseSchedule.courseScheduleId = cs.courseSchedule.courseScheduleId
                         and csa.startDate <= cs.sessionDate
                         and (csa.endDate is null or csa.endDate >= cs.sessionDate)
                         and csa.assignmentStatus in (com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ACTIVE, com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ENDED)

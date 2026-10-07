@@ -20,17 +20,14 @@ public interface CoachTimesheetRepository extends JpaRepository<CoachTimesheet, 
         from CoachTimesheet t
         join fetch t.classSession cs
         join fetch t.courseStaffAssignment csa
-        left join fetch cs.course sessionCourse
-        left join fetch sessionCourse.classSchedule sessionCourseSchedule
-        left join fetch sessionCourseSchedule.branch
-        left join fetch sessionCourse.nextClassSchedule sessionCourseNextSchedule
-        left join fetch sessionCourseNextSchedule.branch
+        left join fetch cs.course
+        left join fetch cs.courseSchedule sessionCourseSchedule
+        left join fetch sessionCourseSchedule.classSchedule sessionClassSchedule
+        left join fetch sessionClassSchedule.branch
         left join fetch csa.staffPerson assignmentStaff
-        left join fetch csa.course assignmentCourse
-        left join fetch assignmentCourse.classSchedule assignmentCourseSchedule
-        left join fetch assignmentCourseSchedule.branch
-        left join fetch assignmentCourse.nextClassSchedule assignmentCourseNextSchedule
-        left join fetch assignmentCourseNextSchedule.branch
+        left join fetch csa.courseSchedule assignmentCourseSchedule
+        left join fetch assignmentCourseSchedule.classSchedule assignmentClassSchedule
+        left join fetch assignmentClassSchedule.branch
         where cs.sessionDate between :fromDate and :toDate
           and (:courseId is null or cs.course.courseId = :courseId)
           and (
@@ -38,7 +35,7 @@ public interface CoachTimesheetRepository extends JpaRepository<CoachTimesheet, 
               or (
                   :self = true
                   and csa.staffPerson.personId = :activePersonId
-                  and csa.course.courseId = cs.course.courseId
+                  and csa.courseSchedule.courseScheduleId = cs.courseSchedule.courseScheduleId
                   and csa.startDate <= cs.sessionDate
                   and (csa.endDate is null or csa.endDate >= cs.sessionDate)
                   and csa.assignmentStatus in (
@@ -52,7 +49,7 @@ public interface CoachTimesheetRepository extends JpaRepository<CoachTimesheet, 
                       select 1
                       from CourseStaffAssignment actorAssignment
                       where actorAssignment.staffPerson.personId = :activePersonId
-                        and actorAssignment.course.courseId = cs.course.courseId
+                        and actorAssignment.courseSchedule.courseScheduleId = cs.courseSchedule.courseScheduleId
                         and actorAssignment.assignmentType = com.dat.ai_receptionist_web.enums.Training.AssignmentType.MANAGER
                         and actorAssignment.startDate <= cs.sessionDate
                         and (actorAssignment.endDate is null or actorAssignment.endDate >= cs.sessionDate)
@@ -80,25 +77,22 @@ public interface CoachTimesheetRepository extends JpaRepository<CoachTimesheet, 
         from CoachTimesheet t
         join fetch t.classSession cs
         join fetch t.courseStaffAssignment csa
-        left join fetch cs.course sessionCourse
-        left join fetch sessionCourse.classSchedule sessionCourseSchedule
-        left join fetch sessionCourseSchedule.branch
-        left join fetch sessionCourse.nextClassSchedule sessionCourseNextSchedule
-        left join fetch sessionCourseNextSchedule.branch
+        left join fetch cs.course
+        left join fetch cs.courseSchedule sessionCourseSchedule
+        left join fetch sessionCourseSchedule.classSchedule sessionClassSchedule
+        left join fetch sessionClassSchedule.branch
         left join fetch csa.staffPerson assignmentStaff
         left join fetch assignmentStaff.position
-        left join fetch csa.course assignmentCourse
-        left join fetch assignmentCourse.classSchedule assignmentCourseSchedule
-        left join fetch assignmentCourseSchedule.branch
-        left join fetch assignmentCourse.nextClassSchedule assignmentCourseNextSchedule
-        left join fetch assignmentCourseNextSchedule.branch
+        left join fetch csa.courseSchedule assignmentCourseSchedule
+        left join fetch assignmentCourseSchedule.classSchedule assignmentClassSchedule
+        left join fetch assignmentClassSchedule.branch
         where t.coachTimesheetId = :id
           and (
               :unrestricted = true
               or (
                   :self = true
                   and csa.staffPerson.personId = :activePersonId
-                  and csa.course.courseId = cs.course.courseId
+                  and csa.courseSchedule.courseScheduleId = cs.courseSchedule.courseScheduleId
                   and csa.startDate <= cs.sessionDate
                   and (csa.endDate is null or csa.endDate >= cs.sessionDate)
                   and csa.assignmentStatus in (
@@ -112,7 +106,7 @@ public interface CoachTimesheetRepository extends JpaRepository<CoachTimesheet, 
                       select 1
                       from CourseStaffAssignment actorAssignment
                       where actorAssignment.staffPerson.personId = :activePersonId
-                        and actorAssignment.course.courseId = cs.course.courseId
+                        and actorAssignment.courseSchedule.courseScheduleId = cs.courseSchedule.courseScheduleId
                         and actorAssignment.assignmentType = com.dat.ai_receptionist_web.enums.Training.AssignmentType.MANAGER
                         and actorAssignment.startDate <= cs.sessionDate
                         and (actorAssignment.endDate is null or actorAssignment.endDate >= cs.sessionDate)

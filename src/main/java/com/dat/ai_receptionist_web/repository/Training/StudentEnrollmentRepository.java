@@ -91,7 +91,9 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
         left join fetch e.coursePurchase p
         join p.coursePrice pr
         left join fetch e.studentPerson enrollmentStudent
-        left join fetch e.classSchedule enrollmentSchedule
+        left join fetch e.schedules enrollmentScheduleLink
+        left join fetch enrollmentScheduleLink.courseSchedule enrollmentCourseSchedule
+        left join fetch enrollmentCourseSchedule.classSchedule enrollmentSchedule
         left join fetch enrollmentSchedule.branch
         where e.startDate <= :toDate
           and e.endDate >= :fromDate
@@ -117,7 +119,7 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
                       select 1
                       from CourseStaffAssignment csa
                       where csa.staffPerson.personId = :activePersonId
-                        and csa.course.courseId = pr.course.courseId
+                        and csa.courseSchedule.course.courseId = pr.course.courseId
                         and csa.startDate <= :toDate
                         and (csa.endDate is null or csa.endDate >= :fromDate)
                         and csa.assignmentStatus in (com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ACTIVE, com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ENDED)
@@ -146,7 +148,9 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
         join p.coursePrice pr
         left join fetch e.studentPerson enrollmentStudent
         left join fetch enrollmentStudent.position
-        left join fetch e.classSchedule enrollmentSchedule
+        left join fetch e.schedules enrollmentScheduleLink
+        left join fetch enrollmentScheduleLink.courseSchedule enrollmentCourseSchedule
+        left join fetch enrollmentCourseSchedule.classSchedule enrollmentSchedule
         left join fetch enrollmentSchedule.branch
         where e.studentEnrollmentId = :id
           and (
@@ -169,7 +173,7 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
                       select 1
                       from CourseStaffAssignment csa
                       where csa.staffPerson.personId = :activePersonId
-                        and csa.course.courseId = pr.course.courseId
+                        and csa.courseSchedule.course.courseId = pr.course.courseId
                         and csa.startDate <= e.endDate
                         and (csa.endDate is null or csa.endDate >= e.startDate)
                         and csa.assignmentStatus in (com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ACTIVE, com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ENDED)

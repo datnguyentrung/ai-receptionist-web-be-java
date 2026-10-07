@@ -18,17 +18,15 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, UUID
         from LeaveRequest lr
         left join fetch lr.person person
         left join fetch lr.leaveClassSession leaveSession
-        left join fetch leaveSession.course leaveSessionCourse
-        left join fetch leaveSessionCourse.classSchedule leaveSessionSchedule
+        left join fetch leaveSession.course
+        left join fetch leaveSession.courseSchedule leaveSessionCourseSchedule
+        left join fetch leaveSessionCourseSchedule.classSchedule leaveSessionSchedule
         left join fetch leaveSessionSchedule.branch
-        left join fetch leaveSessionCourse.nextClassSchedule leaveSessionNextSchedule
-        left join fetch leaveSessionNextSchedule.branch
         left join fetch lr.makeupClassSession makeupSession
-        left join fetch makeupSession.course makeupSessionCourse
-        left join fetch makeupSessionCourse.classSchedule makeupSessionSchedule
+        left join fetch makeupSession.course
+        left join fetch makeupSession.courseSchedule makeupSessionCourseSchedule
+        left join fetch makeupSessionCourseSchedule.classSchedule makeupSessionSchedule
         left join fetch makeupSessionSchedule.branch
-        left join fetch makeupSessionCourse.nextClassSchedule makeupSessionNextSchedule
-        left join fetch makeupSessionNextSchedule.branch
     """,
             countQuery = """
         select count(lr)
@@ -42,17 +40,15 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, UUID
         left join fetch lr.person person
         left join fetch person.position
         left join fetch lr.leaveClassSession leaveSession
-        left join fetch leaveSession.course leaveSessionCourse
-        left join fetch leaveSessionCourse.classSchedule leaveSessionSchedule
+        left join fetch leaveSession.course
+        left join fetch leaveSession.courseSchedule leaveSessionCourseSchedule
+        left join fetch leaveSessionCourseSchedule.classSchedule leaveSessionSchedule
         left join fetch leaveSessionSchedule.branch
-        left join fetch leaveSessionCourse.nextClassSchedule leaveSessionNextSchedule
-        left join fetch leaveSessionNextSchedule.branch
         left join fetch lr.makeupClassSession makeupSession
-        left join fetch makeupSession.course makeupSessionCourse
-        left join fetch makeupSessionCourse.classSchedule makeupSessionSchedule
+        left join fetch makeupSession.course
+        left join fetch makeupSession.courseSchedule makeupSessionCourseSchedule
+        left join fetch makeupSessionCourseSchedule.classSchedule makeupSessionSchedule
         left join fetch makeupSessionSchedule.branch
-        left join fetch makeupSessionCourse.nextClassSchedule makeupSessionNextSchedule
-        left join fetch makeupSessionNextSchedule.branch
         left join fetch lr.createdByUser
         left join fetch lr.reviewedByUser
         where lr.leaveRequestId = :id

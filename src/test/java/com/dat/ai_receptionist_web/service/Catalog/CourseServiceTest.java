@@ -6,12 +6,14 @@ import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.domain.Training.CourseStaffAssignment;
 import com.dat.ai_receptionist_web.dto.Catalog.CourseDTO;
 import com.dat.ai_receptionist_web.enums.Catalog.CourseStatus;
+import com.dat.ai_receptionist_web.enums.Core.ScheduleLevel;
 import com.dat.ai_receptionist_web.enums.Training.AssignmentType;
 import com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus;
 import com.dat.ai_receptionist_web.mapper.Catalog.CourseMapper;
 import com.dat.ai_receptionist_web.repository.Catalog.ClassScheduleRepository;
 import com.dat.ai_receptionist_web.repository.Catalog.CourseRepository;
 import com.dat.ai_receptionist_web.repository.Training.CourseStaffAssignmentRepository;
+import com.dat.ai_receptionist_web.repository.Training.ClassSessionRepository;
 import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentRepository;
 import com.dat.ai_receptionist_web.service.Training.scheduling.CourseSessionPlanningService;
 import org.junit.jupiter.api.Test;
@@ -30,6 +32,53 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class CourseServiceTest {
+    @Test
+    void updateLevelRefreshesOnlyEligibleFutureSessionSnapshots() {
+        CourseRepository repository = mock(CourseRepository.class);
+        CourseMapper mapper = mock(CourseMapper.class);
+        CourseStaffAssignmentRepository assignmentRepository = mock(CourseStaffAssignmentRepository.class);
+        StudentEnrollmentRepository enrollmentRepository = mock(StudentEnrollmentRepository.class);
+        ClassSessionRepository classSessionRepository = mock(ClassSessionRepository.class);
+        var courseScheduleRepository = mock(com.dat.ai_receptionist_web.repository.Catalog.CourseScheduleRepository.class);
+        UUID courseId = UUID.randomUUID();
+        Course course = Course.builder()
+                .courseId(courseId)
+                .name("Course A")
+                .level(ScheduleLevel.BASIC)
+                .capacity(20)
+                .status(CourseStatus.CLOSED)
+                .build();
+        CourseDTO.Response response = new CourseDTO.Response(
+                courseId, List.of(), "Course A", ScheduleLevel.ADVANCED,
+                20, 0, CourseStatus.CLOSED, null, null, null, null, null);
+
+        when(repository.findById(courseId)).thenReturn(java.util.Optional.of(course));
+        when(repository.save(course)).thenReturn(course);
+        when(assignmentRepository.findEffectiveStaffByCourseIdsAndDate(anyCollection(), anyCollection(), any()))
+                .thenReturn(List.of());
+        when(mapper.toResponse(course, null, null, 0)).thenReturn(response);
+        when(mapper.withSchedules(response, List.of())).thenReturn(response);
+        when(courseScheduleRepository.findDetailedByCourseId(courseId)).thenReturn(List.of());
+
+        CourseService service = new CourseService(
+                repository,
+                mapper,
+                mock(ClassScheduleRepository.class),
+                courseScheduleRepository,
+                mock(com.dat.ai_receptionist_web.mapper.Catalog.CourseScheduleMapper.class),
+                mock(CourseSessionPlanningService.class),
+                assignmentRepository,
+                enrollmentRepository,
+                classSessionRepository);
+
+        CourseDTO.Response result = service.update(courseId,
+                new CourseDTO.UpdateRequest("Course A", ScheduleLevel.ADVANCED, 20, CourseStatus.CLOSED));
+
+        assertThat(result).isSameAs(response);
+        verify(classSessionRepository).updateFutureScheduleLevel(
+                courseId, LocalDate.now(), ScheduleLevel.ADVANCED.name());
+    }
+
     @Test
     void listMapsPrimaryCoachUsingOneBatchStaffAssignmentQuery() {
         CourseRepository repository = mock(CourseRepository.class);
@@ -62,6 +111,7 @@ class CourseServiceTest {
                 course.getCourseId(),
                 List.of(),
                 course.getName(),
+                ScheduleLevel.BASIC,
                 0,
                 3,
                 CourseStatus.ACTIVE,
@@ -86,7 +136,8 @@ class CourseServiceTest {
                 mock(com.dat.ai_receptionist_web.mapper.Catalog.CourseScheduleMapper.class),
                 planningService,
                 assignmentRepository,
-                studentEnrollmentRepository);
+                studentEnrollmentRepository,
+                mock(com.dat.ai_receptionist_web.repository.Training.ClassSessionRepository.class));
 
         var result = service.list(pageable);
 

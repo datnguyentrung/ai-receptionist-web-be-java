@@ -118,6 +118,7 @@ public class ClassSessionService {
         ClassSession entity = ClassSession.builder()
                 .course(course)
                 .scheduleSnapshot(ClassSessionScheduleSnapshot.from(
+                        course,
                         courseScheduleResolver.resolve(course, request.sessionDate())))
                 .sessionDate(request.sessionDate())
                 .status(request.status())
@@ -149,6 +150,7 @@ public class ClassSessionService {
         }
         mapper.updateEntity(request, entity);
         entity.setScheduleSnapshot(ClassSessionScheduleSnapshot.from(
+                entity.getCourse(),
                 courseScheduleResolver.resolve(entity.getCourse(), request.sessionDate())));
         return mapper.toResponse(repository.save(entity));
     }

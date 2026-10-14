@@ -1,7 +1,6 @@
 package com.dat.ai_receptionist_web.enums.Core;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -69,7 +68,6 @@ public enum Weekday {
         };
     }
 
-    @JsonValue
     public int getCode() {
         return code;
     }

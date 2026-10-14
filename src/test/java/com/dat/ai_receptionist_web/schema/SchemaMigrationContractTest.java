@@ -8,6 +8,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class SchemaMigrationContractTest {
     @Test
+    void v17MovesLevelToCourseAndPreservesSessionSnapshot() throws Exception {
+        String sql = Files.readString(Path.of(
+                "src/main/resources/db/migration/V17__move_schedule_level_to_course.sql"));
+
+        assertThat(sql)
+                .contains("ALTER TABLE catalog.course ADD COLUMN level VARCHAR(20)")
+                .contains("COUNT(DISTINCT schedule.level) <> 1")
+                .contains("RAISE EXCEPTION")
+                .contains("ALTER COLUMN level SET NOT NULL")
+                .contains("ck_course_level")
+                .contains("DROP CONSTRAINT IF EXISTS ck_schedule_level")
+                .contains("ALTER TABLE catalog.class_schedule DROP COLUMN level")
+                .doesNotContain("ALTER TABLE training.class_session DROP COLUMN schedule_level")
+                .doesNotContain("ALTER TABLE skill.fitness DROP COLUMN schedule_level");
+    }
+
+    @Test
     void finalBootstrapContainsExactFinancialEnumsAndNoTuitionLegacy() throws Exception {
         String sql = Files.readString(Path.of(
                 "src/main/resources/db/migration/V1__create_final_domain_schema.sql"));

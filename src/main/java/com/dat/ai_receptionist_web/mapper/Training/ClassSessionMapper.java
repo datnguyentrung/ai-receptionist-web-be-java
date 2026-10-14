@@ -13,6 +13,7 @@ import org.mapstruct.MappingTarget;
 @Mapper(componentModel = "spring", uses = {CourseMapper.class, PersonMapper.class})
 public interface ClassSessionMapper {
     @Mapping(target = "learningProgress", ignore = true)
+    @Mapping(target = "scheduleLevel", source = "scheduleSnapshot.level")
     ClassSessionDTO.Response toResponse(ClassSession entity);
 
     default ClassSessionDTO.Response toResponse(
@@ -23,6 +24,7 @@ public interface ClassSessionMapper {
         return new ClassSessionDTO.Response(
                 base.classSessionId(),
                 base.course(),
+                base.scheduleLevel(),
                 base.sessionDate(),
                 base.status(),
                 base.attendanceClosed(),
@@ -35,11 +37,13 @@ public interface ClassSessionMapper {
     }
 
     @Mapping(target = "primaryCoach", ignore = true)
+    @Mapping(target = "scheduleLevel", source = "scheduleSnapshot.level")
     ClassSessionDTO.SimpleResponse toSimpleResponse(ClassSession entity);
 
     @Mapping(target = "primaryCoach", source = "primaryCoach")
     @Mapping(target = "classSessionId", source = "entity.classSessionId")
     @Mapping(target = "course", source = "entity.course")
+    @Mapping(target = "scheduleLevel", source = "entity.scheduleSnapshot.level")
     @Mapping(target = "sessionDate", source = "entity.sessionDate")
     @Mapping(target = "status", source = "entity.status")
     @Mapping(target = "attendanceClosed", source = "entity.attendanceClosed")

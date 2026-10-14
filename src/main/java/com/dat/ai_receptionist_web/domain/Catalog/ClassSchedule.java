@@ -32,10 +32,6 @@ public class ClassSchedule {
     private Weekday weekday;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "level", nullable = false, length = 20)
-    private ScheduleLevel level;
-
-    @Enumerated(EnumType.STRING)
     @Column(name = "location", nullable = false, length = 50)
     private ScheduleLocation location;
 

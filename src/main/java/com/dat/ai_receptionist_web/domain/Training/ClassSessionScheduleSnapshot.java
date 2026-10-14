@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Training;
 
 import com.dat.ai_receptionist_web.domain.Catalog.ClassSchedule;
+import com.dat.ai_receptionist_web.domain.Catalog.Course;
 import com.dat.ai_receptionist_web.enums.Core.ScheduleLevel;
 import com.dat.ai_receptionist_web.enums.Core.ScheduleLocation;
 import com.dat.ai_receptionist_web.enums.Core.Weekday;
@@ -39,12 +40,12 @@ public class ClassSessionScheduleSnapshot {
     @Column(name = "schedule_location", nullable = false, length = 50)
     private ScheduleLocation location;
 
-    public static ClassSessionScheduleSnapshot from(ClassSchedule schedule) {
+    public static ClassSessionScheduleSnapshot from(Course course, ClassSchedule schedule) {
         return ClassSessionScheduleSnapshot.builder()
                 .scheduleId(schedule.getScheduleId())
                 .branchId(schedule.getBranch().getBranchId())
                 .weekday(schedule.getWeekday())
-                .level(schedule.getLevel())
+                .level(course.getLevel())
                 .location(schedule.getLocation())
                 .build();
     }

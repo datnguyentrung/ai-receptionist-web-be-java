@@ -1,14 +1,8 @@
 package com.dat.ai_receptionist_web.service.Catalog;
 
-import java.util.UUID;
-
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.dat.ai_receptionist_web.domain.Catalog.ClassSchedule;
-import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.dto.Catalog.ClassScheduleDTO;
+import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.enums.Core.ScheduleStatus;
 import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.code.CatalogErrorCode;
@@ -17,8 +11,12 @@ import com.dat.ai_receptionist_web.mapper.Catalog.ClassScheduleMapper;
 import com.dat.ai_receptionist_web.repository.Catalog.ClassScheduleRepository;
 import com.dat.ai_receptionist_web.repository.Catalog.CourseScheduleRepository;
 import com.dat.ai_receptionist_web.repository.Core.BranchRepository;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -35,9 +33,9 @@ public class ClassScheduleService {
      * lý.
      */
     @Transactional(readOnly = true)
-    public PageResponse<ClassScheduleDTO.SimpleResponse> list(Pageable pageable) {
+    public PageResponse<ClassScheduleDTO.Response> list(Pageable pageable) {
         return PageResponse.of(classScheduleRepository.findAllDetailed(pageable),
-                classScheduleMapper::toSimpleResponse);
+                classScheduleMapper::toResponse);
     }
 
     /**
@@ -61,7 +59,6 @@ public class ClassScheduleService {
         classSchedule.setBranch(branchRepository.findById(request.branchId())
                 .orElseThrow(() -> new ApiException(CoreErrorCode.BRANCH_NOT_FOUND)));
         classSchedule.setWeekday(request.weekday());
-        classSchedule.setLevel(request.level());
         classSchedule.setLocation(request.location());
         classSchedule.setStatus(request.status());
         classSchedule.setStartTime(request.startTime());
@@ -76,7 +73,8 @@ public class ClassScheduleService {
      * Output: Trả về ClassScheduleDTO.Response theo kết quả xử lý.
      */
     @Transactional
-    public ClassScheduleDTO.Response update(UUID id, ClassScheduleDTO.UpdateRequest request) {
+    public ClassScheduleDTO.Response update(UUID id,
+                                            ClassScheduleDTO.UpdateRequest request) {
         ClassSchedule classSchedule = find(id);
         requireNotReferenced(id);
         classSchedule.setBranch(branchRepository.findById(request.branchId())

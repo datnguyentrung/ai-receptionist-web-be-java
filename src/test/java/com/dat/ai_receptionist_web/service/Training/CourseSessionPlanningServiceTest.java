@@ -56,7 +56,7 @@ class CourseSessionPlanningServiceTest {
 
         Branch branch = Branch.builder().branchId(1L).build();
         scheduleA = ClassSchedule.builder().scheduleId(UUID.randomUUID())
-                .branch(branch).level(ScheduleLevel.BASIC).location(ScheduleLocation.INDOOR)
+                .branch(branch).location(ScheduleLocation.INDOOR)
                 .weekday(Weekday.MONDAY).startTime(LocalTime.of(18, 0))
                 .endTime(LocalTime.of(19, 30)).status(ScheduleStatus.ACTIVE).build();
 
@@ -79,6 +79,7 @@ class CourseSessionPlanningServiceTest {
         UUID courseId = UUID.randomUUID();
         Course course = Course.builder()
                 .courseId(courseId)
+                .level(ScheduleLevel.BASIC)
                 .status(CourseStatus.ACTIVE)
                 .classSessionGeneratedUntil(TODAY.plusDays(10))
                 .build();
@@ -107,6 +108,7 @@ class CourseSessionPlanningServiceTest {
             assertThat(session.getCourse()).isEqualTo(course);
             assertThat(session.getCourseSchedule()).isEqualTo(courseScheduleA);
             assertThat(session.getStatus()).isEqualTo(SessionStatus.SCHEDULED);
+            assertThat(session.getScheduleSnapshot().getLevel()).isEqualTo(ScheduleLevel.BASIC);
             assertThat(session.isAttendanceClosed()).isFalse();
             assertThat(session.getStartTime()).isEqualTo(LocalTime.of(18, 0));
             assertThat(session.getEndTime()).isEqualTo(LocalTime.of(19, 30));

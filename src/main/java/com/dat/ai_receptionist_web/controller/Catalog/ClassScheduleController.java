@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.UUID;
 
 @RestController
@@ -24,7 +25,9 @@ public class ClassScheduleController {
      */
     @GetMapping
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).CLASS_SCHEDULE_READ.getCode())")
-    public PageResponse<ClassScheduleDTO.SimpleResponse> list(Pageable pageable) { return service.list(pageable); }
+    public PageResponse<ClassScheduleDTO.Response> list(Pageable pageable) {
+        return service.list(pageable);
+    }
 
     /**
      * Tác dụng: Lấy chi tiết một bản ghi theo khóa định danh.
@@ -33,7 +36,9 @@ public class ClassScheduleController {
      */
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).CLASS_SCHEDULE_READ.getCode())")
-    public ClassScheduleDTO.Response get(@PathVariable UUID id) { return service.get(id); }
+    public ClassScheduleDTO.Response get(@PathVariable UUID id) {
+        return service.get(id);
+    }
 
     /**
      * Tác dụng: Tạo mới bản ghi và trả về dữ liệu sau khi tạo.
@@ -43,7 +48,9 @@ public class ClassScheduleController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).CLASS_SCHEDULE_CREATE.getCode())")
-    public ClassScheduleDTO.Response create(@Valid @RequestBody ClassScheduleDTO.CreateRequest request) { return service.create(request); }
+    public ClassScheduleDTO.Response create(@Valid @RequestBody ClassScheduleDTO.CreateRequest request) {
+        return service.create(request);
+    }
 
     /**
      * Tác dụng: Cập nhật bản ghi hiện có và trả về dữ liệu sau khi cập nhật.
@@ -52,7 +59,10 @@ public class ClassScheduleController {
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).CLASS_SCHEDULE_UPDATE.getCode())")
-    public ClassScheduleDTO.Response update(@PathVariable UUID id, @Valid @RequestBody ClassScheduleDTO.UpdateRequest request) { return service.update(id, request); }
+    public ClassScheduleDTO.Response update(@PathVariable UUID id,
+                                            @Valid @RequestBody ClassScheduleDTO.UpdateRequest request) {
+        return service.update(id, request);
+    }
 
     /**
      * Tác dụng: Xóa hoặc vô hiệu hóa bản ghi theo định danh đầu vào.
@@ -62,7 +72,9 @@ public class ClassScheduleController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).CLASS_SCHEDULE_DELETE.getCode())")
-    public void delete(@PathVariable UUID id) { service.delete(id); }
+    public void delete(@PathVariable UUID id) {
+        service.delete(id);
+    }
 }
 
 

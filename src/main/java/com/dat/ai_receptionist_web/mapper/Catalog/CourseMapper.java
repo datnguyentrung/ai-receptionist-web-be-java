@@ -24,6 +24,7 @@ public interface CourseMapper {
     @Mapping(target = "courseSchedules", ignore = true)
     @Mapping(target = "courseId", source = "entity.courseId")
     @Mapping(target = "name", source = "entity.name")
+    @Mapping(target = "level", source = "entity.level")
     @Mapping(target = "capacity", source = "entity.capacity")
     @Mapping(target = "currentStudentCount", source = "currentStudentCount")
     @Mapping(target = "status", source = "entity.status")
@@ -45,24 +46,26 @@ public interface CourseMapper {
     @Mapping(target = "courseSchedules", ignore = true)
     @Mapping(target = "courseId", source = "entity.courseId")
     @Mapping(target = "name", source = "entity.name")
+    @Mapping(target = "level", source = "entity.level")
     @Mapping(target = "capacity", source = "entity.capacity")
     @Mapping(target = "currentStudentCount", source = "currentStudentCount")
     @Mapping(target = "status", source = "entity.status")
     CourseDTO.SimpleResponse toSimpleResponse(Course entity, Person primaryCoach, int currentStudentCount);
 
     default CourseDTO.Response withSchedules(CourseDTO.Response base, List<com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO.Response> schedules) {
-        return new CourseDTO.Response(base.courseId(), schedules, base.name(), base.capacity(),
+        return new CourseDTO.Response(base.courseId(), schedules, base.name(), base.level(), base.capacity(),
                 base.currentStudentCount(), base.status(), base.classSessionGeneratedUntil(),
                 base.primaryCoach(), base.manager(), base.createdAt(), base.updatedAt());
     }
 
     default CourseDTO.SimpleResponse withSchedules(CourseDTO.SimpleResponse base, List<com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO.SimpleResponse> schedules) {
-        return new CourseDTO.SimpleResponse(base.courseId(), schedules, base.name(), base.capacity(),
+        return new CourseDTO.SimpleResponse(base.courseId(), schedules, base.name(), base.level(), base.capacity(),
                 base.currentStudentCount(), base.status(), base.primaryCoach());
     }
 
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "capacity", source = "capacity")
+    @Mapping(target = "level", source = "level")
     @Mapping(target = "status", source = "status")
     void updateEntity(CourseDTO.UpdateRequest request, @MappingTarget Course entity);
 }

@@ -7,6 +7,7 @@ import com.dat.ai_receptionist_web.domain.Training.CourseStaffAssignment;
 import com.dat.ai_receptionist_web.dto.Catalog.CourseDTO;
 import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.enums.Catalog.CourseStatus;
+import com.dat.ai_receptionist_web.enums.Core.ScheduleLevel;
 import com.dat.ai_receptionist_web.enums.Training.AssignmentType;
 import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.code.CatalogErrorCode;
@@ -15,6 +16,7 @@ import com.dat.ai_receptionist_web.repository.Catalog.ClassScheduleRepository;
 import com.dat.ai_receptionist_web.repository.Catalog.CourseScheduleRepository;
 import com.dat.ai_receptionist_web.repository.Catalog.CourseRepository;
 import com.dat.ai_receptionist_web.repository.Training.CourseStaffAssignmentRepository;
+import com.dat.ai_receptionist_web.repository.Training.ClassSessionRepository;
 import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentRepository;
 import com.dat.ai_receptionist_web.service.Training.scheduling.CourseSessionPlanningService;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +46,7 @@ public class CourseService {
     private final CourseSessionPlanningService planningService;
     private final CourseStaffAssignmentRepository courseStaffAssignmentRepository;
     private final StudentEnrollmentRepository studentEnrollmentRepository;
+    private final ClassSessionRepository classSessionRepository;
 
     @Transactional(readOnly = true)
     public PageResponse<CourseDTO.SimpleResponse> list(Pageable pageable) {
@@ -78,6 +81,7 @@ public class CourseService {
         entity.setCapacity(request.capacity());
         entity.setStatus(request.status());
         entity.setName(request.name());
+        entity.setLevel(request.level());
         Course saved = repository.save(entity);
         replaceSchedules(saved, request.courseSchedules());
         if (saved.getStatus() == CourseStatus.ACTIVE) {
@@ -89,10 +93,16 @@ public class CourseService {
     @Transactional
     public CourseDTO.Response update(UUID id, CourseDTO.UpdateRequest request) {
         Course entity = find(id);
+        ScheduleLevel previousLevel = entity.getLevel();
         entity.setName(request.name());
+        entity.setLevel(request.level());
         entity.setCapacity(request.capacity());
         entity.setStatus(request.status());
         Course saved = repository.save(entity);
+        if (previousLevel != saved.getLevel()) {
+            classSessionRepository.updateFutureScheduleLevel(
+                    saved.getCourseId(), LocalDate.now(), saved.getLevel().name());
+        }
         if (saved.getStatus() == CourseStatus.ACTIVE) {
             planningService.maintainGenerationHorizon();
         }

@@ -17,7 +17,6 @@ public interface ClassScheduleMapper {
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "branch", ignore = true)
     @Mapping(target = "weekday", source = "weekday")
-    @Mapping(target = "level", source = "level")
     @Mapping(target = "location", source = "location")
     @Mapping(target = "status", source = "status")
     @Mapping(target = "startTime", source = "startTime")

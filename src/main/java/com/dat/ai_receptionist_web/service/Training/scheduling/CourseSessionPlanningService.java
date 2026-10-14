@@ -97,7 +97,7 @@ public class CourseSessionPlanningService {
             created.add(ClassSession.builder()
                     .course(course)
                     .courseSchedule(courseSchedule)
-                    .scheduleSnapshot(ClassSessionScheduleSnapshot.from(courseSchedule.getClassSchedule()))
+                    .scheduleSnapshot(ClassSessionScheduleSnapshot.from(course, courseSchedule.getClassSchedule()))
                     .sessionDate(date)
                     .status(SessionStatus.SCHEDULED)
                     .attendanceClosed(false)

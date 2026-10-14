@@ -5,6 +5,7 @@ import com.dat.ai_receptionist_web.domain.Training.ClassSession;
 import com.dat.ai_receptionist_web.dto.Training.ClassSessionDTO;
 import com.dat.ai_receptionist_web.enums.Core.Belt;
 import com.dat.ai_receptionist_web.enums.Core.PersonStatus;
+import com.dat.ai_receptionist_web.enums.Core.ScheduleLevel;
 import com.dat.ai_receptionist_web.enums.Security.SystemRoleDefinition;
 import com.dat.ai_receptionist_web.enums.Training.AttendanceStatus;
 import com.dat.ai_receptionist_web.enums.Training.EvaluationStatus;
@@ -64,6 +65,7 @@ class ClassSessionServiceTest {
         ClassSessionDTO.Response response = new ClassSessionDTO.Response(
                 session.getClassSessionId(),
                 null,
+                ScheduleLevel.BASIC,
                 session.getSessionDate(),
                 session.getStatus(),
                 session.isAttendanceClosed(),
@@ -130,6 +132,7 @@ class ClassSessionServiceTest {
         ClassSessionDTO.SimpleResponse sessionResponse = new ClassSessionDTO.SimpleResponse(
                 session.getClassSessionId(),
                 null,
+                ScheduleLevel.BASIC,
                 session.getSessionDate(),
                 session.getStatus(),
                 session.isAttendanceClosed(),

@@ -2,7 +2,6 @@ package com.dat.ai_receptionist_web.dto.Catalog;
 
 import com.dat.ai_receptionist_web.dto.Core.BranchDTO;
 import jakarta.validation.constraints.*;
-import com.dat.ai_receptionist_web.enums.Core.ScheduleLevel;
 import com.dat.ai_receptionist_web.enums.Core.ScheduleLocation;
 import com.dat.ai_receptionist_web.enums.Core.ScheduleStatus;
 import com.dat.ai_receptionist_web.enums.Core.Weekday;
@@ -19,9 +18,6 @@ public final class ClassScheduleDTO {
             Long branchId,
             @NotNull
             Weekday weekday,
-            @NotNull
-            ScheduleLevel level,
-            @NotNull
             ScheduleLocation location,
             @NotNull
             ScheduleStatus status,
@@ -37,9 +33,6 @@ public final class ClassScheduleDTO {
             Long branchId,
             @NotNull
             Weekday weekday,
-            @NotNull
-            ScheduleLevel level,
-            @NotNull
             ScheduleLocation location,
             @NotNull
             ScheduleStatus status,
@@ -54,7 +47,6 @@ public final class ClassScheduleDTO {
             UUID scheduleId,
             BranchDTO.Response branch,
             Weekday weekday,
-            ScheduleLevel level,
             ScheduleLocation location,
             ScheduleStatus status,
             LocalTime startTime,
@@ -66,9 +58,10 @@ public final class ClassScheduleDTO {
             UUID scheduleId,
             BranchDTO.SimpleResponse branch,
             Weekday weekday,
-            ScheduleLevel level,
             ScheduleLocation location,
-            ScheduleStatus status
+            ScheduleStatus status,
+            LocalTime startTime,
+            LocalTime endTime
     ) {
     }
 }

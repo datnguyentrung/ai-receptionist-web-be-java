@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Catalog;
 
 import com.dat.ai_receptionist_web.enums.Catalog.CourseStatus;
+import com.dat.ai_receptionist_web.enums.Core.ScheduleLevel;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
@@ -53,6 +54,10 @@ public class Course {
 
     @Column(name = "name", nullable = false, length = 255)
     private String name;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "level", nullable = false, length = 20)
+    private ScheduleLevel level;
 
     @Column(name = "capacity", nullable = false)
     private int capacity;

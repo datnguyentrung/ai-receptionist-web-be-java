@@ -14,6 +14,20 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface ClassSessionRepository extends JpaRepository<ClassSession, UUID> {
+    @Modifying
+    @Query(value = """
+        update training.class_session
+           set schedule_level = :level
+         where course_id = :courseId
+           and session_date >= :fromDate
+           and status in ('SCHEDULED', 'POSTPONED')
+    """, nativeQuery = true)
+    int updateFutureScheduleLevel(
+            @Param("courseId") UUID courseId,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("level") String level
+    );
+
     @Query("""
         select count(c) as total,
                coalesce(sum(case

@@ -2,6 +2,7 @@ package com.dat.ai_receptionist_web.dto.Catalog;
 
 import com.dat.ai_receptionist_web.dto.Core.PersonDTO;
 import com.dat.ai_receptionist_web.enums.Catalog.CourseStatus;
+import com.dat.ai_receptionist_web.enums.Core.ScheduleLevel;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -21,6 +22,9 @@ public final class CourseDTO {
             @NotBlank(message = "Name is required")
             String name,
 
+            @NotNull(message = "Level is required")
+            ScheduleLevel level,
+
             int capacity,
 
             @NotNull(message = "Status is required")
@@ -32,6 +36,9 @@ public final class CourseDTO {
             @NotNull(message = "Name is required")
             String name,
 
+            @NotNull(message = "Level is required")
+            ScheduleLevel level,
+
             int capacity,
             @NotNull(message = "Status is required")
             CourseStatus status
@@ -42,6 +49,7 @@ public final class CourseDTO {
             UUID courseId,
             List<CourseScheduleDTO.Response> courseSchedules,
             String name,
+            ScheduleLevel level,
 
             int capacity,
             int currentStudentCount,
@@ -59,6 +67,7 @@ public final class CourseDTO {
             UUID courseId,
             List<CourseScheduleDTO.SimpleResponse> courseSchedules,
             String name,
+            ScheduleLevel level,
             int capacity,
             int currentStudentCount,
             CourseStatus status,

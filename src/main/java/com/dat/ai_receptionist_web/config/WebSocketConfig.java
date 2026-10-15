@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.config;
 
 import com.dat.ai_receptionist_web.socket.ClassSessionWebSocketHandler;
+import com.dat.ai_receptionist_web.socket.SparringWebSocketHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +17,7 @@ import java.util.List;
 public class WebSocketConfig implements WebSocketConfigurer {
 
     private final ClassSessionWebSocketHandler classSessionWebSocketHandler;
+    private final SparringWebSocketHandler sparringWebSocketHandler;
 
     @Value("${cors.allowed-origins}")
     private List<String> allowedOrigins;
@@ -23,6 +25,8 @@ public class WebSocketConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(classSessionWebSocketHandler, "/ws/class-sessions")
+                .setAllowedOrigins(allowedOrigins.toArray(new String[0]));
+        registry.addHandler(sparringWebSocketHandler, "/ws/sparring")
                 .setAllowedOrigins(allowedOrigins.toArray(new String[0]));
     }
 }

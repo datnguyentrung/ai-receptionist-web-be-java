@@ -115,7 +115,8 @@ public enum PermissionDefinition {
     STUDENT_ENROLLMENT_UPDATE("STUDENT_ENROLLMENT_UPDATE", "STUDENT_ENROLLMENT", PermissionAction.UPDATE, "Student Enrollment Update"),
     STUDENT_ENROLLMENT_DELETE("STUDENT_ENROLLMENT_DELETE", "STUDENT_ENROLLMENT", PermissionAction.DELETE, "Student Enrollment Delete"),
     WALLET_TOP_UP_CREATE("WALLET_TOP_UP_CREATE", "WALLET", PermissionAction.CREATE, "Wallet Top Up Create"),
-    WALLET_REFUND_CREATE("WALLET_REFUND_CREATE", "WALLET", PermissionAction.CREATE, "Wallet Refund Create");
+    WALLET_REFUND_CREATE("WALLET_REFUND_CREATE", "WALLET", PermissionAction.CREATE, "Wallet Refund Create"),
+    SPARRING_OPERATE("SPARRING_OPERATE", "SPARRING", PermissionAction.UPDATE, "Operate sparring rooms");
 
     private final String code;
     private final String model;

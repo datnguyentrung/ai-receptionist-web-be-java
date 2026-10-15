@@ -40,32 +40,34 @@ class TrainingPolicyRepositoryContractTest {
                 .isAssignableFrom(SessionAttendanceRepository.class);
         assertThat(listGraph).isNotNull();
         assertThat(listGraph.attributePaths()).contains(
-                "classSession.course.classSchedule.branch",
-                "classSession.course.nextClassSchedule.branch",
+                "classSession.courseSchedule.classSchedule.branch",
                 "studentEnrollment.studentPerson",
-                "studentEnrollment.classSchedule.branch",
+                "studentEnrollment.schedules.courseSchedule.classSchedule.branch",
                 "studentEnrollment.coursePurchase",
                 "courseStaffAssignment.staffPerson",
-                "courseStaffAssignment.course.classSchedule.branch",
-                "courseStaffAssignment.course.nextClassSchedule.branch"
+                "courseStaffAssignment.courseSchedule.classSchedule.branch"
         );
         assertScopedAttendanceQuery(detailQuery.value());
         assertThat(detailQuery.value())
                 .contains(
                         "join fetch a.classSession",
-                        "left join fetch sessionCourse.classSchedule",
-                        "left join fetch sessionCourseNextSchedule.branch",
+                        "left join fetch cs.courseSchedule sessionCourseSchedule",
+                        "left join fetch sessionCourseSchedule.classSchedule sessionClassSchedule",
+                        "left join fetch sessionClassSchedule.branch",
                         "left join fetch a.studentEnrollment",
                         "left join fetch e.studentPerson",
                         "left join fetch enrollmentStudent.position",
-                        "left join fetch e.classSchedule",
+                        "left join fetch e.schedules enrollmentScheduleLink",
+                        "left join fetch enrollmentScheduleLink.courseSchedule enrollmentCourseSchedule",
+                        "left join fetch enrollmentCourseSchedule.classSchedule enrollmentSchedule",
                         "left join fetch enrollmentSchedule.branch",
                         "left join fetch e.coursePurchase",
                         "left join fetch a.courseStaffAssignment",
                         "left join fetch participantAssignment.staffPerson",
                         "left join fetch participantStaff.position",
-                        "left join fetch participantCourse.classSchedule",
-                        "left join fetch participantCourse.nextClassSchedule"
+                        "left join fetch participantAssignment.courseSchedule participantCourseSchedule",
+                        "left join fetch participantCourseSchedule.classSchedule participantClassSchedule",
+                        "left join fetch participantClassSchedule.branch"
                 );
     }
 
@@ -107,7 +109,9 @@ class TrainingPolicyRepositoryContractTest {
                 .contains(
                         "left join fetch e.coursePurchase",
                         "left join fetch e.studentPerson",
-                        "left join fetch e.classSchedule",
+                        "left join fetch e.schedules enrollmentScheduleLink",
+                        "left join fetch enrollmentScheduleLink.courseSchedule enrollmentCourseSchedule",
+                        "left join fetch enrollmentCourseSchedule.classSchedule enrollmentSchedule",
                         "left join fetch enrollmentSchedule.branch"
                 )
                 .doesNotContain("status != CANCELLED", "stream().filter");
@@ -119,7 +123,9 @@ class TrainingPolicyRepositoryContractTest {
                         "left join fetch e.coursePurchase",
                         "left join fetch e.studentPerson",
                         "left join fetch enrollmentStudent.position",
-                        "left join fetch e.classSchedule",
+                        "left join fetch e.schedules enrollmentScheduleLink",
+                        "left join fetch enrollmentScheduleLink.courseSchedule enrollmentCourseSchedule",
+                        "left join fetch enrollmentCourseSchedule.classSchedule enrollmentSchedule",
                         "left join fetch enrollmentSchedule.branch"
                 )
                 .doesNotContain("status != CANCELLED", "stream().filter");
@@ -157,23 +163,23 @@ class TrainingPolicyRepositoryContractTest {
                 .contains(
                         "join fetch t.classSession",
                         "join fetch t.courseStaffAssignment",
-                        "left join fetch sessionCourse.classSchedule",
-                        "left join fetch sessionCourse.nextClassSchedule",
+                        "left join fetch cs.courseSchedule sessionCourseSchedule",
+                        "left join fetch sessionCourseSchedule.classSchedule sessionClassSchedule",
                         "left join fetch csa.staffPerson",
-                        "left join fetch assignmentCourse.classSchedule",
-                        "left join fetch assignmentCourse.nextClassSchedule"
+                        "left join fetch csa.courseSchedule assignmentCourseSchedule",
+                        "left join fetch assignmentCourseSchedule.classSchedule assignmentClassSchedule"
                 )
                 .doesNotContain("left join fetch assignmentStaff.position");
         assertThat(detailQuery.value())
                 .contains(
                         "join fetch t.classSession",
                         "join fetch t.courseStaffAssignment",
-                        "left join fetch sessionCourse.classSchedule",
-                        "left join fetch sessionCourse.nextClassSchedule",
+                        "left join fetch cs.courseSchedule sessionCourseSchedule",
+                        "left join fetch sessionCourseSchedule.classSchedule sessionClassSchedule",
                         "left join fetch csa.staffPerson",
                         "left join fetch assignmentStaff.position",
-                        "left join fetch assignmentCourse.classSchedule",
-                        "left join fetch assignmentCourse.nextClassSchedule"
+                        "left join fetch csa.courseSchedule assignmentCourseSchedule",
+                        "left join fetch assignmentCourseSchedule.classSchedule assignmentClassSchedule"
                 );
     }
 
@@ -192,10 +198,9 @@ class TrainingPolicyRepositoryContractTest {
                 .contains("CourseStaffAssignmentStatus.ACTIVE", "CourseStaffAssignmentStatus.ENDED")
                 .contains(
                         "left join fetch c.course",
-                        "left join fetch course.classSchedule",
-                        "left join fetch courseSchedule.branch",
-                        "left join fetch course.nextClassSchedule",
-                        "left join fetch courseNextSchedule.branch"
+                        "left join fetch c.courseSchedule courseSchedule",
+                        "left join fetch courseSchedule.classSchedule classSchedule",
+                        "left join fetch classSchedule.branch"
                 )
                 .doesNotContain("status != CANCELLED", "status <> CANCELLED", "stream().filter");
         assertThat(detailQuery.value())
@@ -204,8 +209,9 @@ class TrainingPolicyRepositoryContractTest {
                 .contains("CourseStaffAssignmentStatus.ACTIVE", "CourseStaffAssignmentStatus.ENDED")
                 .contains(
                         "left join fetch c.course",
-                        "left join fetch course.classSchedule",
-                        "left join fetch course.nextClassSchedule"
+                        "left join fetch c.courseSchedule courseSchedule",
+                        "left join fetch courseSchedule.classSchedule classSchedule",
+                        "left join fetch classSchedule.branch"
                 )
                 .doesNotContain("status != CANCELLED", "status <> CANCELLED", "stream().filter");
     }
@@ -381,13 +387,13 @@ class TrainingPolicyRepositoryContractTest {
                 .contains(
                         "left join fetch lr.person",
                         "left join fetch lr.leaveClassSession",
-                        "left join fetch leaveSessionCourse.classSchedule",
+                        "left join fetch leaveSession.courseSchedule leaveSessionCourseSchedule",
+                        "left join fetch leaveSessionCourseSchedule.classSchedule leaveSessionSchedule",
                         "left join fetch leaveSessionSchedule.branch",
-                        "left join fetch leaveSessionCourse.nextClassSchedule",
-                        "left join fetch leaveSessionNextSchedule.branch",
                         "left join fetch lr.makeupClassSession",
-                        "left join fetch makeupSessionCourse.classSchedule",
-                        "left join fetch makeupSessionCourse.nextClassSchedule"
+                        "left join fetch makeupSession.courseSchedule makeupSessionCourseSchedule",
+                        "left join fetch makeupSessionCourseSchedule.classSchedule makeupSessionSchedule",
+                        "left join fetch makeupSessionSchedule.branch"
                 )
                 .doesNotContain("left join fetch lr.createdByUser", "left join fetch lr.reviewedByUser");
         assertThat(listQuery.countQuery()).isNotBlank();

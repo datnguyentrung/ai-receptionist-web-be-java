@@ -32,10 +32,9 @@ class ListFetchGraphContractTest {
                 "left join fetch classSchedule.branch");
         assertDetailedListQuery(CoursePriceRepository.class,
                 "join fetch cp.course",
-                "join fetch course.classSchedule",
-                "join fetch classSchedule.branch",
-                "left join fetch course.nextClassSchedule",
-                "left join fetch nextClassSchedule.branch");
+                "left join fetch course.courseSchedules courseSchedule",
+                "left join fetch courseSchedule.classSchedule classSchedule",
+                "join fetch classSchedule.branch");
         assertDetailedListQuery(WalletRepository.class,
                 "join fetch w.person");
         assertDetailedListQuery(WalletTransactionRepository.class,
@@ -47,7 +46,8 @@ class ListFetchGraphContractTest {
                 "join fetch purchase.studentPerson",
                 "join fetch purchase.coursePrice",
                 "join fetch coursePrice.course",
-                "join fetch course.classSchedule",
+                "left join fetch course.courseSchedules courseSchedule",
+                "left join fetch courseSchedule.classSchedule classSchedule",
                 "join fetch classSchedule.branch",
                 "join fetch purchase.debitTransaction");
         assertDetailedListQuery(FitnessRecordRepository.class,

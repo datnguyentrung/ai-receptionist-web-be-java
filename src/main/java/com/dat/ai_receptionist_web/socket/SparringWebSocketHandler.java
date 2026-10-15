@@ -62,7 +62,7 @@ public class SparringWebSocketHandler extends TextWebSocketHandler {
             String type = payload.path("type").asText();
             SparringRoomResponse snapshot = rooms.apply(roomCode, Boolean.TRUE.equals(session.getAttributes().get("operator")), type,
                     nullableText(payload, "side"), nullableInt(payload, "points"), nullableInt(payload, "delta"),
-                    nullableInt(payload, "seconds"), nullableInt(payload, "round"));
+                    nullableInt(payload, "seconds"), nullableInt(payload, "round"), nullableText(payload, "name"));
             broadcast(roomCode, "snapshot", snapshot);
         } catch (Exception error) {
             sendError(session, error);

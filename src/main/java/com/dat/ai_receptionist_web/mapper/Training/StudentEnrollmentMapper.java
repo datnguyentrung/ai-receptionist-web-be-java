@@ -2,6 +2,7 @@ package com.dat.ai_receptionist_web.mapper.Training;
 
 import com.dat.ai_receptionist_web.domain.Training.StudentEnrollment;
 import com.dat.ai_receptionist_web.dto.Training.StudentEnrollmentDTO;
+import com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO;
 import com.dat.ai_receptionist_web.mapper.Catalog.CourseScheduleMapper;
 import com.dat.ai_receptionist_web.mapper.Core.PersonMapper;
 import org.mapstruct.BeanMapping;
@@ -20,6 +21,12 @@ public abstract class StudentEnrollmentMapper {
     @Mapping(target = "coursePurchaseId", source = "coursePurchase.coursePurchaseId")
     @Mapping(target = "courseSchedules", expression = "java(entity.getSchedules().stream().map(link -> courseScheduleMapper.toSimpleResponse(link.getCourseSchedule())).toList())")
     public abstract StudentEnrollmentDTO.SimpleResponse toSimpleResponse(StudentEnrollment entity);
+
+    @Mapping(target = "coursePurchaseId", source = "entity.coursePurchase.coursePurchaseId")
+    @Mapping(target = "courseSchedules", source = "courseSchedules")
+    public abstract StudentEnrollmentDTO.SimpleResponse toSimpleResponse(
+            StudentEnrollment entity,
+            java.util.List<CourseScheduleDTO.SimpleResponse> courseSchedules);
 
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "studentPerson", ignore = true)

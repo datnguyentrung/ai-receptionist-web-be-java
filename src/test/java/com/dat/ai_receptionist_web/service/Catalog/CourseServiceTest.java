@@ -12,6 +12,7 @@ import com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus;
 import com.dat.ai_receptionist_web.mapper.Catalog.CourseMapper;
 import com.dat.ai_receptionist_web.repository.Catalog.ClassScheduleRepository;
 import com.dat.ai_receptionist_web.repository.Catalog.CourseRepository;
+import com.dat.ai_receptionist_web.repository.Catalog.CourseScheduleRepository;
 import com.dat.ai_receptionist_web.repository.Training.CourseStaffAssignmentRepository;
 import com.dat.ai_receptionist_web.repository.Training.ClassSessionRepository;
 import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentRepository;
@@ -117,7 +118,7 @@ class CourseServiceTest {
                 CourseStatus.ACTIVE,
                 null);
 
-        when(repository.findAllDetailed(pageable)).thenReturn(new PageImpl<>(List.of(course)));
+        when(repository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(course)));
         when(assignmentRepository.findEffectiveStaffByCourseIdsAndDate(
                 anyCollection(),
                 anyCollection(),
@@ -127,12 +128,14 @@ class CourseServiceTest {
                 eq(LocalDate.now()))).thenReturn(List.of(new CourseStudentCountRow(course.getCourseId(), 3)));
         when(mapper.toSimpleResponse(course, coach, 3)).thenReturn(response);
         when(mapper.withSchedules(eq(response), anyList())).thenReturn(response);
+        CourseScheduleRepository courseScheduleRepository = mock(CourseScheduleRepository.class);
+        when(courseScheduleRepository.findDetailedByCourseIds(anyList())).thenReturn(List.of(schedule));
 
         CourseService service = new CourseService(
                 repository,
                 mapper,
                 mock(ClassScheduleRepository.class),
-                mock(com.dat.ai_receptionist_web.repository.Catalog.CourseScheduleRepository.class),
+                courseScheduleRepository,
                 mock(com.dat.ai_receptionist_web.mapper.Catalog.CourseScheduleMapper.class),
                 planningService,
                 assignmentRepository,
@@ -151,6 +154,8 @@ class CourseServiceTest {
                 eq(LocalDate.now()));
         verify(mapper).toSimpleResponse(course, coach, 3);
         verify(mapper).withSchedules(eq(response), anyList());
+        verify(courseScheduleRepository).findDetailedByCourseIds(List.of(course.getCourseId()));
+        verify(courseScheduleRepository, never()).findDetailedByCourseId(any());
     }
 
     private record CourseStudentCountRow(UUID courseId, long studentCount)

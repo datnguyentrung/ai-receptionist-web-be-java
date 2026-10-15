@@ -89,12 +89,10 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
         select e
         from StudentEnrollment e
         left join fetch e.coursePurchase p
-        join p.coursePrice pr
+        join fetch p.coursePrice pr
+        join fetch pr.course
         left join fetch e.studentPerson enrollmentStudent
-        left join fetch e.schedules enrollmentScheduleLink
-        left join fetch enrollmentScheduleLink.courseSchedule enrollmentCourseSchedule
-        left join fetch enrollmentCourseSchedule.classSchedule enrollmentSchedule
-        left join fetch enrollmentSchedule.branch
+        left join fetch enrollmentStudent.position
         where e.startDate <= :toDate
           and e.endDate >= :fromDate
           and (:courseId is null or pr.course.courseId = :courseId)
@@ -145,7 +143,8 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
         select e
         from StudentEnrollment e
         left join fetch e.coursePurchase p
-        join p.coursePrice pr
+        join fetch p.coursePrice pr
+        join fetch pr.course
         left join fetch e.studentPerson enrollmentStudent
         left join fetch enrollmentStudent.position
         left join fetch e.schedules enrollmentScheduleLink

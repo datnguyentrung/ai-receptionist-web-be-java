@@ -9,10 +9,12 @@ import com.dat.ai_receptionist_web.error.code.CoreErrorCode;
 import com.dat.ai_receptionist_web.error.code.FinanceErrorCode;
 import com.dat.ai_receptionist_web.error.code.TrainingErrorCode;
 import com.dat.ai_receptionist_web.mapper.Training.StudentEnrollmentMapper;
+import com.dat.ai_receptionist_web.mapper.Catalog.CourseScheduleMapper;
 import com.dat.ai_receptionist_web.repository.Catalog.CourseScheduleRepository;
 import com.dat.ai_receptionist_web.repository.Core.PersonRepository;
 import com.dat.ai_receptionist_web.repository.Finance.CoursePurchaseRepository;
 import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentRepository;
+import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentScheduleRepository;
 import com.dat.ai_receptionist_web.service.Core.PersonCodePolicy;
 import com.dat.ai_receptionist_web.service.Security.access.AccessContext;
 import com.dat.ai_receptionist_web.service.Security.access.CurrentAccessContextResolver;
@@ -26,6 +28,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.UUID;
 import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +41,8 @@ public class StudentEnrollmentService {
     private final PersonRepository personRepository;
     private final CoursePurchaseRepository coursePurchaseRepository;
     private final CourseScheduleRepository courseScheduleRepository;
+    private final StudentEnrollmentScheduleRepository studentEnrollmentScheduleRepository;
+    private final CourseScheduleMapper courseScheduleMapper;
     private final PersonCodePolicy personCodePolicy;
     private final CurrentAccessContextResolver currentAccessContextResolver;
     private final StudentEnrollmentAccessPolicy accessPolicy;
@@ -49,7 +57,7 @@ public class StudentEnrollmentService {
     ) {
         AccessContext context = currentAccessContextResolver.current();
         TrainingAccessScope scope = accessPolicy.resolveReadScope(context);
-        return PageResponse.of(repository.findAccessible(
+        var enrollments = repository.findAccessible(
                 context.userId(),
                 context.activePersonId(),
                 scope.unrestricted(),
@@ -61,7 +69,15 @@ public class StudentEnrollmentService {
                 courseId,
                 studentPersonId,
                 pageable
-        ), mapper::toSimpleResponse);
+        );
+        Map<UUID, List<com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO.SimpleResponse>>
+                schedulesByEnrollmentId = getSimpleSchedulesByEnrollmentIds(
+                enrollments.getContent().stream()
+                        .map(com.dat.ai_receptionist_web.domain.Training.StudentEnrollment::getStudentEnrollmentId)
+                        .toList());
+        return PageResponse.of(enrollments, enrollment -> mapper.toSimpleResponse(
+                enrollment,
+                schedulesByEnrollmentId.getOrDefault(enrollment.getStudentEnrollmentId(), List.of())));
     }
 
     @Transactional(readOnly = true)
@@ -147,10 +163,19 @@ public class StudentEnrollmentService {
         if (scheduleIds == null || scheduleIds.isEmpty()) {
             throw new ApiException(CatalogErrorCode.COURSE_SCHEDULE_CHANGE_CONFLICT, "At least one course schedule is required");
         }
+        LinkedHashSet<UUID> uniqueScheduleIds = new LinkedHashSet<>(scheduleIds);
+        Map<UUID, com.dat.ai_receptionist_web.domain.Catalog.CourseSchedule> schedulesById =
+                courseScheduleRepository.findDetailedByIds(uniqueScheduleIds).stream()
+                        .collect(Collectors.toMap(
+                                com.dat.ai_receptionist_web.domain.Catalog.CourseSchedule::getCourseScheduleId,
+                                schedule -> schedule));
+        if (schedulesById.size() != uniqueScheduleIds.size()) {
+            throw new ApiException(CatalogErrorCode.COURSE_SCHEDULE_NOT_FOUND);
+        }
+
         LinkedHashSet<com.dat.ai_receptionist_web.domain.Training.StudentEnrollmentSchedule> links = new LinkedHashSet<>();
-        for (UUID id : new LinkedHashSet<>(scheduleIds)) {
-            var courseSchedule = courseScheduleRepository.findById(id)
-                    .orElseThrow(() -> new ApiException(CatalogErrorCode.CLASS_SCHEDULE_NOT_FOUND));
+        for (UUID id : uniqueScheduleIds) {
+            var courseSchedule = schedulesById.get(id);
             if (!courseSchedule.getCourse().getCourseId().equals(courseId)
                     || courseSchedule.getStartDate().isAfter(end)
                     || (courseSchedule.getEndDate() != null && courseSchedule.getEndDate().isBefore(start))) {
@@ -160,5 +185,19 @@ public class StudentEnrollmentService {
                     .courseSchedule(courseSchedule).build());
         }
         return links;
+    }
+
+    private Map<UUID, List<com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO.SimpleResponse>>
+    getSimpleSchedulesByEnrollmentIds(List<UUID> enrollmentIds) {
+        if (enrollmentIds.isEmpty()) {
+            return Map.of();
+        }
+        return studentEnrollmentScheduleRepository.findDetailedByStudentEnrollmentIds(enrollmentIds).stream()
+                .collect(Collectors.groupingBy(
+                        link -> link.getStudentEnrollment().getStudentEnrollmentId(),
+                        LinkedHashMap::new,
+                        Collectors.mapping(
+                                link -> courseScheduleMapper.toSimpleResponse(link.getCourseSchedule()),
+                                Collectors.toList())));
     }
 }

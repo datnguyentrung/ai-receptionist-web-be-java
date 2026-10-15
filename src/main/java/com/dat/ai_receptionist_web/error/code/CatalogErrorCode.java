@@ -13,6 +13,8 @@ public enum CatalogErrorCode implements ErrorCode {
             HttpStatus.NOT_FOUND,
             "Course not found",
             "No course exists for the provided courseId"),
+    COURSE_SCHEDULE_NOT_FOUND("COURSE_SCHEDULE_NOT_FOUND", HttpStatus.NOT_FOUND,
+            "Course schedule not found", "No course schedule exists for the provided courseId and courseScheduleId"),
     COURSE_PRICE_NOT_FOUND("COURSE_PRICE_NOT_FOUND", HttpStatus.NOT_FOUND, "Course price not found",
             "Course price not found"),
     COURSE_SCHEDULE_PENDING_NOT_FOUND("COURSE_SCHEDULE_PENDING_NOT_FOUND", HttpStatus.NOT_FOUND,

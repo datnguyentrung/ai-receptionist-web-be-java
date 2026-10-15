@@ -5,6 +5,7 @@ import com.dat.ai_receptionist_web.domain.Catalog.CourseSchedule;
 import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.domain.Training.CourseStaffAssignment;
 import com.dat.ai_receptionist_web.dto.Catalog.CourseDTO;
+import com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO;
 import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.enums.Catalog.CourseStatus;
 import com.dat.ai_receptionist_web.enums.Core.ScheduleLevel;
@@ -50,7 +51,7 @@ public class CourseService {
 
     @Transactional(readOnly = true)
     public PageResponse<CourseDTO.SimpleResponse> list(Pageable pageable) {
-        Page<Course> courses = repository.findAllDetailed(pageable);
+        Page<Course> courses = repository.findAll(pageable);
         List<UUID> courseIds = courses.getContent().stream()
                 .map(Course::getCourseId)
                 .toList();
@@ -60,13 +61,13 @@ public class CourseService {
                 currentDate);
         Map<UUID, Integer> currentStudentCountByCourseId =
                 getCurrentStudentCountByCourseIds(courseIds, currentDate);
+        Map<UUID, List<CourseScheduleDTO.SimpleResponse>> schedulesByCourseId =
+                getSimpleSchedulesByCourseIds(courseIds);
         return PageResponse.of(courses, course -> mapper.withSchedules(mapper.toSimpleResponse(
                         course,
                         staffByCourseId.getOrDefault(course.getCourseId(), CourseStaffView.empty()).primaryCoach(),
                         currentStudentCountByCourseId.getOrDefault(course.getCourseId(), 0)),
-                courseScheduleRepository.findDetailedByCourseId(course.getCourseId()).stream()
-                        .map(courseScheduleMapper::toSimpleResponse)
-                        .toList()));
+                schedulesByCourseId.getOrDefault(course.getCourseId(), List.of())));
     }
 
     @Transactional(readOnly = true)
@@ -115,36 +116,6 @@ public class CourseService {
         entity.setStatus(CourseStatus.CANCELLED);
     }
 
-    @Transactional
-    public com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO.Response addSchedule(
-            UUID courseId, com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO.UpsertRequest request) {
-        Course course = find(courseId);
-        CourseSchedule schedule = buildCourseSchedule(course, request);
-        return courseScheduleMapper.toResponse(courseScheduleRepository.save(schedule));
-    }
-
-    @Transactional
-    public com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO.Response updateSchedule(
-            UUID courseId, UUID id, com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO.UpsertRequest request) {
-        CourseSchedule existing = courseScheduleRepository.findById(id)
-                .filter(item -> item.getCourse().getCourseId().equals(courseId))
-                .orElseThrow(() -> new ApiException(CatalogErrorCode.CLASS_SCHEDULE_NOT_FOUND));
-        CourseSchedule candidate = buildCourseSchedule(existing.getCourse(), request);
-        existing.setClassSchedule(candidate.getClassSchedule());
-        existing.setStartDate(candidate.getStartDate());
-        existing.setEndDate(candidate.getEndDate());
-        existing.setStatus(candidate.getStatus());
-        return courseScheduleMapper.toResponse(courseScheduleRepository.save(existing));
-    }
-
-    @Transactional
-    public void deactivateSchedule(UUID courseId, UUID id) {
-        CourseSchedule schedule = courseScheduleRepository.findById(id)
-                .filter(item -> item.getCourse().getCourseId().equals(courseId))
-                .orElseThrow(() -> new ApiException(CatalogErrorCode.CLASS_SCHEDULE_NOT_FOUND));
-        schedule.setStatus(com.dat.ai_receptionist_web.enums.Core.ScheduleStatus.INACTIVE);
-    }
-
     private Course find(UUID id) {
         return repository.findById(id)
                 .orElseThrow(() -> new ApiException(CatalogErrorCode.COURSE_NOT_FOUND));
@@ -165,7 +136,7 @@ public class CourseService {
                 .map(courseScheduleMapper::toResponse).toList());
     }
 
-    private void replaceSchedules(Course course, List<com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO.UpsertRequest> requests) {
+    private void replaceSchedules(Course course, List<CourseScheduleDTO.UpsertRequest> requests) {
         if (requests == null || requests.isEmpty()) {
             throw new ApiException(CatalogErrorCode.COURSE_SCHEDULE_CHANGE_CONFLICT, "At least one course schedule is required");
         }
@@ -174,7 +145,7 @@ public class CourseService {
         }
     }
 
-    private CourseSchedule buildCourseSchedule(Course course, com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO.UpsertRequest request) {
+    private CourseSchedule buildCourseSchedule(Course course, CourseScheduleDTO.UpsertRequest request) {
         if (request.endDate() != null && request.endDate().isBefore(request.startDate())) {
             throw new ApiException(CatalogErrorCode.COURSE_SCHEDULE_CHANGE_CONFLICT, "Schedule end date must not precede start date");
         }
@@ -221,6 +192,18 @@ public class CourseService {
                         count -> Math.toIntExact(count.getStudentCount()),
                         (left, right) -> left,
                         LinkedHashMap::new));
+    }
+
+    private Map<UUID, List<CourseScheduleDTO.SimpleResponse>> getSimpleSchedulesByCourseIds(
+            List<UUID> courseIds) {
+        if (courseIds.isEmpty()) {
+            return Map.of();
+        }
+        return courseScheduleRepository.findDetailedByCourseIds(courseIds).stream()
+                .collect(Collectors.groupingBy(
+                        schedule -> schedule.getCourse().getCourseId(),
+                        LinkedHashMap::new,
+                        Collectors.mapping(courseScheduleMapper::toSimpleResponse, Collectors.toList())));
     }
 
     private record CourseStaffView(

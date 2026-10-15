@@ -10,6 +10,19 @@ import java.util.UUID;
 public final class CourseScheduleDTO {
     private CourseScheduleDTO() {}
 
+    public record CreateRequest(
+            @NotNull UUID courseId,
+            @NotNull UUID classScheduleId,
+            @NotNull LocalDate startDate,
+            LocalDate endDate,
+            @NotNull ScheduleStatus status) {}
+
+    public record UpdateRequest(
+            @NotNull UUID classScheduleId,
+            @NotNull LocalDate startDate,
+            LocalDate endDate,
+            @NotNull ScheduleStatus status) {}
+
     public record UpsertRequest(
             @NotNull UUID classScheduleId,
             @NotNull LocalDate startDate,
@@ -18,6 +31,7 @@ public final class CourseScheduleDTO {
 
     public record Response(
             UUID courseScheduleId,
+            UUID courseId,
             ClassScheduleDTO.Response classSchedule,
             LocalDate startDate,
             LocalDate endDate,
@@ -27,6 +41,7 @@ public final class CourseScheduleDTO {
 
     public record SimpleResponse(
             UUID courseScheduleId,
+            UUID courseId,
             ClassScheduleDTO.SimpleResponse classSchedule,
             LocalDate startDate,
             LocalDate endDate,

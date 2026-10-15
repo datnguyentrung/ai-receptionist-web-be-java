@@ -22,6 +22,8 @@ public enum TrainingErrorCode implements ErrorCode {
             "Attendance command not found", "Attendance command not found"),
     STUDENT_ENROLLMENT_NOT_FOUND("STUDENT_ENROLLMENT_NOT_FOUND", HttpStatus.NOT_FOUND,
             "Student enrollment not found", "Student enrollment not found"),
+    STUDENT_ENROLLMENT_SCHEDULE_NOT_FOUND("STUDENT_ENROLLMENT_SCHEDULE_NOT_FOUND", HttpStatus.NOT_FOUND,
+            "Student enrollment schedule not found", "Student enrollment schedule not found"),
     CLASS_SESSION_IMMUTABLE("CLASS_SESSION_IMMUTABLE", HttpStatus.CONFLICT,
             "Class session immutable",
             "Class session is already started, completed or scheduled in the past"),

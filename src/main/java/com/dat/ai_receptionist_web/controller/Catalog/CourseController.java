@@ -1,7 +1,6 @@
 package com.dat.ai_receptionist_web.controller.Catalog;
 
 import com.dat.ai_receptionist_web.dto.Catalog.CourseDTO;
-import com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO;
 import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.service.Catalog.CourseService;
 import jakarta.validation.Valid;
@@ -63,32 +62,6 @@ public class CourseController {
     public CourseDTO.Response update(@PathVariable UUID id,
                                      @Valid @RequestBody CourseDTO.UpdateRequest request) {
         return service.update(id, request);
-    }
-
-    @PostMapping("/{id}/schedules")
-    @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).COURSE_UPDATE.getCode())")
-    public CourseScheduleDTO.Response addSchedule(
-            @PathVariable UUID id,
-            @Valid @RequestBody com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO.UpsertRequest request) {
-        return service.addSchedule(id, request);
-    }
-
-    @PutMapping("/{courseId}/schedules/{scheduleId}")
-    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).COURSE_UPDATE.getCode())")
-    public com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO.Response updateSchedule(
-            @PathVariable UUID courseId,
-            @PathVariable UUID scheduleId,
-            @Valid @RequestBody com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO.UpsertRequest request) {
-        return service.updateSchedule(courseId, scheduleId, request);
-    }
-
-    @DeleteMapping("/{courseId}/schedules/{scheduleId}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).COURSE_UPDATE.getCode())")
-    public void deactivateSchedule(@PathVariable UUID courseId,
-                                   @PathVariable UUID scheduleId) {
-        service.deactivateSchedule(courseId, scheduleId);
     }
 
     /**

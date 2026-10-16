@@ -66,6 +66,12 @@
       "sourceType": "github",
       "skillPath": "engineering-team/skills/senior-prompt-engineer/SKILL.md",
       "computedHash": "09c11f243d8e01bc3c7d7a94c6a46daff7a1a349351b7aad223a00eace1914be"
+    },
+    "setup-matt-pocock-skills": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/setup-matt-pocock-skills/SKILL.md",
+      "computedHash": "1114faf86d8658d6b3c729e7e604fbfecdee3fa112f23c4889463e87da662aec"
     }
   }
 }

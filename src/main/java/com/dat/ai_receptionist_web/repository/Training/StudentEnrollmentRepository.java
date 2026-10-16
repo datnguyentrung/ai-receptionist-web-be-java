@@ -97,6 +97,10 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
           and e.endDate >= :fromDate
           and (:courseId is null or pr.course.courseId = :courseId)
           and (:studentPersonId is null or e.studentPerson.personId = :studentPersonId)
+          and (:status is null or e.status = :status)
+          and (:search = ''
+              or lower(enrollmentStudent.fullName) like lower(concat('%', :search, '%'))
+              or lower(coalesce(enrollmentStudent.personCode, '')) like lower(concat('%', :search, '%')))
           and (
               :unrestricted = true
               or (:self = true and e.studentPerson.personId = :activePersonId)
@@ -136,6 +140,8 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
             @Param("toDate") LocalDate toDate,
             @Param("courseId") UUID courseId,
             @Param("studentPersonId") UUID studentPersonId,
+            @Param("status") com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus status,
+            @Param("search") String search,
             Pageable pageable
     );
 

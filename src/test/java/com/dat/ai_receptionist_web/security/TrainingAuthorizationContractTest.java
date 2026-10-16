@@ -128,6 +128,8 @@ class TrainingAuthorizationContractTest {
                 LocalDate.class,
                 UUID.class,
                 UUID.class,
+                com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus.class,
+                String.class,
                 Pageable.class
         );
         assertPermission(

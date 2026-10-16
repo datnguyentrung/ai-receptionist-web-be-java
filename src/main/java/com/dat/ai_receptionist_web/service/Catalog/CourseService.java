@@ -1,22 +1,15 @@
 package com.dat.ai_receptionist_web.service.Catalog;
 
 import com.dat.ai_receptionist_web.domain.Catalog.Course;
-import com.dat.ai_receptionist_web.domain.Catalog.CourseSchedule;
-import com.dat.ai_receptionist_web.domain.Core.Person;
-import com.dat.ai_receptionist_web.domain.Training.CourseStaffAssignment;
 import com.dat.ai_receptionist_web.dto.Catalog.CourseDTO;
 import com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO;
 import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.enums.Catalog.CourseStatus;
 import com.dat.ai_receptionist_web.enums.Core.ScheduleLevel;
-import com.dat.ai_receptionist_web.enums.Training.AssignmentType;
 import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.code.CatalogErrorCode;
 import com.dat.ai_receptionist_web.mapper.Catalog.CourseMapper;
-import com.dat.ai_receptionist_web.repository.Catalog.ClassScheduleRepository;
-import com.dat.ai_receptionist_web.repository.Catalog.CourseScheduleRepository;
 import com.dat.ai_receptionist_web.repository.Catalog.CourseRepository;
-import com.dat.ai_receptionist_web.repository.Training.CourseStaffAssignmentRepository;
 import com.dat.ai_receptionist_web.repository.Training.ClassSessionRepository;
 import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentRepository;
 import com.dat.ai_receptionist_web.service.Training.scheduling.CourseSessionPlanningService;
@@ -27,12 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -41,11 +31,8 @@ import java.util.stream.Collectors;
 public class CourseService {
     private final CourseRepository repository;
     private final CourseMapper mapper;
-    private final ClassScheduleRepository classScheduleRepository;
-    private final CourseScheduleRepository courseScheduleRepository;
-    private final com.dat.ai_receptionist_web.mapper.Catalog.CourseScheduleMapper courseScheduleMapper;
+    private final CourseScheduleService courseScheduleService;
     private final CourseSessionPlanningService planningService;
-    private final CourseStaffAssignmentRepository courseStaffAssignmentRepository;
     private final StudentEnrollmentRepository studentEnrollmentRepository;
     private final ClassSessionRepository classSessionRepository;
 
@@ -56,16 +43,12 @@ public class CourseService {
                 .map(Course::getCourseId)
                 .toList();
         LocalDate currentDate = LocalDate.now();
-        Map<UUID, CourseStaffView> staffByCourseId = getStaffByCourseIds(
-                Set.copyOf(courseIds),
-                currentDate);
         Map<UUID, Integer> currentStudentCountByCourseId =
                 getCurrentStudentCountByCourseIds(courseIds, currentDate);
         Map<UUID, List<CourseScheduleDTO.SimpleResponse>> schedulesByCourseId =
-                getSimpleSchedulesByCourseIds(courseIds);
+                courseScheduleService.findSimpleResponsesByCourseIds(courseIds);
         return PageResponse.of(courses, course -> mapper.withSchedules(mapper.toSimpleResponse(
                         course,
-                        staffByCourseId.getOrDefault(course.getCourseId(), CourseStaffView.empty()).primaryCoach(),
                         currentStudentCountByCourseId.getOrDefault(course.getCourseId(), 0)),
                 schedulesByCourseId.getOrDefault(course.getCourseId(), List.of())));
     }
@@ -84,7 +67,7 @@ public class CourseService {
         entity.setName(request.name());
         entity.setLevel(request.level());
         Course saved = repository.save(entity);
-        replaceSchedules(saved, request.courseSchedules());
+        courseScheduleService.createForCourse(saved, request.courseSchedules());
         if (saved.getStatus() == CourseStatus.ACTIVE) {
             planningService.maintainGenerationHorizon();
         }
@@ -123,62 +106,12 @@ public class CourseService {
 
     private CourseDTO.Response toResponseWithStaff(Course course) {
         LocalDate currentDate = LocalDate.now();
-        CourseStaffView staff = getStaffByCourseIds(Set.of(course.getCourseId()), currentDate)
-                .getOrDefault(course.getCourseId(), CourseStaffView.empty());
         int currentStudentCount = Math.toIntExact(studentEnrollmentRepository.countCurrentStudentsByCourseId(
                 course.getCourseId(),
                 currentDate));
         return mapper.withSchedules(mapper.toResponse(
                 course,
-                staff.primaryCoach(),
-                staff.manager(),
-                currentStudentCount), courseScheduleRepository.findDetailedByCourseId(course.getCourseId()).stream()
-                .map(courseScheduleMapper::toResponse).toList());
-    }
-
-    private void replaceSchedules(Course course, List<CourseScheduleDTO.UpsertRequest> requests) {
-        if (requests == null || requests.isEmpty()) {
-            throw new ApiException(CatalogErrorCode.COURSE_SCHEDULE_CHANGE_CONFLICT, "At least one course schedule is required");
-        }
-        for (var request : requests) {
-            courseScheduleRepository.save(buildCourseSchedule(course, request));
-        }
-    }
-
-    private CourseSchedule buildCourseSchedule(Course course, CourseScheduleDTO.UpsertRequest request) {
-        if (request.endDate() != null && request.endDate().isBefore(request.startDate())) {
-            throw new ApiException(CatalogErrorCode.COURSE_SCHEDULE_CHANGE_CONFLICT, "Schedule end date must not precede start date");
-        }
-        var schedule = classScheduleRepository.findById(request.classScheduleId())
-                .orElseThrow(() -> new ApiException(CatalogErrorCode.CLASS_SCHEDULE_NOT_FOUND));
-        return CourseSchedule.builder().course(course).classSchedule(schedule)
-                .startDate(request.startDate()).endDate(request.endDate()).status(request.status()).build();
-    }
-
-    private Map<UUID, CourseStaffView> getStaffByCourseIds(Set<UUID> courseIds,
-                                                           LocalDate effectiveDate) {
-        if (courseIds.isEmpty()) {
-            return Map.of();
-        }
-        List<CourseStaffAssignment> assignments =
-                courseStaffAssignmentRepository.findEffectiveStaffByCourseIdsAndDate(
-                        courseIds,
-                        EnumSet.allOf(AssignmentType.class),
-                        effectiveDate);
-
-        Map<UUID, CourseStaffViewBuilder> builders = new LinkedHashMap<>();
-        for (CourseStaffAssignment assignment : assignments) {
-            UUID courseId = assignment.getCourseSchedule().getCourse().getCourseId();
-            CourseStaffViewBuilder builder = builders.computeIfAbsent(courseId, ignored -> new CourseStaffViewBuilder());
-            builder.add(assignment);
-        }
-
-        return builders.entrySet().stream()
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> entry.getValue().build(),
-                        (left, right) -> left,
-                        LinkedHashMap::new));
+                currentStudentCount), courseScheduleService.findResponsesByCourseId(course.getCourseId()));
     }
 
     private Map<UUID, Integer> getCurrentStudentCountByCourseIds(List<UUID> courseIds,
@@ -194,58 +127,4 @@ public class CourseService {
                         LinkedHashMap::new));
     }
 
-    private Map<UUID, List<CourseScheduleDTO.SimpleResponse>> getSimpleSchedulesByCourseIds(
-            List<UUID> courseIds) {
-        if (courseIds.isEmpty()) {
-            return Map.of();
-        }
-        return courseScheduleRepository.findDetailedByCourseIds(courseIds).stream()
-                .collect(Collectors.groupingBy(
-                        schedule -> schedule.getCourse().getCourseId(),
-                        LinkedHashMap::new,
-                        Collectors.mapping(courseScheduleMapper::toSimpleResponse, Collectors.toList())));
-    }
-
-    private record CourseStaffView(
-            Person primaryCoach,
-            List<Person> assistantCoaches,
-            List<Person> teachingAssistants,
-            Person manager
-    ) {
-        private static CourseStaffView empty() {
-            return new CourseStaffView(null, List.of(), List.of(), null);
-        }
-    }
-
-    private static final class CourseStaffViewBuilder {
-        private Person primaryCoach;
-        private final List<Person> assistantCoaches = new ArrayList<>();
-        private final List<Person> teachingAssistants = new ArrayList<>();
-        private Person manager;
-
-        private void add(CourseStaffAssignment assignment) {
-            switch (assignment.getAssignmentType()) {
-                case PRIMARY_COACH -> {
-                    if (primaryCoach == null) {
-                        primaryCoach = assignment.getStaffPerson();
-                    }
-                }
-                case ASSISTANT_COACH -> assistantCoaches.add(assignment.getStaffPerson());
-                case TEACHING_ASSISTANT -> teachingAssistants.add(assignment.getStaffPerson());
-                case MANAGER -> {
-                    if (manager == null) {
-                        manager = assignment.getStaffPerson();
-                    }
-                }
-            }
-        }
-
-        private CourseStaffView build() {
-            return new CourseStaffView(
-                    primaryCoach,
-                    List.copyOf(assistantCoaches),
-                    List.copyOf(teachingAssistants),
-                    manager);
-        }
-    }
 }

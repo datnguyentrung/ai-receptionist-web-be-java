@@ -1,6 +1,5 @@
 package com.dat.ai_receptionist_web.dto.Catalog;
 
-import com.dat.ai_receptionist_web.dto.Core.PersonDTO;
 import com.dat.ai_receptionist_web.enums.Catalog.CourseStatus;
 import com.dat.ai_receptionist_web.enums.Core.ScheduleLevel;
 import jakarta.validation.constraints.NotBlank;
@@ -56,8 +55,6 @@ public final class CourseDTO {
 
             CourseStatus status,
             LocalDate classSessionGeneratedUntil,
-            PersonDTO.BriefResponse primaryCoach,
-            PersonDTO.BriefResponse manager,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
@@ -70,8 +67,7 @@ public final class CourseDTO {
             ScheduleLevel level,
             int capacity,
             int currentStudentCount,
-            CourseStatus status,
-            PersonDTO.BriefResponse primaryCoach
+            CourseStatus status
     ) {
     }
 

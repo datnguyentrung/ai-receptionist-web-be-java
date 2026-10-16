@@ -53,6 +53,8 @@ public class StudentEnrollmentService {
             LocalDate toDate,
             UUID courseId,
             UUID studentPersonId,
+            StudentEnrollmentStatus status,
+            String search,
             Pageable pageable
     ) {
         AccessContext context = currentAccessContextResolver.current();
@@ -68,6 +70,8 @@ public class StudentEnrollmentService {
                 toDate,
                 courseId,
                 studentPersonId,
+                status,
+                search == null ? "" : search.trim(),
                 pageable
         );
         Map<UUID, List<com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO.SimpleResponse>>

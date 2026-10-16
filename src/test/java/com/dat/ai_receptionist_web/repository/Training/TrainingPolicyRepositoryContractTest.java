@@ -86,6 +86,8 @@ class TrainingPolicyRepositoryContractTest {
                         LocalDate.class,
                         UUID.class,
                         UUID.class,
+                        com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus.class,
+                        String.class,
                         Pageable.class
                 )
                 .getAnnotation(Query.class);
@@ -103,16 +105,15 @@ class TrainingPolicyRepositoryContractTest {
                 .getAnnotation(Query.class);
 
         assertThat(listQuery.value())
+                .contains(":status is null or e.status = :status")
+                .contains("lower(enrollmentStudent.fullName)")
+                .contains("enrollmentStudent.personCode")
                 .contains("UserPerson up", "RelationshipType.GUARDIAN", "up.active = true")
                 .contains("csa.startDate <= :toDate", "csa.endDate is null or csa.endDate >= :fromDate")
                 .contains("CourseStaffAssignmentStatus.ACTIVE", "CourseStaffAssignmentStatus.ENDED")
                 .contains(
                         "left join fetch e.coursePurchase",
-                        "left join fetch e.studentPerson",
-                        "left join fetch e.schedules enrollmentScheduleLink",
-                        "left join fetch enrollmentScheduleLink.courseSchedule enrollmentCourseSchedule",
-                        "left join fetch enrollmentCourseSchedule.classSchedule enrollmentSchedule",
-                        "left join fetch enrollmentSchedule.branch"
+                        "left join fetch e.studentPerson"
                 )
                 .doesNotContain("status != CANCELLED", "stream().filter");
         assertThat(detailQuery.value())
@@ -283,6 +284,11 @@ class TrainingPolicyRepositoryContractTest {
                         boolean.class,
                         boolean.class,
                         boolean.class,
+                        UUID.class,
+                        java.util.Collection.class,
+                        boolean.class,
+                        LocalDate.class,
+                        String.class,
                         Pageable.class
                 )
                 .getAnnotation(Query.class);
@@ -300,6 +306,12 @@ class TrainingPolicyRepositoryContractTest {
         assertScopedCourseStaffAssignmentQuery(listQuery.value());
         assertScopedCourseStaffAssignmentQuery(detailQuery.value());
         assertThat(listQuery.value())
+                .contains(":courseId is null or course.courseId = :courseId")
+                .contains("a.assignmentType in :assignmentTypes")
+                .contains(":filterEffectiveOn = false")
+                .contains("a.startDate <= :effectiveOn")
+                .contains("lower(staffPerson.fullName)")
+                .contains("staffPerson.personCode")
                 .contains(
                         "left join fetch a.staffPerson",
                         "left join fetch a.courseSchedule",
@@ -307,6 +319,7 @@ class TrainingPolicyRepositoryContractTest {
                         "left join fetch courseSchedule.classSchedule",
                         "left join fetch classSchedule.branch"
                 )
+                .doesNotContain(":effectiveOn is null")
                 .doesNotContain("left join fetch staffPerson.position");
         assertThat(detailQuery.value())
                 .contains(

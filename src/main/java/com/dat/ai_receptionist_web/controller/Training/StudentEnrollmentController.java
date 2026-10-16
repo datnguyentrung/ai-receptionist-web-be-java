@@ -2,6 +2,7 @@ package com.dat.ai_receptionist_web.controller.Training;
 
 import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.dto.Training.StudentEnrollmentDTO;
+import com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus;
 import com.dat.ai_receptionist_web.service.Training.StudentEnrollmentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -36,9 +37,11 @@ public class StudentEnrollmentController {
             @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) UUID courseId,
             @RequestParam(required = false) UUID studentPersonId,
+            @RequestParam(required = false) StudentEnrollmentStatus status,
+            @RequestParam(required = false) String search,
             Pageable pageable
     ) {
-        return service.list(fromDate, toDate, courseId, studentPersonId, pageable);
+        return service.list(fromDate, toDate, courseId, studentPersonId, status, search, pageable);
     }
 
     @GetMapping("/{id}")

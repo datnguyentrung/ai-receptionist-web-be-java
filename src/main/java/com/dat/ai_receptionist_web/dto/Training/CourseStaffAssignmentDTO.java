@@ -60,4 +60,11 @@ public final class CourseStaffAssignmentDTO {
             CourseStaffAssignmentStatus assignmentStatus
     ) {
     }
+
+    public record BriefResponse(
+            UUID courseStaffAssignmentId,
+            PersonDTO.BriefResponse staffPerson,
+            AssignmentType assignmentType
+    ) {
+    }
 }

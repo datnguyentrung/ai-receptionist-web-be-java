@@ -4,6 +4,7 @@ import com.dat.ai_receptionist_web.domain.Training.CourseStaffAssignment;
 import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.dto.Training.CourseStaffAssignmentDTO;
 import com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus;
+import com.dat.ai_receptionist_web.enums.Training.AssignmentType;
 import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.code.CatalogErrorCode;
 import com.dat.ai_receptionist_web.error.code.CoreErrorCode;
@@ -22,7 +23,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -36,14 +44,32 @@ public class CourseStaffAssignmentService {
     private final CourseStaffAssignmentAccessPolicy accessPolicy;
 
     @Transactional(readOnly = true)
-    public PageResponse<CourseStaffAssignmentDTO.SimpleResponse> list(Pageable pageable) {
+    public PageResponse<CourseStaffAssignmentDTO.SimpleResponse> list(
+            UUID courseId,
+            Collection<AssignmentType> assignmentTypes,
+            LocalDate effectiveOn,
+            String search,
+            Pageable pageable
+    ) {
         AccessContext context = currentAccessContextResolver.current();
         TrainingAccessScope scope = accessPolicy.resolveReadScope(context);
+        Collection<AssignmentType> resolvedTypes = assignmentTypes == null || assignmentTypes.isEmpty()
+                ? List.of(AssignmentType.values())
+                : assignmentTypes;
+        boolean filterEffectiveOn = effectiveOn != null;
+        LocalDate resolvedEffectiveOn = filterEffectiveOn
+                ? effectiveOn
+                : LocalDate.of(1970, 1, 1);
         return PageResponse.of(repository.findAccessible(
                 context.activePersonId(),
                 scope.unrestricted(),
                 scope.self(),
                 scope.managedCourses(),
+                courseId,
+                resolvedTypes,
+                filterEffectiveOn,
+                resolvedEffectiveOn,
+                search == null ? "" : search.trim(),
                 pageable
         ), mapper::toSimpleResponse);
     }
@@ -54,18 +80,48 @@ public class CourseStaffAssignmentService {
         return mapper.toResponse(findAccessible(id, context, accessPolicy.resolveReadScope(context)));
     }
 
+    @Transactional(readOnly = true)
+    public Map<UUID, List<CourseStaffAssignmentDTO.BriefResponse>> getEffectiveBriefByCourseScheduleIds(
+            Collection<UUID> courseScheduleIds,
+            LocalDate effectiveDate
+    ) {
+        if (courseScheduleIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Comparator<CourseStaffAssignment> staffOrder = Comparator
+                .comparingInt((CourseStaffAssignment assignment) -> assignment.getAssignmentType().ordinal())
+                .thenComparing(assignment -> assignment.getStaffPerson().getFullName(),
+                        Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER))
+                .thenComparing(CourseStaffAssignment::getCourseStaffAssignmentId);
+
+        return repository.findEffectiveByCourseScheduleIdsAndDate(courseScheduleIds, effectiveDate).stream()
+                .sorted(Comparator
+                        .comparing((CourseStaffAssignment assignment) ->
+                                assignment.getCourseSchedule().getCourseScheduleId())
+                        .thenComparing(staffOrder))
+                .collect(Collectors.groupingBy(
+                        assignment -> assignment.getCourseSchedule().getCourseScheduleId(),
+                        LinkedHashMap::new,
+                        Collectors.mapping(mapper::toBriefResponse, Collectors.toList())
+                ));
+    }
+
     @Transactional
     public CourseStaffAssignmentDTO.Response create(CourseStaffAssignmentDTO.CreateRequest request) {
         AccessContext context = currentAccessContextResolver.current();
+        var courseSchedule = courseScheduleRepository.findDetailedById(request.courseScheduleId())
+                .orElseThrow(() -> new ApiException(CatalogErrorCode.COURSE_SCHEDULE_NOT_FOUND));
         accessPolicy.requireCanManagePeriod(
-                context, courseId(request.courseScheduleId()), request.startDate(), request.endDate());
+                context, courseSchedule.getCourse().getCourseId(), request.startDate(), request.endDate());
+        validateAssignment(request.courseScheduleId(), request.assignmentType(), request.startDate(),
+                request.endDate(), null, courseSchedule.getStartDate(), courseSchedule.getEndDate());
         CourseStaffAssignment entity = new CourseStaffAssignment();
         var staffPerson = personRepository.findById(request.staffPersonId())
                 .orElseThrow(() -> new ApiException(CoreErrorCode.PERSON_NOT_FOUND));
         personCodePolicy.requireSystemEmployee(staffPerson);
         entity.setStaffPerson(staffPerson);
-        entity.setCourseSchedule(courseScheduleRepository.findById(request.courseScheduleId())
-                .orElseThrow(() -> new ApiException(CatalogErrorCode.COURSE_NOT_FOUND)));
+        entity.setCourseSchedule(courseSchedule);
         entity.setAssignmentType(request.assignmentType());
         entity.setStartDate(request.startDate());
         entity.setEndDate(request.endDate());
@@ -78,14 +134,17 @@ public class CourseStaffAssignmentService {
     public CourseStaffAssignmentDTO.Response update(UUID id, CourseStaffAssignmentDTO.UpdateRequest request) {
         AccessContext context = currentAccessContextResolver.current();
         var entity = findAccessible(id, context, accessPolicy.resolveWriteScope(context));
+        var courseSchedule = courseScheduleRepository.findDetailedById(request.courseScheduleId())
+                .orElseThrow(() -> new ApiException(CatalogErrorCode.COURSE_SCHEDULE_NOT_FOUND));
         accessPolicy.requireCanManagePeriod(
-                context, courseId(request.courseScheduleId()), request.startDate(), request.endDate());
+                context, courseSchedule.getCourse().getCourseId(), request.startDate(), request.endDate());
+        validateAssignment(request.courseScheduleId(), request.assignmentType(), request.startDate(),
+                request.endDate(), id, courseSchedule.getStartDate(), courseSchedule.getEndDate());
         var staffPerson = personRepository.findById(request.staffPersonId())
                 .orElseThrow(() -> new ApiException(CoreErrorCode.PERSON_NOT_FOUND));
         personCodePolicy.requireSystemEmployee(staffPerson);
         entity.setStaffPerson(staffPerson);
-        entity.setCourseSchedule(courseScheduleRepository.findById(request.courseScheduleId())
-                .orElseThrow(() -> new ApiException(CatalogErrorCode.COURSE_NOT_FOUND)));
+        entity.setCourseSchedule(courseSchedule);
         mapper.updateEntity(request, entity);
         return mapper.toResponse(repository.save(entity));
     }
@@ -113,9 +172,23 @@ public class CourseStaffAssignmentService {
         ).orElseThrow(() -> new ApiException(TrainingErrorCode.COURSE_STAFF_ASSIGNMENT_NOT_FOUND));
     }
 
-    private UUID courseId(UUID courseScheduleId) {
-        return courseScheduleRepository.findById(courseScheduleId)
-                .orElseThrow(() -> new ApiException(CatalogErrorCode.COURSE_NOT_FOUND))
-                .getCourse().getCourseId();
+    private void validateAssignment(
+            UUID courseScheduleId,
+            AssignmentType assignmentType,
+            LocalDate startDate,
+            LocalDate endDate,
+            UUID excludeId,
+            LocalDate scheduleStartDate,
+            LocalDate scheduleEndDate
+    ) {
+        if ((endDate != null && endDate.isBefore(startDate))
+                || startDate.isBefore(scheduleStartDate)
+                || (scheduleEndDate != null && (endDate == null || endDate.isAfter(scheduleEndDate)))) {
+            throw new ApiException(TrainingErrorCode.COURSE_STAFF_ASSIGNMENT_PERIOD_INVALID);
+        }
+        if (assignmentType == AssignmentType.PRIMARY_COACH
+                && repository.existsOverlappingPrimaryAssignment(courseScheduleId, startDate, endDate, excludeId)) {
+            throw new ApiException(TrainingErrorCode.PRIMARY_COACH_ASSIGNMENT_CONFLICT);
+        }
     }
 }

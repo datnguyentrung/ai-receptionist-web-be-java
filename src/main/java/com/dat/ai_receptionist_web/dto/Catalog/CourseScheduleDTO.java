@@ -1,5 +1,6 @@
 package com.dat.ai_receptionist_web.dto.Catalog;
 
+import com.dat.ai_receptionist_web.dto.Training.CourseStaffAssignmentDTO;
 import com.dat.ai_receptionist_web.enums.Core.ScheduleStatus;
 import jakarta.validation.constraints.NotNull;
 
@@ -33,6 +34,7 @@ public final class CourseScheduleDTO {
             UUID courseScheduleId,
             UUID courseId,
             ClassScheduleDTO.Response classSchedule,
+            java.util.List<CourseStaffAssignmentDTO.BriefResponse> staffAssignments,
             LocalDate startDate,
             LocalDate endDate,
             ScheduleStatus status,

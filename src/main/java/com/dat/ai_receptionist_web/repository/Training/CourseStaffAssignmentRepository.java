@@ -19,6 +19,25 @@ public interface CourseStaffAssignmentRepository extends JpaRepository<CourseSta
         select a
         from CourseStaffAssignment a
         join fetch a.staffPerson staffPerson
+        join fetch a.courseSchedule courseSchedule
+        where courseSchedule.courseScheduleId in :courseScheduleIds
+          and a.startDate <= :effectiveDate
+          and (a.endDate is null or a.endDate >= :effectiveDate)
+          and a.assignmentStatus in (
+              com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ACTIVE,
+              com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ENDED
+          )
+        order by courseSchedule.courseScheduleId, a.assignmentType, staffPerson.fullName, a.courseStaffAssignmentId
+    """)
+    List<CourseStaffAssignment> findEffectiveByCourseScheduleIdsAndDate(
+            @Param("courseScheduleIds") Collection<UUID> courseScheduleIds,
+            @Param("effectiveDate") LocalDate effectiveDate
+    );
+
+    @Query("""
+        select a
+        from CourseStaffAssignment a
+        join fetch a.staffPerson staffPerson
         left join fetch staffPerson.position
         where a.courseSchedule.course.courseId in :courseIds
           and a.assignmentType in :assignmentTypes
@@ -183,7 +202,21 @@ public interface CourseStaffAssignmentRepository extends JpaRepository<CourseSta
         left join fetch courseSchedule.course course
         left join fetch courseSchedule.classSchedule classSchedule
         left join fetch classSchedule.branch
-        where :unrestricted = true
+        where (:courseId is null or course.courseId = :courseId)
+          and a.assignmentType in :assignmentTypes
+          and (:filterEffectiveOn = false or (
+              a.startDate <= :effectiveOn
+              and (a.endDate is null or a.endDate >= :effectiveOn)
+              and a.assignmentStatus in (
+                  com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ACTIVE,
+                  com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ENDED
+              )
+          ))
+          and (:search = ''
+              or lower(staffPerson.fullName) like lower(concat('%', :search, '%'))
+              or lower(coalesce(staffPerson.personCode, '')) like lower(concat('%', :search, '%')))
+          and (
+              :unrestricted = true
            or (:self = true and a.staffPerson.personId = :activePersonId)
            or (
                :managedCourses = true
@@ -200,14 +233,39 @@ public interface CourseStaffAssignmentRepository extends JpaRepository<CourseSta
                          com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ENDED
                      )
                )
-           )
+           ))
     """)
     Page<CourseStaffAssignment> findAccessible(
             @Param("activePersonId") UUID activePersonId,
             @Param("unrestricted") boolean unrestricted,
             @Param("self") boolean self,
             @Param("managedCourses") boolean managedCourses,
+            @Param("courseId") UUID courseId,
+            @Param("assignmentTypes") Collection<AssignmentType> assignmentTypes,
+            @Param("filterEffectiveOn") boolean filterEffectiveOn,
+            @Param("effectiveOn") LocalDate effectiveOn,
+            @Param("search") String search,
             Pageable pageable
+    );
+
+    @Query("""
+        select count(a) > 0
+        from CourseStaffAssignment a
+        where a.courseSchedule.courseScheduleId = :courseScheduleId
+          and a.assignmentType = com.dat.ai_receptionist_web.enums.Training.AssignmentType.PRIMARY_COACH
+          and (:excludeId is null or a.courseStaffAssignmentId <> :excludeId)
+          and a.startDate <= coalesce(:endDate, a.startDate)
+          and (a.endDate is null or a.endDate >= :startDate)
+          and a.assignmentStatus in (
+              com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ACTIVE,
+              com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ENDED
+          )
+    """)
+    boolean existsOverlappingPrimaryAssignment(
+            @Param("courseScheduleId") UUID courseScheduleId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("excludeId") UUID excludeId
     );
 
     @Query("""

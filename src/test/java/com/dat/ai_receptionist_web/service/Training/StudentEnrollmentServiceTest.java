@@ -56,7 +56,7 @@ class StudentEnrollmentServiceTest {
                 new TrainingAccessScope(true, false, false, false, false));
         when(enrollmentRepository.findAccessible(
                 eq(context.userId()), eq(context.activePersonId()), eq(true), eq(false), eq(false), eq(false),
-                eq(from), eq(to), isNull(), isNull(), eq(pageable)))
+                eq(from), eq(to), isNull(), isNull(), isNull(), eq(""), eq(pageable)))
                 .thenReturn(new PageImpl<>(List.of(enrollment)));
         when(enrollmentScheduleRepository.findDetailedByStudentEnrollmentIds(List.of(enrollmentId)))
                 .thenReturn(List.of(link));
@@ -74,7 +74,7 @@ class StudentEnrollmentServiceTest {
                 contextResolver,
                 accessPolicy);
 
-        var result = service.list(from, to, null, null, pageable);
+        var result = service.list(from, to, null, null, null, null, pageable);
 
         assertThat(result.getContent()).containsExactly(response);
         verify(enrollmentScheduleRepository).findDetailedByStudentEnrollmentIds(List.of(enrollmentId));

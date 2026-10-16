@@ -15,6 +15,8 @@ public interface CourseStaffAssignmentMapper {
 
     CourseStaffAssignmentDTO.SimpleResponse toSimpleResponse(CourseStaffAssignment entity);
 
+    CourseStaffAssignmentDTO.BriefResponse toBriefResponse(CourseStaffAssignment entity);
+
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "staffPerson", ignore = true)
     @Mapping(target = "courseSchedule", ignore = true)

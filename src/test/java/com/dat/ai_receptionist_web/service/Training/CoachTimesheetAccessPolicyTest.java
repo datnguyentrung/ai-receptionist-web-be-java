@@ -121,7 +121,7 @@ class CoachTimesheetAccessPolicyTest {
                 .course(course)
                 .build();
         return CourseStaffAssignment.builder()
-                .staffPerson(Person.builder().personId(staffPersonId).personCode("VQT_001").build())
+                .staffPerson(Person.builder().personId(staffPersonId).personCode("VQ_001").build())
                 .courseSchedule(schedule)
                 .assignmentType(AssignmentType.PRIMARY_COACH)
                 .startDate(startDate)

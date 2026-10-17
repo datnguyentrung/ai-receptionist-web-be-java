@@ -23,7 +23,7 @@ public enum CoreErrorCode implements ErrorCode {
             "Person code already exists", "Person code already exists"),
     PERSON_CODE_POLICY_VIOLATION("PERSON_CODE_POLICY_VIOLATION", HttpStatus.UNPROCESSABLE_CONTENT,
             "Person code policy violation",
-            "Person code must start with VQ_ (student) or VQT_ (system employee)"),
+            "Person code must start with VQ_ and match the required business position"),
     INVALID_IDENTIFICATION_REQUEST("INVALID_IDENTIFICATION_REQUEST", HttpStatus.BAD_REQUEST,
             "Invalid identification request", "Identification requires a face image or person code"),
     INVALID_IMAGE_FILE("INVALID_IMAGE_FILE", HttpStatus.BAD_REQUEST, "Invalid image file",

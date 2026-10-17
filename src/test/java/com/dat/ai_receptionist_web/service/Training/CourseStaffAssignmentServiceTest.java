@@ -17,6 +17,7 @@ import com.dat.ai_receptionist_web.service.Core.PersonCodePolicy;
 import com.dat.ai_receptionist_web.service.Security.access.CurrentAccessContextResolver;
 import com.dat.ai_receptionist_web.service.Security.access.AccessContext;
 import com.dat.ai_receptionist_web.service.Training.access.CourseStaffAssignmentAccessPolicy;
+import jakarta.validation.Validation;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
@@ -30,6 +31,17 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 class CourseStaffAssignmentServiceTest {
+    @Test
+    void acceptsNullNoteInCreateRequest() {
+        var request = new CourseStaffAssignmentDTO.CreateRequest(
+                UUID.randomUUID(), UUID.randomUUID(), AssignmentType.TEACHING_ASSISTANT,
+                LocalDate.of(2026, 10, 17), null, CourseStaffAssignmentStatus.ACTIVE, null);
+
+        try (var validatorFactory = Validation.buildDefaultValidatorFactory()) {
+            assertThat(validatorFactory.getValidator().validate(request)).isEmpty();
+        }
+    }
+
     @Test
     void createRejectsOverlappingPrimaryCoachAssignment() {
         CourseStaffAssignmentRepository repository = mock(CourseStaffAssignmentRepository.class);

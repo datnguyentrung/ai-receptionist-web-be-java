@@ -21,7 +21,7 @@ public final class CourseStaffAssignmentDTO {
             @NotNull LocalDate startDate,
             LocalDate endDate,
             @NotNull CourseStaffAssignmentStatus assignmentStatus,
-            @NotNull String note
+            String note
     ) {
     }
 
@@ -32,7 +32,7 @@ public final class CourseStaffAssignmentDTO {
             @NotNull LocalDate startDate,
             LocalDate endDate,
             @NotNull CourseStaffAssignmentStatus assignmentStatus,
-            @NotNull String note
+            String note
     ) {
     }
 

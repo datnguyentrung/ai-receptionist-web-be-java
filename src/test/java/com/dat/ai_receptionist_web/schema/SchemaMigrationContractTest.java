@@ -112,4 +112,20 @@ class SchemaMigrationContractTest {
                 .contains("idx_session_attendance_course_staff_assignment")
                 .contains("STUDENT_ATTENDANCE", "SESSION_ATTENDANCE");
     }
+
+    @Test
+    void v18NormalizesVqtCodesAndDefaultsInvalidLegacyStaffToAssistantOne() throws Exception {
+        String sql = Files.readString(Path.of(
+                "src/main/resources/db/migration/V18__normalize_person_codes_to_vq_and_validate_staff_positions.sql"));
+
+        assertThat(sql)
+                .contains("Cannot normalize VQT_ person codes")
+                .contains("training.course_staff_assignment")
+                .contains("Active ASSISTANT_1 position is required")
+                .contains("SET position_id = assistant.position_id")
+                .contains("COACH_JUNIOR", "ASSISTANT_3", "MANAGER_1")
+                .contains("SET person_code = 'VQ_' || substring(person_code FROM 5)")
+                .contains("DROP CONSTRAINT IF EXISTS ck_person_code_prefix")
+                .contains("CHECK (person_code LIKE 'VQ\\_%')");
+    }
 }

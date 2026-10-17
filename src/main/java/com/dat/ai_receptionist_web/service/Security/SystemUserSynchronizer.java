@@ -211,11 +211,15 @@ public class SystemUserSynchronizer implements ApplicationRunner {
      */
     private BootstrapDefinition normalize(BootstrapUserProperties.UserAccount account) {
         validate(account);
+        String personCode = account.getPersonCode().trim().toUpperCase(Locale.ROOT);
+        if (!personCode.startsWith("VQ_")) {
+            throw new IllegalArgumentException("Bootstrap user personCode must start with VQ_");
+        }
         return new BootstrapDefinition(
                 account.getRoleCode().trim().toUpperCase(Locale.ROOT),
                 PhoneNumberUtil.normalize(account.getPhoneNumber()),
                 account.getPassword(),
-                account.getPersonCode().trim().toUpperCase(Locale.ROOT),
+                personCode,
                 account.getFullName(),
                 account.getEmail()
         );

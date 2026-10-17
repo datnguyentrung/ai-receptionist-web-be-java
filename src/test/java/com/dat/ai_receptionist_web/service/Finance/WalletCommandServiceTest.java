@@ -2,6 +2,7 @@ package com.dat.ai_receptionist_web.service.Finance;
 
 import com.dat.ai_receptionist_web.domain.Catalog.*;
 import com.dat.ai_receptionist_web.domain.Core.Person;
+import com.dat.ai_receptionist_web.domain.Core.Position;
 import com.dat.ai_receptionist_web.domain.Finance.*;
 import com.dat.ai_receptionist_web.domain.Security.User;
 import com.dat.ai_receptionist_web.domain.Training.StudentEnrollment;
@@ -60,7 +61,11 @@ class WalletCommandServiceTest {
         UUID actorId = UUID.randomUUID();
         UUID priceId = UUID.randomUUID();
         UUID scheduleId = UUID.randomUUID();
-        Person person = Person.builder().personId(personId).personCode("VQ_anv_010100").build();
+        Person person = Person.builder()
+                .personId(personId)
+                .personCode("VQ_anv_010100")
+                .position(Position.builder().code("STUDENT").active(true).build())
+                .build();
         Wallet wallet = Wallet.builder().walletId(UUID.randomUUID()).person(person)
                 .balance(new BigDecimal("1000000")).status(WalletStatus.ACTIVE).build();
         Course course = Course.builder().courseId(UUID.randomUUID())

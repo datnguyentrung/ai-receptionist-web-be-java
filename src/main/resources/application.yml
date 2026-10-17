@@ -187,13 +187,13 @@ app:
       - role-code: SUPER_ADMIN
         phone-number: ${BOOTSTRAP_SUPER_ADMIN_PHONE:0900000001}
         password: ${BOOTSTRAP_SUPER_ADMIN_PASSWORD:123456}
-        person-code: ${BOOTSTRAP_SUPER_ADMIN_PERSON_CODE:VQT_SUPER_ADMIN}
+        person-code: ${BOOTSTRAP_SUPER_ADMIN_PERSON_CODE:VQ_SUPER_ADMIN}
         full-name: ${BOOTSTRAP_SUPER_ADMIN_FULL_NAME:System Super Administrator}
         email: ${BOOTSTRAP_SUPER_ADMIN_EMAIL:super.admin@example.local}
       - role-code: SYSTEM_ADMIN
         phone-number: ${BOOTSTRAP_SYSTEM_ADMIN_PHONE:0900000002}
         password: ${BOOTSTRAP_SYSTEM_ADMIN_PASSWORD:123456}
-        person-code: ${BOOTSTRAP_SYSTEM_ADMIN_PERSON_CODE:VQT_SYSTEM_ADMIN}
+        person-code: ${BOOTSTRAP_SYSTEM_ADMIN_PERSON_CODE:VQ_SYSTEM_ADMIN}
         full-name: ${BOOTSTRAP_SYSTEM_ADMIN_FULL_NAME:System Administrator}
         email: ${BOOTSTRAP_SYSTEM_ADMIN_EMAIL:system.admin@example.local}
 

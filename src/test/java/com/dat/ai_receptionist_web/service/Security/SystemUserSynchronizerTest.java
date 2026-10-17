@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 class SystemUserSynchronizerTest {
@@ -42,7 +43,7 @@ class SystemUserSynchronizerTest {
         User user = User.builder().userId(userId).phoneNumber("0900000001").build();
 
         when(userRepository.findAllByPhoneNumberIn(Set.of("0900000001"))).thenReturn(List.of());
-        when(personRepository.findAllByPersonCodeUpperIn(Set.of("SYS-SUPER-ADMIN"))).thenReturn(List.of());
+        when(personRepository.findAllByPersonCodeUpperIn(Set.of("VQ_SUPER_ADMIN"))).thenReturn(List.of());
         when(userService.createLoginUserWithoutDuplicateCheck("0900000001", "secret")).thenReturn(user);
         when(personRepository.save(any(Person.class))).thenAnswer(invocation -> {
             Person person = invocation.getArgument(0);
@@ -72,7 +73,7 @@ class SystemUserSynchronizerTest {
         UUID userId = UUID.randomUUID();
         UUID personId = UUID.randomUUID();
         User user = User.builder().userId(userId).phoneNumber("0900000001").build();
-        Person person = Person.builder().personId(personId).personCode("SYS-SUPER-ADMIN").build();
+        Person person = Person.builder().personId(personId).personCode("VQ_SUPER_ADMIN").build();
         UserPerson userPerson = UserPerson.builder()
                 .user(user)
                 .person(person)
@@ -81,7 +82,7 @@ class SystemUserSynchronizerTest {
                 .build();
 
         when(userRepository.findAllByPhoneNumberIn(Set.of("0900000001"))).thenReturn(List.of(user));
-        when(personRepository.findAllByPersonCodeUpperIn(Set.of("SYS-SUPER-ADMIN"))).thenReturn(List.of(person));
+        when(personRepository.findAllByPersonCodeUpperIn(Set.of("VQ_SUPER_ADMIN"))).thenReturn(List.of(person));
         when(userPersonRepository.findAllByUserIdInAndPersonIdInAndRelationshipType(
                 Set.of(userId), Set.of(personId), RelationshipType.MANAGER
         )).thenReturn(List.of(userPerson));
@@ -100,12 +101,22 @@ class SystemUserSynchronizerTest {
         verify(userRoleService).assignRolesIfMissing(Map.of(userId, Set.of("SUPER_ADMIN")));
     }
 
+    @Test
+    void rejectsLegacyVqtBootstrapCode() {
+        BootstrapUserProperties.UserAccount account = account();
+        account.setPersonCode("VQT_SUPER_ADMIN");
+
+        assertThatThrownBy(() -> synchronizer.syncAll(List.of(account)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Bootstrap user personCode must start with VQ_");
+    }
+
     private BootstrapUserProperties.UserAccount account() {
         BootstrapUserProperties.UserAccount account = new BootstrapUserProperties.UserAccount();
         account.setRoleCode("SUPER_ADMIN");
         account.setPhoneNumber("0900000001");
         account.setPassword("secret");
-        account.setPersonCode("SYS-SUPER-ADMIN");
+        account.setPersonCode("VQ_SUPER_ADMIN");
         account.setFullName("System Super Administrator");
         account.setEmail("super.admin@example.local");
         return account;

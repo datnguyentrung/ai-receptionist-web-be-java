@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface StudentEnrollmentScheduleRepository extends JpaRepository<StudentEnrollmentSchedule, UUID> {
+    boolean existsByCourseSchedule_CourseScheduleId(UUID courseScheduleId);
     @Query("""
         select link from StudentEnrollmentSchedule link
         join fetch link.studentEnrollment enrollment

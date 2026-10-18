@@ -24,7 +24,10 @@ public class CoursePriceController {
      */
     @GetMapping
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).COURSE_PRICE_READ.getCode())")
-    public PageResponse<CoursePriceDTO.SimpleResponse> list(Pageable pageable) { return service.list(pageable); }
+    public PageResponse<CoursePriceDTO.SimpleResponse> list(
+            @RequestParam(required = false) UUID courseId,
+            @RequestParam(required = false) com.dat.ai_receptionist_web.enums.Catalog.CoursePriceStatus status,
+            Pageable pageable) { return service.list(courseId, status, pageable); }
 
     /**
      * Tác dụng: Lấy chi tiết một bản ghi theo khóa định danh.

@@ -104,7 +104,8 @@ class PersonServiceTest {
                 PersonStatus.ACTIVE,
                 Belt.C9,
                 true,
-                false
+                false,
+                null
         );
 
         when(people.findAll(any(Specification.class), eq(pageable))).thenReturn(new PageImpl<>(List.of(person)));

@@ -4,6 +4,7 @@ import com.dat.ai_receptionist_web.enums.Core.Belt;
 import com.dat.ai_receptionist_web.enums.Core.PersonStatus;
 
 import java.util.UUID;
+import java.util.List;
 
 public record PersonListFilter(
         UUID positionId,
@@ -11,6 +12,7 @@ public record PersonListFilter(
         PersonStatus status,
         Belt currentBelt,
         Boolean gender,
-        Boolean isStudent
+        Boolean isStudent,
+        List<UUID> courseScheduleIds
 ) {
 }

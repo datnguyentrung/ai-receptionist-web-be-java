@@ -23,6 +23,21 @@ public interface CoursePriceRepository extends JpaRepository<CoursePrice, UUID> 
             """)
     Page<CoursePrice> findAllDetailed(Pageable pageable);
 
+    @Query(value = """
+            select cp from CoursePrice cp join fetch cp.course course
+            where (:courseId is null or course.courseId = :courseId)
+              and (:status is null or cp.status = :status)
+            """,
+            countQuery = """
+            select count(cp) from CoursePrice cp
+            where (:courseId is null or cp.course.courseId = :courseId)
+              and (:status is null or cp.status = :status)
+            """)
+    Page<CoursePrice> findAllDetailedByFilter(
+            @Param("courseId") UUID courseId,
+            @Param("status") com.dat.ai_receptionist_web.enums.Catalog.CoursePriceStatus status,
+            Pageable pageable);
+
     @EntityGraph(attributePaths = {"course", "course.courseSchedules", "course.courseSchedules.classSchedule"})
     @Query("select cp from CoursePrice cp where cp.coursePriceId = :id")
     Optional<CoursePrice> findForPurchase(@Param("id") UUID id);

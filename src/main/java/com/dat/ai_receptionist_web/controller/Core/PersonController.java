@@ -6,6 +6,8 @@ import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.enums.Core.Belt;
 import com.dat.ai_receptionist_web.enums.Core.PersonStatus;
 import com.dat.ai_receptionist_web.service.Core.PersonService;
+import com.dat.ai_receptionist_web.service.Report.PersonYearlySummaryService;
+import com.dat.ai_receptionist_web.dto.Report.YearlySummaryDTO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -16,12 +18,14 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/persons")
 @RequiredArgsConstructor
 public class PersonController {
     private final PersonService service;
+    private final PersonYearlySummaryService yearlySummaryService;
 
     /**
      * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
@@ -37,6 +41,7 @@ public class PersonController {
             @RequestParam(required = false) Belt currentBelt,
             @RequestParam(required = false) Boolean gender,
             @RequestParam(required = false) Boolean isStudent,
+            @RequestParam(required = false) List<UUID> courseScheduleId,
             Pageable pageable
     ) {
         return service.list(
@@ -46,10 +51,30 @@ public class PersonController {
                         status,
                         currentBelt,
                         gender,
-                        isStudent
+                        isStudent,
+                        courseScheduleId
                 ),
                 pageable
         );
+    }
+
+    @GetMapping("/by-code/{personCode}")
+    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).PERSON_READ.getCode())")
+    public PersonDTO.Response getByCode(
+            @PathVariable String personCode,
+            @RequestParam(defaultValue = "false") boolean isStudent
+    ) {
+        return service.getByCode(personCode, isStudent);
+    }
+
+    @GetMapping("/{personId}/yearly-summary")
+    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).PERSON_READ.getCode())")
+    public YearlySummaryDTO.Response yearlySummary(
+            @PathVariable UUID personId,
+            @RequestParam int year
+    ) {
+        service.requireStudent(personId);
+        return yearlySummaryService.yearlySummary(personId, year);
     }
 
     /**

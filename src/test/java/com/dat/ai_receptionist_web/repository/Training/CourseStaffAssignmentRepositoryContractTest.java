@@ -5,10 +5,25 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class CourseStaffAssignmentRepositoryContractTest {
+    @Test
+    void accessibleListCanBeScopedToOneCourseSchedule() throws Exception {
+        Query query = CourseStaffAssignmentRepository.class
+                .getMethod("findAccessible", UUID.class, boolean.class, boolean.class,
+                        boolean.class, UUID.class, UUID.class, Collection.class,
+                        boolean.class, LocalDate.class, String.class,
+                        org.springframework.data.domain.Pageable.class)
+                .getAnnotation(Query.class);
+
+        assertThat(query).isNotNull();
+        assertThat(query.value())
+                .contains(":courseScheduleId is null or courseSchedule.courseScheduleId = :courseScheduleId");
+    }
+
     @Test
     void effectiveScheduleStaffQueryFiltersByScheduleDateAndActiveLikeStatuses() throws Exception {
         Query query = CourseStaffAssignmentRepository.class

@@ -14,6 +14,7 @@ import java.util.UUID;
 
 public interface CourseScheduleRepository extends JpaRepository<CourseSchedule, UUID> {
     long countByClassSchedule_ScheduleId(UUID scheduleId);
+    long countByCourse_CourseId(UUID courseId);
     @Query("""
         select cs from CourseSchedule cs join fetch cs.classSchedule s join fetch s.branch
         where cs.course.courseId = :courseId order by cs.startDate, cs.courseScheduleId

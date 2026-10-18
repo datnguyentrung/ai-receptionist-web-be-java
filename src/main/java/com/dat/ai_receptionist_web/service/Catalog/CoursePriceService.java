@@ -28,8 +28,8 @@ public class CoursePriceService {
      * Output: Trả về PageResponse<CoursePriceDTO.SimpleResponse> theo kết quả xử lý.
      */
     @Transactional(readOnly = true)
-    public PageResponse<CoursePriceDTO.SimpleResponse> list(Pageable pageable) {
-        return PageResponse.of(repository.findAllDetailed(pageable), mapper::toSimpleResponse);
+    public PageResponse<CoursePriceDTO.SimpleResponse> list(UUID courseId, CoursePriceStatus status, Pageable pageable) {
+        return PageResponse.of(repository.findAllDetailedByFilter(courseId, status, pageable), mapper::toSimpleResponse);
     }
 
     /**

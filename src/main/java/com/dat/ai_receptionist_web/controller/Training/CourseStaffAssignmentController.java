@@ -35,12 +35,13 @@ public class CourseStaffAssignmentController {
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).COURSE_STAFF_ASSIGNMENT_READ.getCode())")
     public PageResponse<CourseStaffAssignmentDTO.SimpleResponse> list(
             @RequestParam(required = false) UUID courseId,
+            @RequestParam(required = false) UUID courseScheduleId,
             @RequestParam(required = false) List<AssignmentType> assignmentTypes,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate effectiveOn,
             @RequestParam(required = false) String search,
             Pageable pageable
     ) {
-        return service.list(courseId, assignmentTypes, effectiveOn, search, pageable);
+        return service.list(courseId, courseScheduleId, assignmentTypes, effectiveOn, search, pageable);
     }
 
     @GetMapping("/{id}")
@@ -65,6 +66,12 @@ public class CourseStaffAssignmentController {
             @Valid @RequestBody CourseStaffAssignmentDTO.UpdateRequest request
     ) {
         return service.update(id, request);
+    }
+
+    @PutMapping("/{id}/end")
+    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).COURSE_STAFF_ASSIGNMENT_DELETE.getCode())")
+    public CourseStaffAssignmentDTO.Response end(@PathVariable UUID id) {
+        return service.end(id);
     }
 
     @DeleteMapping("/{id}")

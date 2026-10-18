@@ -2,6 +2,8 @@ package com.dat.ai_receptionist_web.specification;
 
 import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.domain.Core.Position;
+import com.dat.ai_receptionist_web.domain.Training.StudentEnrollment;
+import com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus;
 import com.dat.ai_receptionist_web.dto.Core.PersonListFilter;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
@@ -12,6 +14,7 @@ import org.springframework.util.StringUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.time.LocalDate;
 
 public final class PersonSpecification {
     private static final String STUDENT_POSITION_CODE = "STUDENT";
@@ -50,6 +53,20 @@ public final class PersonSpecification {
                 predicates.add(filter.isStudent()
                         ? studentPosition
                         : cb.or(cb.isNull(position.get("positionId")), cb.not(studentPosition)));
+            }
+            if (filter.courseScheduleIds() != null && !filter.courseScheduleIds().isEmpty()) {
+                var enrollment = query.subquery(Long.class);
+                var enrollmentRoot = enrollment.from(StudentEnrollment.class);
+                var schedule = enrollmentRoot.join("schedules", JoinType.INNER);
+                enrollment.select(cb.literal(1L));
+                enrollment.where(
+                        cb.equal(enrollmentRoot.get("studentPerson"), root),
+                        schedule.get("courseSchedule").get("courseScheduleId").in(filter.courseScheduleIds()),
+                        cb.equal(enrollmentRoot.get("status"), StudentEnrollmentStatus.ACTIVE),
+                        cb.lessThanOrEqualTo(enrollmentRoot.get("startDate"), LocalDate.now()),
+                        cb.greaterThanOrEqualTo(enrollmentRoot.get("endDate"), LocalDate.now())
+                );
+                predicates.add(cb.exists(enrollment));
             }
 
             return cb.and(predicates.toArray(Predicate[]::new));

@@ -104,12 +104,12 @@ public class PersonService {
      */
     @Transactional(readOnly = true)
     public PageResponse<PersonDTO.SimpleResponse> list(Pageable pageable) {
-        return list(new PersonListFilter(null, null, null, null, null, null), pageable);
+        return list(new PersonListFilter(null, null, null, null, null, null, null), pageable);
     }
 
     @Transactional(readOnly = true)
     public PageResponse<PersonDTO.SimpleResponse> list(UUID positionId, Pageable pageable) {
-        return list(new PersonListFilter(positionId, null, null, null, null, null), pageable);
+        return list(new PersonListFilter(positionId, null, null, null, null, null, null), pageable);
     }
 
     @Transactional(readOnly = true)
@@ -127,6 +127,26 @@ public class PersonService {
     public PersonDTO.Response get(UUID id) {
         return personMapper.toResponse(personRepository.findById(id)
                 .orElseThrow(() -> new ApiException(CoreErrorCode.PERSON_NOT_FOUND)));
+    }
+
+    /** Resolves a person code for a profile flow, optionally restricting it to students. */
+    @Transactional(readOnly = true)
+    public PersonDTO.Response getByCode(String personCode, boolean studentOnly) {
+        Person person = personRepository.findByPersonCodeIgnoreCase(personCode.trim())
+                .orElseThrow(() -> new ApiException(CoreErrorCode.PERSON_NOT_FOUND));
+        if (studentOnly) requireStudent(person);
+        return personMapper.toResponse(person);
+    }
+
+    @Transactional(readOnly = true)
+    public void requireStudent(UUID personId) {
+        requireStudent(find(personId));
+    }
+
+    private static void requireStudent(Person person) {
+        if (person.getPosition() == null || !"STUDENT".equalsIgnoreCase(person.getPosition().getCode())) {
+            throw new ApiException(CoreErrorCode.PERSON_NOT_FOUND);
+        }
     }
 
     /**

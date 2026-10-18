@@ -78,6 +78,8 @@ class TrainingAuthorizationContractTest {
         assertPermission(CourseStaffAssignmentController.class, "update",
                 PermissionDefinition.COURSE_STAFF_ASSIGNMENT_UPDATE,
                 UUID.class, CourseStaffAssignmentDTO.UpdateRequest.class);
+        assertPermission(CourseStaffAssignmentController.class, "end",
+                PermissionDefinition.COURSE_STAFF_ASSIGNMENT_DELETE, UUID.class);
         assertPermission(CourseStaffAssignmentController.class, "delete",
                 PermissionDefinition.COURSE_STAFF_ASSIGNMENT_DELETE, UUID.class);
     }

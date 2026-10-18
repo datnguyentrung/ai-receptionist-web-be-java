@@ -46,6 +46,7 @@ public class CourseStaffAssignmentService {
     @Transactional(readOnly = true)
     public PageResponse<CourseStaffAssignmentDTO.SimpleResponse> list(
             UUID courseId,
+            UUID courseScheduleId,
             Collection<AssignmentType> assignmentTypes,
             LocalDate effectiveOn,
             String search,
@@ -66,6 +67,7 @@ public class CourseStaffAssignmentService {
                 scope.self(),
                 scope.managedCourses(),
                 courseId,
+                courseScheduleId,
                 resolvedTypes,
                 filterEffectiveOn,
                 resolvedEffectiveOn,
@@ -115,7 +117,7 @@ public class CourseStaffAssignmentService {
         accessPolicy.requireCanManagePeriod(
                 context, courseSchedule.getCourse().getCourseId(), request.startDate(), request.endDate());
         validateAssignment(request.courseScheduleId(), request.assignmentType(), request.startDate(),
-                request.endDate(), null, courseSchedule.getStartDate(), courseSchedule.getEndDate());
+                request.endDate(), request.assignmentStatus(), null, courseSchedule.getStartDate(), courseSchedule.getEndDate());
         CourseStaffAssignment entity = new CourseStaffAssignment();
         var staffPerson = personRepository.findById(request.staffPersonId())
                 .orElseThrow(() -> new ApiException(CoreErrorCode.PERSON_NOT_FOUND));
@@ -139,13 +141,32 @@ public class CourseStaffAssignmentService {
         accessPolicy.requireCanManagePeriod(
                 context, courseSchedule.getCourse().getCourseId(), request.startDate(), request.endDate());
         validateAssignment(request.courseScheduleId(), request.assignmentType(), request.startDate(),
-                request.endDate(), id, courseSchedule.getStartDate(), courseSchedule.getEndDate());
+                request.endDate(), request.assignmentStatus(), id, courseSchedule.getStartDate(), courseSchedule.getEndDate());
         var staffPerson = personRepository.findById(request.staffPersonId())
                 .orElseThrow(() -> new ApiException(CoreErrorCode.PERSON_NOT_FOUND));
         personCodePolicy.requireSystemEmployee(staffPerson);
         entity.setStaffPerson(staffPerson);
         entity.setCourseSchedule(courseSchedule);
         mapper.updateEntity(request, entity);
+        return mapper.toResponse(repository.save(entity));
+    }
+
+    @Transactional
+    public CourseStaffAssignmentDTO.Response end(UUID id) {
+        AccessContext context = currentAccessContextResolver.current();
+        var entity = findAccessible(id, context, accessPolicy.resolveWriteScope(context));
+        var courseSchedule = entity.getCourseSchedule();
+        LocalDate endDate = LocalDate.now();
+        if (endDate.isBefore(entity.getStartDate())) {
+            endDate = entity.getStartDate();
+        }
+        if (courseSchedule.getEndDate() != null && endDate.isAfter(courseSchedule.getEndDate())) {
+            endDate = courseSchedule.getEndDate();
+        }
+        accessPolicy.requireCanManagePeriod(
+                context, courseSchedule.getCourse().getCourseId(), entity.getStartDate(), endDate);
+        entity.setEndDate(endDate);
+        entity.setAssignmentStatus(CourseStaffAssignmentStatus.ENDED);
         return mapper.toResponse(repository.save(entity));
     }
 
@@ -177,13 +198,15 @@ public class CourseStaffAssignmentService {
             AssignmentType assignmentType,
             LocalDate startDate,
             LocalDate endDate,
+            CourseStaffAssignmentStatus assignmentStatus,
             UUID excludeId,
             LocalDate scheduleStartDate,
             LocalDate scheduleEndDate
     ) {
         if ((endDate != null && endDate.isBefore(startDate))
                 || startDate.isBefore(scheduleStartDate)
-                || (scheduleEndDate != null && (endDate == null || endDate.isAfter(scheduleEndDate)))) {
+                || (scheduleEndDate != null && endDate != null && endDate.isAfter(scheduleEndDate))
+                || (assignmentStatus == CourseStaffAssignmentStatus.ENDED && endDate == null)) {
             throw new ApiException(TrainingErrorCode.COURSE_STAFF_ASSIGNMENT_PERIOD_INVALID);
         }
         if (assignmentType == AssignmentType.PRIMARY_COACH

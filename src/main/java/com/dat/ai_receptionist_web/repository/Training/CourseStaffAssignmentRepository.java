@@ -15,6 +15,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface CourseStaffAssignmentRepository extends JpaRepository<CourseStaffAssignment, UUID> {
+    boolean existsByCourseSchedule_CourseScheduleId(UUID courseScheduleId);
     @Query("""
         select a
         from CourseStaffAssignment a
@@ -203,6 +204,7 @@ public interface CourseStaffAssignmentRepository extends JpaRepository<CourseSta
         left join fetch courseSchedule.classSchedule classSchedule
         left join fetch classSchedule.branch
         where (:courseId is null or course.courseId = :courseId)
+          and (:courseScheduleId is null or courseSchedule.courseScheduleId = :courseScheduleId)
           and a.assignmentType in :assignmentTypes
           and (:filterEffectiveOn = false or (
               a.startDate <= :effectiveOn
@@ -241,6 +243,7 @@ public interface CourseStaffAssignmentRepository extends JpaRepository<CourseSta
             @Param("self") boolean self,
             @Param("managedCourses") boolean managedCourses,
             @Param("courseId") UUID courseId,
+            @Param("courseScheduleId") UUID courseScheduleId,
             @Param("assignmentTypes") Collection<AssignmentType> assignmentTypes,
             @Param("filterEffectiveOn") boolean filterEffectiveOn,
             @Param("effectiveOn") LocalDate effectiveOn,

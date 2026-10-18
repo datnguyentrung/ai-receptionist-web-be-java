@@ -14,6 +14,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface ClassSessionRepository extends JpaRepository<ClassSession, UUID> {
+    boolean existsByCourseSchedule_CourseScheduleId(UUID courseScheduleId);
     @Modifying
     @Query(value = """
         update training.class_session

@@ -11,6 +11,9 @@ import com.dat.ai_receptionist_web.mapper.Catalog.CourseScheduleMapper;
 import com.dat.ai_receptionist_web.repository.Catalog.ClassScheduleRepository;
 import com.dat.ai_receptionist_web.repository.Catalog.CourseRepository;
 import com.dat.ai_receptionist_web.repository.Catalog.CourseScheduleRepository;
+import com.dat.ai_receptionist_web.repository.Training.ClassSessionRepository;
+import com.dat.ai_receptionist_web.repository.Training.CourseStaffAssignmentRepository;
+import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentScheduleRepository;
 import com.dat.ai_receptionist_web.service.Training.CourseStaffAssignmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -33,6 +36,9 @@ public class CourseScheduleService {
     private final ClassScheduleRepository classScheduleRepository;
     private final CourseScheduleMapper mapper;
     private final CourseStaffAssignmentService courseStaffAssignmentService;
+    private final ClassSessionRepository classSessionRepository;
+    private final CourseStaffAssignmentRepository courseStaffAssignmentRepository;
+    private final StudentEnrollmentScheduleRepository studentEnrollmentScheduleRepository;
 
     @Transactional(readOnly = true)
     public PageResponse<CourseScheduleDTO.SimpleResponse> list(Pageable pageable) {
@@ -62,7 +68,19 @@ public class CourseScheduleService {
 
     @Transactional
     public void delete(UUID id) {
-        find(id).setStatus(ScheduleStatus.INACTIVE);
+        CourseSchedule schedule = find(id);
+        UUID scheduleId = schedule.getCourseScheduleId();
+        if (repository.countByCourse_CourseId(schedule.getCourse().getCourseId()) <= 1) {
+            throw new ApiException(CatalogErrorCode.COURSE_SCHEDULE_CHANGE_CONFLICT,
+                    "A course must retain at least one schedule");
+        }
+        if (classSessionRepository.existsByCourseSchedule_CourseScheduleId(scheduleId)
+                || courseStaffAssignmentRepository.existsByCourseSchedule_CourseScheduleId(scheduleId)
+                || studentEnrollmentScheduleRepository.existsByCourseSchedule_CourseScheduleId(scheduleId)) {
+            throw new ApiException(CatalogErrorCode.COURSE_SCHEDULE_CHANGE_CONFLICT,
+                    "A course schedule with related sessions, enrollments, or staff assignments cannot be deleted");
+        }
+        repository.delete(schedule);
     }
 
     @Transactional(readOnly = true)
@@ -128,14 +146,22 @@ public class CourseScheduleService {
 
     private void apply(CourseSchedule schedule, UUID classScheduleId,
                        java.time.LocalDate startDate, java.time.LocalDate endDate, ScheduleStatus status) {
-        if (endDate != null && endDate.isBefore(startDate)) {
+        LocalDate normalizedEndDate = endDate;
+        if (status == ScheduleStatus.INACTIVE && normalizedEndDate == null) {
+            LocalDate today = LocalDate.now();
+            normalizedEndDate = today.isBefore(startDate) ? startDate : today;
+        } else if (schedule.getStatus() == ScheduleStatus.INACTIVE && status == ScheduleStatus.ACTIVE) {
+            normalizedEndDate = null;
+        }
+
+        if (normalizedEndDate != null && normalizedEndDate.isBefore(startDate)) {
             throw new ApiException(CatalogErrorCode.COURSE_SCHEDULE_CHANGE_CONFLICT,
                     "Schedule end date must not precede start date");
         }
         schedule.setClassSchedule(classScheduleRepository.findById(classScheduleId)
                 .orElseThrow(() -> new ApiException(CatalogErrorCode.CLASS_SCHEDULE_NOT_FOUND)));
         schedule.setStartDate(startDate);
-        schedule.setEndDate(endDate);
+        schedule.setEndDate(normalizedEndDate);
         schedule.setStatus(status);
     }
 }

@@ -8,6 +8,7 @@ import com.dat.ai_receptionist_web.error.code.CatalogErrorCode;
 import com.dat.ai_receptionist_web.mapper.Catalog.CoursePriceMapper;
 import com.dat.ai_receptionist_web.repository.Catalog.CoursePriceRepository;
 import com.dat.ai_receptionist_web.repository.Catalog.CourseRepository;
+import com.dat.ai_receptionist_web.repository.Finance.CoursePurchaseRepository;
 import com.dat.ai_receptionist_web.enums.Catalog.CoursePriceStatus;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ public class CoursePriceService {
     private final CoursePriceRepository repository;
     private final CoursePriceMapper mapper;
     private final CourseRepository courseRepository;
+    private final CoursePurchaseRepository coursePurchaseRepository;
 
     /**
      * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
@@ -73,14 +75,17 @@ public class CoursePriceService {
     }
 
     /**
-     * Tác dụng: Xóa hoặc vô hiệu hóa bản ghi theo định danh đầu vào.
+     * Tác dụng: Xóa hẳn bản ghi theo định danh đầu vào khi chưa có lượt mua tham chiếu.
      * Input: Nhận UUID id từ caller hoặc request.
      * Output: Không trả về dữ liệu; cập nhật trạng thái hoặc ném lỗi khi xử lý thất bại.
      */
     @Transactional
     public void delete(UUID id) {
         var entity = find(id);
-        entity.setStatus(CoursePriceStatus.INACTIVE);
+        if (coursePurchaseRepository.existsByCoursePrice_CoursePriceId(id)) {
+            throw new ApiException(CatalogErrorCode.COURSE_PRICE_IN_USE);
+        }
+        repository.delete(entity);
     }
 
     /**

@@ -17,6 +17,8 @@ public enum CatalogErrorCode implements ErrorCode {
             "Course schedule not found", "No course schedule exists for the provided courseId and courseScheduleId"),
     COURSE_PRICE_NOT_FOUND("COURSE_PRICE_NOT_FOUND", HttpStatus.NOT_FOUND, "Course price not found",
             "Course price not found"),
+    COURSE_PRICE_IN_USE("COURSE_PRICE_IN_USE", HttpStatus.CONFLICT, "Course price is in use",
+            "Course price cannot be deleted because it has course purchases"),
     COURSE_SCHEDULE_PENDING_NOT_FOUND("COURSE_SCHEDULE_PENDING_NOT_FOUND", HttpStatus.NOT_FOUND,
             "Pending schedule change not found", "No pending schedule change exists for this course"),
     COURSE_SCHEDULE_CHANGE_CONFLICT("COURSE_SCHEDULE_CHANGE_CONFLICT", HttpStatus.CONFLICT,

@@ -27,4 +27,6 @@ public interface CoursePurchaseRepository extends JpaRepository<CoursePurchase, 
     Page<CoursePurchase> findAllDetailed(Pageable pageable);
 
     Optional<CoursePurchase> findByDebitTransaction_WalletTransactionId(UUID transactionId);
+
+    boolean existsByCoursePrice_CoursePriceId(UUID coursePriceId);
 }

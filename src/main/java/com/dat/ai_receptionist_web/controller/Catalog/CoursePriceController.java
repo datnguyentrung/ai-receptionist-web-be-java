@@ -58,7 +58,7 @@ public class CoursePriceController {
     public CoursePriceDTO.Response update(@PathVariable UUID id, @Valid @RequestBody CoursePriceDTO.UpdateRequest request) { return service.update(id, request); }
 
     /**
-     * Tác dụng: Xóa hoặc vô hiệu hóa bản ghi theo định danh đầu vào.
+     * Tác dụng: Xóa hẳn bản ghi theo định danh đầu vào khi chưa có lượt mua tham chiếu.
      * Input: Nhận UUID id từ caller hoặc request.
      * Output: Không trả về dữ liệu; cập nhật trạng thái hoặc ném lỗi khi xử lý thất bại.
      */

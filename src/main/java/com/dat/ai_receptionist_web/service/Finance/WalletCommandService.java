@@ -37,6 +37,9 @@ public class WalletCommandService {
     private final WalletTransactionRepository transactionRepository;
     private final CoursePurchaseRepository purchaseRepository;
     private final CoursePriceRepository coursePriceRepository;
+    private final TrainingPlanRepository trainingPlanRepository;
+    private final TrainingPlanRequirementRepository trainingPlanRequirementRepository;
+    private final TrainingPlanAccessRuleRepository trainingPlanAccessRuleRepository;
     private final CourseRepository courseRepository;
     private final CourseScheduleRepository courseScheduleRepository;
     private final StudentEnrollmentRepository enrollmentRepository;
@@ -133,6 +136,96 @@ public class WalletCommandService {
         enrollment = enrollmentRepository.save(enrollment);
         wallet.setBalance(after);
         return walletCommandMapper.toTransactionResponse(transaction, purchase, enrollment);
+    }
+
+    @Transactional
+    public WalletCommandDTO.TransactionResponse purchaseTrainingPlan(
+            WalletCommandDTO.TrainingPlanPurchaseRequest request, UUID actorUserId) {
+        Wallet wallet = lockWalletByPerson(request.studentPersonId());
+        WalletTransaction duplicate = transactionRepository.findByTypeAndExternalReference(
+                WalletTransactionType.TRAINING_PLAN_PURCHASE, request.externalReference()).orElse(null);
+        if (duplicate != null) {
+            CoursePurchase purchase = purchaseRepository.findByDebitTransaction_WalletTransactionId(duplicate.getWalletTransactionId())
+                    .orElseThrow(() -> failure(FinanceErrorCode.LEDGER_INVARIANT_VIOLATION));
+            if (!duplicate.getWallet().getWalletId().equals(wallet.getWalletId()) || purchase.getTrainingPlan() == null
+                    || !purchase.getTrainingPlan().getTrainingPlanId().equals(request.trainingPlanId())) {
+                throw failure(FinanceErrorCode.IDEMPOTENCY_CONFLICT);
+            }
+            StudentEnrollment enrollment = enrollmentRepository.findByCoursePurchase_CoursePurchaseId(purchase.getCoursePurchaseId())
+                    .orElseThrow(() -> failure(FinanceErrorCode.LEDGER_INVARIANT_VIOLATION));
+            return walletCommandMapper.toTransactionResponse(duplicate, purchase, enrollment);
+        }
+        requireActive(wallet);
+        personCodePolicy.requireStudent(wallet.getPerson());
+        TrainingPlan plan = trainingPlanRepository.findWithLockByTrainingPlanIdAndStatus(
+                        request.trainingPlanId(), TrainingPlanStatus.ACTIVE)
+                .orElseThrow(() -> failure(CatalogErrorCode.TRAINING_PLAN_NOT_FOUND));
+        Course homeCourse = courseRepository.findByIdForUpdate(request.homeCourseId())
+                .orElseThrow(() -> failure(CatalogErrorCode.COURSE_NOT_FOUND));
+        if (homeCourse.getStatus() != CourseStatus.ACTIVE || !trainingPlanAccessRuleRepository
+                .existsByTrainingPlan_TrainingPlanIdAndTargetCourse_CourseIdAndAccessMode(
+                        plan.getTrainingPlanId(), homeCourse.getCourseId(), PlanAccessMode.HOME)) {
+            throw failure(CatalogErrorCode.TRAINING_PLAN_HOME_COURSE_NOT_ALLOWED);
+        }
+        LocalDate start = request.startDate();
+        LocalDate end = start.plusMonths(plan.getDurationMonths());
+        LinkedHashSet<StudentEnrollmentSchedule> schedules = resolveTrainingPlanSchedules(
+                plan, homeCourse, request.recurringSchedules(), start, end);
+        BigDecimal amount = money(plan.getFinalPrice());
+        if (wallet.getBalance().compareTo(amount) < 0) throw failure(FinanceErrorCode.INSUFFICIENT_BALANCE);
+        User actor = user(actorUserId);
+        BigDecimal before = wallet.getBalance();
+        BigDecimal after = before.subtract(amount);
+        WalletTransaction transaction = transactionRepository.save(approvedTransaction(wallet,
+                WalletTransactionType.TRAINING_PLAN_PURCHASE, WalletTransactionDirection.DEBIT, amount,
+                before, after, request.externalReference(), actor, request.note()));
+        CoursePurchase purchase = purchaseRepository.save(CoursePurchase.builder().studentPerson(wallet.getPerson())
+                .trainingPlan(plan).homeCourse(homeCourse).debitTransaction(transaction).build());
+        StudentEnrollment enrollment = StudentEnrollment.builder().studentPerson(wallet.getPerson())
+                .coursePurchase(purchase).startDate(start).endDate(end)
+                .status(start.isAfter(LocalDate.now()) ? StudentEnrollmentStatus.PENDING_START : StudentEnrollmentStatus.ACTIVE)
+                .build();
+        enrollment.replaceSchedules(schedules);
+        enrollment = enrollmentRepository.save(enrollment);
+        wallet.setBalance(after);
+        return walletCommandMapper.toTransactionResponse(transaction, purchase, enrollment);
+    }
+
+    private LinkedHashSet<StudentEnrollmentSchedule> resolveTrainingPlanSchedules(
+            TrainingPlan plan, Course homeCourse, java.util.List<WalletCommandDTO.RecurringScheduleSelection> selections,
+            LocalDate start, LocalDate end) {
+        var requirements = trainingPlanRequirementRepository.findByTrainingPlan_TrainingPlanIdAndFulfillmentMode(
+                plan.getTrainingPlanId(), FulfillmentMode.RECURRING);
+        var byId = requirements.stream().collect(java.util.stream.Collectors.toMap(
+                TrainingPlanRequirement::getTrainingPlanRequirementId, requirement -> requirement));
+        var selected = new java.util.LinkedHashMap<UUID, java.util.List<UUID>>();
+        for (WalletCommandDTO.RecurringScheduleSelection selection : selections) {
+            if (!byId.containsKey(selection.requirementId())) throw failure(CatalogErrorCode.TRAINING_PLAN_REQUIREMENT_NOT_MET);
+            selected.computeIfAbsent(selection.requirementId(), ignored -> new java.util.ArrayList<>()).add(selection.courseScheduleId());
+        }
+        LinkedHashSet<StudentEnrollmentSchedule> result = new LinkedHashSet<>();
+        for (TrainingPlanRequirement requirement : requirements) {
+            var ids = selected.getOrDefault(requirement.getTrainingPlanRequirementId(), java.util.List.of());
+            if (ids.size() != requirement.getSessionsPerWeek() || new LinkedHashSet<>(ids).size() != ids.size()) {
+                throw failure(CatalogErrorCode.TRAINING_PLAN_REQUIREMENT_NOT_MET);
+            }
+            for (UUID id : ids) {
+                CourseSchedule schedule = courseScheduleRepository.findById(id)
+                        .orElseThrow(() -> failure(CatalogErrorCode.COURSE_SCHEDULE_NOT_FOUND));
+                boolean applicable = schedule.getStatus() == ScheduleStatus.ACTIVE
+                        && schedule.getSessionType() == requirement.getSessionType()
+                        && !schedule.getStartDate().isAfter(end)
+                        && (schedule.getEndDate() == null || !schedule.getEndDate().isBefore(start))
+                        && (!requirement.isHomeCourseOnly() || schedule.getCourse().getCourseId().equals(homeCourse.getCourseId()))
+                        && trainingPlanAccessRuleRepository.existsByTrainingPlan_TrainingPlanIdAndTargetCourse_CourseIdAndSessionTypeAndAccessMode(
+                        plan.getTrainingPlanId(), schedule.getCourse().getCourseId(), schedule.getSessionType(), PlanAccessMode.RECURRING);
+                if (!applicable) throw failure(CatalogErrorCode.TRAINING_PLAN_REQUIREMENT_NOT_MET);
+                result.add(StudentEnrollmentSchedule.builder().courseSchedule(schedule).requirement(requirement)
+                        .effectiveFrom(start).effectiveTo(end)
+                        .status(com.dat.ai_receptionist_web.enums.Training.EnrollmentScheduleStatus.ACTIVE).build());
+            }
+        }
+        return result;
     }
 
     private LinkedHashSet<StudentEnrollmentSchedule> resolvePurchaseSchedules(

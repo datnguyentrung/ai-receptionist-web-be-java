@@ -41,6 +41,13 @@ public class WalletCommandController {
         return commandService.purchaseCourse(request, currentUserId());
     }
 
+    @PostMapping("/training-plan-purchases")
+    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).COURSE_PURCHASE_CREATE.getCode())")
+    public WalletCommandDTO.TransactionResponse purchaseTrainingPlan(
+            @Valid @RequestBody WalletCommandDTO.TrainingPlanPurchaseRequest request) {
+        return commandService.purchaseTrainingPlan(request, currentUserId());
+    }
+
     /**
      * Tác dụng: Thực hiện logic refund của lớp hiện tại.
      * Input: Nhận WalletCommandDTO.RefundRequest request từ caller hoặc request.

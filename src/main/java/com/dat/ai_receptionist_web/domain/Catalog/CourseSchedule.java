@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Catalog;
 
 import com.dat.ai_receptionist_web.enums.Core.ScheduleStatus;
+import com.dat.ai_receptionist_web.enums.Catalog.SessionType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
@@ -42,6 +43,11 @@ public class CourseSchedule {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private ScheduleStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "session_type", nullable = false, length = 20)
+    @Builder.Default
+    private SessionType sessionType = SessionType.STANDARD;
 
     @CreatedDate @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

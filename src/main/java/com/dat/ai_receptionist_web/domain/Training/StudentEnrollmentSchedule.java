@@ -1,11 +1,14 @@
 package com.dat.ai_receptionist_web.domain.Training;
 
 import com.dat.ai_receptionist_web.domain.Catalog.CourseSchedule;
+import com.dat.ai_receptionist_web.domain.Catalog.TrainingPlanRequirement;
+import com.dat.ai_receptionist_web.enums.Training.EnrollmentScheduleStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.util.UUID;
+import java.time.LocalDate;
 
 @Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor
 @Entity
@@ -24,4 +27,19 @@ public class StudentEnrollmentSchedule {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "course_schedule_id", nullable = false)
     private CourseSchedule courseSchedule;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "training_plan_requirement_id")
+    private TrainingPlanRequirement requirement;
+
+    @Column(name = "effective_from")
+    private LocalDate effectiveFrom;
+
+    @Column(name = "effective_to")
+    private LocalDate effectiveTo;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private EnrollmentScheduleStatus status = EnrollmentScheduleStatus.ACTIVE;
 }

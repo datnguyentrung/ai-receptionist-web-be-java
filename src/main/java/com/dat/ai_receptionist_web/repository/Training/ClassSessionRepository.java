@@ -5,6 +5,7 @@ import com.dat.ai_receptionist_web.enums.Training.SessionStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
@@ -14,6 +15,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface ClassSessionRepository extends JpaRepository<ClassSession, UUID> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select c from ClassSession c join fetch c.course join fetch c.courseSchedule where c.classSessionId = :id")
+    Optional<ClassSession> findDetailedByIdForUpdate(@Param("id") UUID id);
     boolean existsByCourseSchedule_CourseScheduleId(UUID courseScheduleId);
     @Modifying
     @Query(value = """

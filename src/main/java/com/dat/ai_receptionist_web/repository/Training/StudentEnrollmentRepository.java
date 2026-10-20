@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -12,6 +13,15 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface StudentEnrollmentRepository extends JpaRepository<StudentEnrollment, UUID> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        select e from StudentEnrollment e
+        join fetch e.coursePurchase p
+        left join fetch p.trainingPlan
+        left join fetch p.homeCourse
+        where e.studentEnrollmentId = :id
+    """)
+    Optional<StudentEnrollment> findDetailedByIdForUpdate(@Param("id") UUID id);
     long countByCoursePurchase_CoursePrice_Course_CourseId(UUID courseId);
 
     @Query("""

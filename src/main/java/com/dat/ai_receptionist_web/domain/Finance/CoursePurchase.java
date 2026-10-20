@@ -1,6 +1,8 @@
 package com.dat.ai_receptionist_web.domain.Finance;
 
 import com.dat.ai_receptionist_web.domain.Catalog.CoursePrice;
+import com.dat.ai_receptionist_web.domain.Catalog.Course;
+import com.dat.ai_receptionist_web.domain.Catalog.TrainingPlan;
 import com.dat.ai_receptionist_web.domain.Core.Person;
 import jakarta.persistence.*;
 import lombok.*;
@@ -28,9 +30,19 @@ public class CoursePurchase {
     @JoinColumn(name = "student_person_id", nullable = false)
     private Person studentPerson;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "course_price_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "course_price_id")
     private CoursePrice coursePrice;
+
+    /** Compatibility link retained while V20-V24 migrate historical purchases. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "training_plan_id")
+    private TrainingPlan trainingPlan;
+
+    /** Operational course picked when the plan was purchased. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "home_course_id")
+    private Course homeCourse;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "debit_transaction_id", nullable = false)

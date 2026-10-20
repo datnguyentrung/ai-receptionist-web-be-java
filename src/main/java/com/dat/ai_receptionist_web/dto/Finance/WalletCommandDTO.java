@@ -27,6 +27,21 @@ public final class WalletCommandDTO {
             @Size(max = 500) String note) {
     }
 
+    public record RecurringScheduleSelection(
+            @NotNull UUID requirementId,
+            @NotNull UUID courseScheduleId) {
+    }
+
+    public record TrainingPlanPurchaseRequest(
+            @NotNull UUID studentPersonId,
+            @NotNull UUID trainingPlanId,
+            @NotNull UUID homeCourseId,
+            @NotNull java.time.LocalDate startDate,
+            @NotNull List<@jakarta.validation.Valid RecurringScheduleSelection> recurringSchedules,
+            @NotBlank @Size(max = 150) String externalReference,
+            @Size(max = 500) String note) {
+    }
+
     public record RefundRequest(
             @NotNull UUID originalDebitTransactionId,
             @Size(max = 500) String note) {

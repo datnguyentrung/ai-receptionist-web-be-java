@@ -34,7 +34,8 @@ class EnumSchemaContractTest {
         assertValues(AttendanceStatus.class, "PRESENT", "ABSENT", "EXCUSED", "MAKEUP", "LATE");
         assertValues(WalletStatus.class, "ACTIVE", "FROZEN", "CLOSED");
         assertValues(CoursePriceStatus.class, "ACTIVE", "INACTIVE");
-        assertValues(WalletTransactionType.class, "TOP_UP", "COURSE_PURCHASE", "SUPPLY_PURCHASE", "REFUND", "MANUAL_ADJUSTMENT");
+        assertValues(WalletTransactionType.class, "TOP_UP", "COURSE_PURCHASE", "TRAINING_PLAN_PURCHASE",
+                "TRAINING_ADDON_PURCHASE", "SUPPLY_PURCHASE", "REFUND", "MANUAL_ADJUSTMENT");
         assertValues(EvaluationStatus.class, "PENDING", "GOOD", "AVERAGE", "WEAK");
         assertValues(WalletTransactionDirection.class, "CREDIT", "DEBIT");
         assertValues(NotificationType.class, "SYSTEM", "ATTENDANCE", "TUITION", "CLASS_SCHEDULE",

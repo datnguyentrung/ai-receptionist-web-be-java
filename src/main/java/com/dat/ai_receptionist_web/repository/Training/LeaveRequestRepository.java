@@ -66,4 +66,7 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, UUID
            or lr.makeupClassSession.classSessionId in :sessionIds
     """)
     List<LeaveRequest> findByReferencedSessionIds(@Param("sessionIds") Collection<UUID> sessionIds);
+
+    boolean existsByLeaveClassSession_ClassSessionIdAndPerson_PersonIdAndStatusIn(
+            UUID classSessionId, UUID personId, Collection<com.dat.ai_receptionist_web.enums.Training.LeaveRequestStatus> statuses);
 }

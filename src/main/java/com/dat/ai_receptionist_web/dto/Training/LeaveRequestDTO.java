@@ -26,6 +26,14 @@ public final class LeaveRequestDTO {
     ) {
     }
 
+    /** Student leave is always anchored to an existing entitlement booking. */
+    public record StudentCreateRequest(
+            @NotNull UUID leaveBookingId,
+            @NotNull UUID makeupClassSessionId,
+            @NotBlank @Size(max = 1000) String leaveContext
+    ) {
+    }
+
     public record ReviewCommand(
             @Size(max = 1000) String reviewNote
     ) {

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 public interface TrainingPlanRepository extends JpaRepository<TrainingPlan, UUID> {
@@ -14,4 +15,6 @@ public interface TrainingPlanRepository extends JpaRepository<TrainingPlan, UUID
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<TrainingPlan> findWithLockByTrainingPlanIdAndStatus(UUID trainingPlanId, TrainingPlanStatus status);
+
+    List<TrainingPlan> findByStatusOrderByNameAsc(TrainingPlanStatus status);
 }

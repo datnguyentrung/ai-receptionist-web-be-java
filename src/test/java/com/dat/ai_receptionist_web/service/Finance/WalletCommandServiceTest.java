@@ -15,6 +15,7 @@ import com.dat.ai_receptionist_web.repository.Finance.*;
 import com.dat.ai_receptionist_web.repository.Security.UserRepository;
 import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentRepository;
 import com.dat.ai_receptionist_web.service.Core.PersonCodePolicy;
+import com.dat.ai_receptionist_web.service.Security.access.CurrentAccessContextResolver;
 import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.code.FinanceErrorCode;
 import jakarta.persistence.LockModeType;
@@ -38,6 +39,10 @@ class WalletCommandServiceTest {
     private CourseScheduleRepository courseSchedules;
     private StudentEnrollmentRepository enrollments;
     private UserRepository users;
+    private TrainingPlanRepository trainingPlans;
+    private TrainingPlanRequirementRepository trainingPlanRequirements;
+    private TrainingPlanAccessRuleRepository trainingPlanAccessRules;
+    private CurrentAccessContextResolver accessContextResolver;
     private WalletCommandService service;
 
     @BeforeEach
@@ -50,8 +55,13 @@ class WalletCommandServiceTest {
         courseSchedules = mock(CourseScheduleRepository.class);
         enrollments = mock(StudentEnrollmentRepository.class);
         users = mock(UserRepository.class);
-        service = new WalletCommandService(wallets, transactions, purchases, prices, courses,
-                courseSchedules, enrollments, users, new PersonCodePolicy(), new WalletCommandMapper() {
+        trainingPlans = mock(TrainingPlanRepository.class);
+        trainingPlanRequirements = mock(TrainingPlanRequirementRepository.class);
+        trainingPlanAccessRules = mock(TrainingPlanAccessRuleRepository.class);
+        accessContextResolver = mock(CurrentAccessContextResolver.class);
+        service = new WalletCommandService(wallets, transactions, purchases, prices, trainingPlans,
+                trainingPlanRequirements, trainingPlanAccessRules, courses, courseSchedules, enrollments,
+                accessContextResolver, users, new PersonCodePolicy(), new WalletCommandMapper() {
                 });
     }
 

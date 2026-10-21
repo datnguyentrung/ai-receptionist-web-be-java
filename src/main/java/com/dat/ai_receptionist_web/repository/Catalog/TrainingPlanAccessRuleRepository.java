@@ -6,10 +6,19 @@ import com.dat.ai_receptionist_web.enums.Catalog.SessionType;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.UUID;
+import java.util.List;
 
 public interface TrainingPlanAccessRuleRepository extends JpaRepository<TrainingPlanAccessRule, UUID> {
     boolean existsByTrainingPlan_TrainingPlanIdAndTargetCourse_CourseIdAndAccessMode(
             UUID trainingPlanId, UUID courseId, PlanAccessMode accessMode);
     boolean existsByTrainingPlan_TrainingPlanIdAndTargetCourse_CourseIdAndSessionTypeAndAccessMode(
             UUID trainingPlanId, UUID courseId, SessionType sessionType, PlanAccessMode accessMode);
+
+    @org.springframework.data.jpa.repository.Query("""
+        select r from TrainingPlanAccessRule r join fetch r.targetCourse
+        where r.trainingPlan.trainingPlanId = :trainingPlanId and r.accessMode = :accessMode
+    """)
+    List<TrainingPlanAccessRule> findDetailedByTrainingPlanIdAndAccessMode(
+            @org.springframework.data.repository.query.Param("trainingPlanId") UUID trainingPlanId,
+            @org.springframework.data.repository.query.Param("accessMode") PlanAccessMode accessMode);
 }

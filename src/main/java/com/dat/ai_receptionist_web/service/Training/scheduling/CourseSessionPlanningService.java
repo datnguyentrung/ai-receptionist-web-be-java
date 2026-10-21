@@ -15,6 +15,7 @@ import com.dat.ai_receptionist_web.repository.Catalog.CourseRepository;
 import com.dat.ai_receptionist_web.repository.Catalog.CourseScheduleRepository;
 import com.dat.ai_receptionist_web.repository.Training.ClassSessionRepository;
 import com.dat.ai_receptionist_web.repository.Training.LeaveRequestRepository;
+import com.dat.ai_receptionist_web.service.Training.RecurringBookingMaterializer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,7 @@ public class CourseSessionPlanningService {
     private final CourseScheduleRepository courseScheduleRepository;
     private final ClassSessionRepository classSessionRepository;
     private final LeaveRequestRepository leaveRequestRepository;
+    private final RecurringBookingMaterializer recurringBookingMaterializer;
 
     @Transactional
     public void maintainGenerationHorizon() {
@@ -106,6 +108,7 @@ public class CourseSessionPlanningService {
                     .build());
         }
         classSessionRepository.saveAll(created);
+        recurringBookingMaterializer.materialize(created);
         return created.stream().map(ClassSession::getClassSessionId).toList();
     }
 

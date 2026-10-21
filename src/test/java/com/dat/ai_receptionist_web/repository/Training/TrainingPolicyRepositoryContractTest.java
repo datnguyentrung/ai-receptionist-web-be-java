@@ -285,6 +285,7 @@ class TrainingPolicyRepositoryContractTest {
                         boolean.class,
                         boolean.class,
                         UUID.class,
+                        UUID.class,
                         java.util.Collection.class,
                         boolean.class,
                         LocalDate.class,

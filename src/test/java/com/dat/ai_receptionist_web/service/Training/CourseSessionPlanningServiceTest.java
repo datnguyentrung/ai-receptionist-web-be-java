@@ -52,7 +52,7 @@ class CourseSessionPlanningServiceTest {
 
         service = new CourseSessionPlanningService(
                 courseRepository, courseScheduleRepository, classSessionRepository,
-                leaveRequestRepository);
+                leaveRequestRepository, mock(RecurringBookingMaterializer.class));
 
         Branch branch = Branch.builder().branchId(1L).build();
         scheduleA = ClassSchedule.builder().scheduleId(UUID.randomUUID())

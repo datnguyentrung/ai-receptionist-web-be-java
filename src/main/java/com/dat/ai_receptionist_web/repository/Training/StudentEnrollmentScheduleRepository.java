@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.time.LocalDate;
 
 public interface StudentEnrollmentScheduleRepository extends JpaRepository<StudentEnrollmentSchedule, UUID> {
     boolean existsByCourseSchedule_CourseScheduleId(UUID courseScheduleId);
@@ -63,4 +64,16 @@ public interface StudentEnrollmentScheduleRepository extends JpaRepository<Stude
             UUID studentEnrollmentId, UUID courseScheduleId);
 
     long countByStudentEnrollment_StudentEnrollmentId(UUID studentEnrollmentId);
+
+    @Query("""
+        select link from StudentEnrollmentSchedule link
+        join fetch link.studentEnrollment enrollment
+        where link.courseSchedule.courseScheduleId = :courseScheduleId
+          and enrollment.status in (com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus.ACTIVE,
+                                    com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus.PENDING_START)
+          and enrollment.startDate <= :date and enrollment.endDate >= :date
+          and link.effectiveFrom <= :date and (link.effectiveTo is null or link.effectiveTo >= :date)
+    """)
+    List<StudentEnrollmentSchedule> findEffectiveByCourseScheduleAndDate(
+            @Param("courseScheduleId") UUID courseScheduleId, @Param("date") LocalDate date);
 }

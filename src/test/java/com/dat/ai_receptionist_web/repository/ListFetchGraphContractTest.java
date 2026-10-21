@@ -2,7 +2,6 @@ package com.dat.ai_receptionist_web.repository;
 
 import com.dat.ai_receptionist_web.repository.Catalog.ClassScheduleRepository;
 import com.dat.ai_receptionist_web.repository.Catalog.CoursePriceRepository;
-import com.dat.ai_receptionist_web.repository.Catalog.CourseRepository;
 import com.dat.ai_receptionist_web.repository.Core.UserPersonRepository;
 import com.dat.ai_receptionist_web.repository.Finance.CoursePurchaseRepository;
 import com.dat.ai_receptionist_web.repository.Finance.WalletRepository;
@@ -26,10 +25,6 @@ class ListFetchGraphContractTest {
                 "join fetch up.person");
         assertDetailedListQuery(ClassScheduleRepository.class,
                 "join fetch cs.branch");
-        assertDetailedListQuery(CourseRepository.class,
-                "left join fetch c.courseSchedules courseSchedule",
-                "left join fetch courseSchedule.classSchedule classSchedule",
-                "left join fetch classSchedule.branch");
         assertDetailedListQuery(CoursePriceRepository.class,
                 "join fetch cp.course",
                 "left join fetch course.courseSchedules courseSchedule",

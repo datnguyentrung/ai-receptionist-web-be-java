@@ -3,8 +3,10 @@ package com.dat.ai_receptionist_web.repository.Training;
 import com.dat.ai_receptionist_web.domain.Training.StudentSessionBooking;
 import com.dat.ai_receptionist_web.enums.Training.BookingStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -16,6 +18,21 @@ public interface StudentSessionBookingRepository extends JpaRepository<StudentSe
     Optional<StudentSessionBooking> findByStudentSessionBookingIdAndEnrollment_StudentEnrollmentId(UUID bookingId, UUID enrollmentId);
     boolean existsByEnrollment_StudentEnrollmentIdAndClassSession_ClassSessionId(UUID enrollmentId, UUID classSessionId);
     List<StudentSessionBooking> findByClassSession_ClassSessionIdAndStatus(UUID classSessionId, BookingStatus status);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select b from StudentSessionBooking b join fetch b.enrollment e join fetch e.coursePurchase p where b.studentSessionBookingId = :id")
+    Optional<StudentSessionBooking> findDetailedByIdForUpdate(@Param("id") UUID id);
+
+    Optional<StudentSessionBooking> findByLeaveRequest_LeaveRequestId(UUID leaveRequestId);
+
+    @Query("""
+        select b from StudentSessionBooking b
+        join fetch b.classSession session
+        join fetch session.course
+        where b.enrollment.studentEnrollmentId = :enrollmentId
+        order by session.sessionDate, session.startTime
+    """)
+    List<StudentSessionBooking> findDetailedByEnrollmentId(@Param("enrollmentId") UUID enrollmentId);
 
     @Query("""
         select count(b) from StudentSessionBooking b

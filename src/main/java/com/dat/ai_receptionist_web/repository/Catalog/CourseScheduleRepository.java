@@ -79,4 +79,19 @@ public interface CourseScheduleRepository extends JpaRepository<CourseSchedule, 
           and cs.startDate <= :date and (cs.endDate is null or cs.endDate >= :date)
     """)
     List<CourseSchedule> findEffectiveByCourseIdAndDate(UUID courseId, ScheduleStatus status, LocalDate date);
+
+    @Query("""
+        select cs from CourseSchedule cs
+        join fetch cs.course c
+        join fetch cs.classSchedule s
+        join fetch s.branch
+        where c.courseId in :courseIds and cs.status = :status
+          and cs.startDate <= :endDate and (cs.endDate is null or cs.endDate >= :startDate)
+        order by c.name, s.weekday, s.startTime
+    """)
+    List<CourseSchedule> findActiveOverlappingByCourseIds(
+            @Param("courseIds") java.util.Collection<UUID> courseIds,
+            @Param("status") ScheduleStatus status,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
 }

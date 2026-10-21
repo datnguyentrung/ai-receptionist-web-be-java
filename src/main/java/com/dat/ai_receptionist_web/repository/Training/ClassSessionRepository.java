@@ -224,4 +224,18 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, UUID
             @Param("activePersonId") UUID activePersonId,
             @Param("unrestricted") boolean unrestricted
     );
+
+    @Query("""
+        select c from ClassSession c
+        join fetch c.course
+        join fetch c.courseSchedule schedule
+        join fetch schedule.classSchedule classSchedule
+        join fetch classSchedule.branch
+        where c.sessionDate between :fromDate and :toDate
+          and c.status in (com.dat.ai_receptionist_web.enums.Training.SessionStatus.SCHEDULED,
+                           com.dat.ai_receptionist_web.enums.Training.SessionStatus.ACTIVE)
+        order by c.sessionDate, c.startTime
+    """)
+    List<ClassSession> findFutureBookableCandidates(@Param("fromDate") LocalDate fromDate,
+                                                     @Param("toDate") LocalDate toDate);
 }

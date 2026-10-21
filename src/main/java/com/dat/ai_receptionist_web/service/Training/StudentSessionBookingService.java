@@ -18,6 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -28,6 +30,51 @@ public class StudentSessionBookingService {
     private final StudentSessionBookingRepository bookingRepository;
     private final TrainingPlanAccessRuleRepository accessRuleRepository;
     private final EnrollmentQuotaService quotaService;
+
+    @Transactional(readOnly = true)
+    public List<StudentSessionBookingDTO.Response> list(UUID enrollmentId) {
+        return bookingRepository.findDetailedByEnrollmentId(enrollmentId).stream().map(this::response).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<StudentSessionBookingDTO.SessionOption> options(UUID enrollmentId, LocalDate from, LocalDate to) {
+        var enrollment = enrollmentRepository.findDetailedByIdForUpdate(enrollmentId)
+                .orElseThrow(() -> new ApiException(TrainingErrorCode.STUDENT_ENROLLMENT_NOT_FOUND));
+        var plan = enrollment.getCoursePurchase().getTrainingPlan();
+        if (plan == null) return List.of();
+        return classSessionRepository.findFutureBookableCandidates(from, to).stream().map(session -> {
+            String reason = optionUnavailableReason(enrollment, session);
+            int remaining = Math.max(session.getCourse().getCapacity() - (int) bookingRepository
+                    .countByClassSession_ClassSessionIdAndStatusNot(session.getClassSessionId(), BookingStatus.CANCELLED), 0);
+            if (remaining == 0 && reason == null) reason = "Lớp đã đủ chỗ";
+            return new StudentSessionBookingDTO.SessionOption(session.getClassSessionId(), session.getCourse().getCourseId(),
+                    session.getCourse().getName(), session.getSessionDate(), session.getStartTime(), session.getEndTime(),
+                    remaining, reason == null, reason);
+        }).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<StudentSessionBookingDTO.Response> leaveOptions(UUID enrollmentId) {
+        LocalDateTime now = LocalDateTime.now();
+        return bookingRepository.findDetailedByEnrollmentId(enrollmentId).stream()
+                .filter(booking -> booking.getStatus() == BookingStatus.RESERVED)
+                .filter(booking -> booking.getSource() != BookingSource.MAKEUP)
+                .filter(booking -> now.isBefore(LocalDateTime.of(booking.getClassSession().getSessionDate(), booking.getClassSession().getStartTime())))
+                .map(this::response).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<StudentSessionBookingDTO.SessionOption> makeupOptions(UUID enrollmentId, UUID leaveBookingId) {
+        var enrollment = enrollmentRepository.findDetailedByIdForUpdate(enrollmentId)
+                .orElseThrow(() -> new ApiException(TrainingErrorCode.STUDENT_ENROLLMENT_NOT_FOUND));
+        var source = bookingRepository.findByStudentSessionBookingIdAndEnrollment_StudentEnrollmentId(leaveBookingId, enrollmentId)
+                .orElseThrow(() -> new ApiException(TrainingErrorCode.BOOKING_NOT_FOUND));
+        if (source.getStatus() != BookingStatus.RESERVED || source.getSource() == BookingSource.MAKEUP) {
+            throw new ApiException(TrainingErrorCode.MAKEUP_SOURCE_BOOKING_INVALID);
+        }
+        return classSessionRepository.findFutureBookableCandidates(LocalDate.now(), enrollment.getEndDate()).stream()
+                .map(session -> makeupOption(enrollment, source, session)).toList();
+    }
 
     @Transactional
     public StudentSessionBookingDTO.Response bookFlexible(UUID enrollmentId, UUID sessionId) {
@@ -108,5 +155,41 @@ public class StudentSessionBookingService {
         return new StudentSessionBookingDTO.Response(booking.getStudentSessionBookingId(),
                 booking.getEnrollment().getStudentEnrollmentId(), booking.getClassSession().getClassSessionId(),
                 booking.getSource(), booking.getStatus(), booking.getBookedAt(), booking.getCancelledAt(), booking.getSettledAt());
+    }
+
+    private String optionUnavailableReason(com.dat.ai_receptionist_web.domain.Training.StudentEnrollment enrollment,
+                                           com.dat.ai_receptionist_web.domain.Training.ClassSession session) {
+        var plan = enrollment.getCoursePurchase().getTrainingPlan();
+        if (enrollment.getStatus() != StudentEnrollmentStatus.ACTIVE) return "Gói học chưa hoạt động";
+        if (session.getSessionDate().isBefore(enrollment.getStartDate()) || session.getSessionDate().isAfter(enrollment.getEndDate())) return "Ngoài thời hạn gói học";
+        if (!LocalDateTime.now().isBefore(LocalDateTime.of(session.getSessionDate(), session.getStartTime()))) return "Buổi học đã bắt đầu";
+        if (!accessRuleRepository.existsByTrainingPlan_TrainingPlanIdAndTargetCourse_CourseIdAndSessionTypeAndAccessMode(
+                plan.getTrainingPlanId(), session.getCourse().getCourseId(), session.getScheduleSnapshot().getSessionType(), PlanAccessMode.FLEX)) return "Gói học không áp dụng cho buổi này";
+        if (bookingRepository.existsByEnrollment_StudentEnrollmentIdAndClassSession_ClassSessionId(enrollment.getStudentEnrollmentId(), session.getClassSessionId())) return "Đã có booking";
+        if (bookingRepository.existsReservedTimeConflict(enrollment.getStudentEnrollmentId(), session.getSessionDate(), session.getStartTime(), session.getEndTime())) return "Trùng giờ với booking khác";
+        if (bookingRepository.countByClassSession_ClassSessionIdAndStatusNot(session.getClassSessionId(), BookingStatus.CANCELLED) >= session.getCourse().getCapacity()) return "Lớp đã đủ chỗ";
+        if (quotaService.reservedNormalInWeek(enrollment, session.getSessionDate()) >= quotaService.weeklyQuota(enrollment, session.getSessionDate())) return "Đã đủ quota tuần";
+        long committed = quotaService.normalDebits(enrollment) + bookingRepository.countNormalReserved(enrollment.getStudentEnrollmentId());
+        if (committed >= quotaService.totalGranted(enrollment)) return "Đã dùng hết lượt";
+        return null;
+    }
+
+    private StudentSessionBookingDTO.SessionOption makeupOption(
+            com.dat.ai_receptionist_web.domain.Training.StudentEnrollment enrollment,
+            StudentSessionBooking source,
+            com.dat.ai_receptionist_web.domain.Training.ClassSession session) {
+        String reason = null;
+        LocalDateTime leaveStart = LocalDateTime.of(source.getClassSession().getSessionDate(), source.getClassSession().getStartTime());
+        LocalDateTime start = LocalDateTime.of(session.getSessionDate(), session.getStartTime());
+        var plan = enrollment.getCoursePurchase().getTrainingPlan();
+        if (!start.isAfter(leaveStart)) reason = "Buổi học bù phải sau buổi nghỉ";
+        else if (plan == null || !accessRuleRepository.existsByTrainingPlan_TrainingPlanIdAndTargetCourse_CourseIdAndSessionTypeAndAccessMode(
+                plan.getTrainingPlanId(), session.getCourse().getCourseId(), session.getScheduleSnapshot().getSessionType(), PlanAccessMode.FLEX)) reason = "Gói học không áp dụng cho buổi này";
+        else if (bookingRepository.existsByEnrollment_StudentEnrollmentIdAndClassSession_ClassSessionId(enrollment.getStudentEnrollmentId(), session.getClassSessionId())) reason = "Đã có booking";
+        else if (bookingRepository.existsReservedTimeConflict(enrollment.getStudentEnrollmentId(), session.getSessionDate(), session.getStartTime(), session.getEndTime())) reason = "Trùng giờ với booking khác";
+        int remaining = Math.max(session.getCourse().getCapacity() - (int) bookingRepository.countByClassSession_ClassSessionIdAndStatusNot(session.getClassSessionId(), BookingStatus.CANCELLED), 0);
+        if (remaining == 0 && reason == null) reason = "Lớp đã đủ chỗ";
+        return new StudentSessionBookingDTO.SessionOption(session.getClassSessionId(), session.getCourse().getCourseId(), session.getCourse().getName(),
+                session.getSessionDate(), session.getStartTime(), session.getEndTime(), remaining, reason == null, reason);
     }
 }

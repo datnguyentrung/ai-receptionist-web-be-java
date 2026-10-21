@@ -10,6 +10,7 @@ import java.util.UUID;
 
 public interface EnrollmentUsageEntryRepository extends JpaRepository<EnrollmentUsageEntry, UUID> {
     boolean existsByBooking_StudentSessionBookingIdAndEntryType(UUID bookingId, UsageEntryType entryType);
+    boolean existsByLeaveRequest_LeaveRequestIdAndEntryType(UUID leaveRequestId, UsageEntryType entryType);
 
     @Query("""
         select coalesce(sum(case when e.entryType = com.dat.ai_receptionist_web.enums.Training.UsageEntryType.REVERSAL

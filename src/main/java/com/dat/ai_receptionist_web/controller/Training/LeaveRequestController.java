@@ -37,8 +37,15 @@ public class LeaveRequestController {
         return service.create(request);
     }
 
+    @PostMapping("/student")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).LEAVE_REQUEST_CREATE.getCode())")
+    public LeaveRequestDTO.Response createStudent(@Valid @RequestBody LeaveRequestDTO.StudentCreateRequest request) {
+        return service.createStudent(request);
+    }
+
     @PostMapping("/{id}/approve")
-    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).LEAVE_REQUEST_UPDATE.getCode())")
+    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).LEAVE_REQUEST_REVIEW.getCode())")
         public LeaveRequestDTO.Response approve(
             @PathVariable UUID id,
             @RequestBody(required = false) LeaveRequestDTO.ReviewCommand command) {
@@ -46,7 +53,7 @@ public class LeaveRequestController {
     }
 
     @PostMapping("/{id}/reject")
-    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).LEAVE_REQUEST_UPDATE.getCode())")
+    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).LEAVE_REQUEST_REVIEW.getCode())")
         public LeaveRequestDTO.Response reject(
             @PathVariable UUID id,
             @RequestBody(required = false) LeaveRequestDTO.ReviewCommand command) {

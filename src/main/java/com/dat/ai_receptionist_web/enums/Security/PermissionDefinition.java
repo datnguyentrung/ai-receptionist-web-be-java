@@ -106,6 +106,7 @@ public enum PermissionDefinition {
     LEAVE_REQUEST_CREATE("LEAVE_REQUEST_CREATE", "LEAVE_REQUEST", PermissionAction.CREATE, "Leave Request Create"),
     LEAVE_REQUEST_UPDATE("LEAVE_REQUEST_UPDATE", "LEAVE_REQUEST", PermissionAction.UPDATE, "Leave Request Update"),
     LEAVE_REQUEST_DELETE("LEAVE_REQUEST_DELETE", "LEAVE_REQUEST", PermissionAction.DELETE, "Leave Request Delete"),
+    LEAVE_REQUEST_REVIEW("LEAVE_REQUEST_REVIEW", "LEAVE_REQUEST", PermissionAction.UPDATE, "Leave Request Review"),
     SESSION_ATTENDANCE_READ("SESSION_ATTENDANCE_READ", "SESSION_ATTENDANCE", PermissionAction.READ, "Session Attendance Read"),
     SESSION_ATTENDANCE_CREATE("SESSION_ATTENDANCE_CREATE", "SESSION_ATTENDANCE", PermissionAction.CREATE, "Session Attendance Create"),
     SESSION_ATTENDANCE_UPDATE("SESSION_ATTENDANCE_UPDATE", "SESSION_ATTENDANCE", PermissionAction.UPDATE, "Session Attendance Update"),

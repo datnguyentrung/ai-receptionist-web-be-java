@@ -5,6 +5,9 @@ import com.dat.ai_receptionist_web.enums.Training.BookingStatus;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
 import java.util.UUID;
 
 public final class StudentSessionBookingDTO {
@@ -22,4 +25,8 @@ public final class StudentSessionBookingDTO {
             LocalDateTime cancelledAt,
             LocalDateTime settledAt
     ) {}
+
+    public record SessionOption(UUID classSessionId, UUID courseId, String courseName,
+                                LocalDate sessionDate, LocalTime startTime, LocalTime endTime,
+                                int remainingCapacity, boolean bookable, String unavailableReason) {}
 }

@@ -14,6 +14,7 @@ import com.dat.ai_receptionist_web.repository.Catalog.*;
 import com.dat.ai_receptionist_web.repository.Finance.*;
 import com.dat.ai_receptionist_web.repository.Security.UserRepository;
 import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentRepository;
+import com.dat.ai_receptionist_web.service.Security.access.CurrentAccessContextResolver;
 import com.dat.ai_receptionist_web.service.Core.PersonCodePolicy;
 import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.ErrorCode;
@@ -43,6 +44,7 @@ public class WalletCommandService {
     private final CourseRepository courseRepository;
     private final CourseScheduleRepository courseScheduleRepository;
     private final StudentEnrollmentRepository enrollmentRepository;
+    private final CurrentAccessContextResolver accessContextResolver;
     private final UserRepository userRepository;
     private final PersonCodePolicy personCodePolicy;
     private final WalletCommandMapper walletCommandMapper;
@@ -141,6 +143,7 @@ public class WalletCommandService {
     @Transactional
     public WalletCommandDTO.TransactionResponse purchaseTrainingPlan(
             WalletCommandDTO.TrainingPlanPurchaseRequest request, UUID actorUserId) {
+        requireStudentPurchaseScope(request.studentPersonId());
         Wallet wallet = lockWalletByPerson(request.studentPersonId());
         WalletTransaction duplicate = transactionRepository.findByTypeAndExternalReference(
                 WalletTransactionType.TRAINING_PLAN_PURCHASE, request.externalReference()).orElse(null);
@@ -189,6 +192,13 @@ public class WalletCommandService {
         enrollment = enrollmentRepository.save(enrollment);
         wallet.setBalance(after);
         return walletCommandMapper.toTransactionResponse(transaction, purchase, enrollment);
+    }
+
+    private void requireStudentPurchaseScope(UUID studentPersonId) {
+        var context = accessContextResolver.current();
+        if (!context.hasUnrestrictedRole() && !studentPersonId.equals(context.activePersonId())) {
+            throw failure(SecurityErrorCode.ACCESS_DENIED);
+        }
     }
 
     private LinkedHashSet<StudentEnrollmentSchedule> resolveTrainingPlanSchedules(

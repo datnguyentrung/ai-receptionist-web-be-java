@@ -6,7 +6,6 @@ import com.dat.ai_receptionist_web.domain.Training.LeaveRequest;
 import com.dat.ai_receptionist_web.domain.Training.SessionAttendance;
 import com.dat.ai_receptionist_web.domain.Training.StudentEnrollment;
 import com.dat.ai_receptionist_web.domain.Training.StudentSessionBooking;
-import com.dat.ai_receptionist_web.domain.Training.EnrollmentUsageEntry;
 import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.dto.Training.LeaveRequestDTO;
 import com.dat.ai_receptionist_web.enums.Training.AttendanceStatus;
@@ -14,7 +13,6 @@ import com.dat.ai_receptionist_web.enums.Training.LeaveRequestStatus;
 import com.dat.ai_receptionist_web.enums.Training.RequesterType;
 import com.dat.ai_receptionist_web.enums.Training.BookingSource;
 import com.dat.ai_receptionist_web.enums.Training.BookingStatus;
-import com.dat.ai_receptionist_web.enums.Training.UsageEntryType;
 import com.dat.ai_receptionist_web.enums.Catalog.PlanAccessMode;
 import com.dat.ai_receptionist_web.enums.Training.SessionStatus;
 import com.dat.ai_receptionist_web.error.ApiException;
@@ -31,7 +29,6 @@ import com.dat.ai_receptionist_web.repository.Training.LeaveRequestRepository;
 import com.dat.ai_receptionist_web.repository.Training.SessionAttendanceRepository;
 import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentRepository;
 import com.dat.ai_receptionist_web.repository.Training.StudentSessionBookingRepository;
-import com.dat.ai_receptionist_web.repository.Training.EnrollmentUsageEntryRepository;
 import com.dat.ai_receptionist_web.repository.Catalog.TrainingPlanAccessRuleRepository;
 import com.dat.ai_receptionist_web.service.Security.access.CurrentAccessContextResolver;
 import com.dat.ai_receptionist_web.util.SecurityUtil;
@@ -59,7 +56,6 @@ public class LeaveRequestService {
     private final StudentEnrollmentRepository enrollmentRepository;
     private final SessionAttendanceRepository attendanceRepository;
     private final StudentSessionBookingRepository bookingRepository;
-    private final EnrollmentUsageEntryRepository usageEntryRepository;
     private final TrainingPlanAccessRuleRepository accessRuleRepository;
     private final CurrentAccessContextResolver accessContextResolver;
 
@@ -179,12 +175,6 @@ public class LeaveRequestService {
         LocalDateTime makeupStart = LocalDateTime.of(makeup.getClassSession().getSessionDate(), makeup.getClassSession().getStartTime());
         if (makeup.getStatus() != BookingStatus.RESERVED || !LocalDateTime.now().isBefore(makeupStart)) {
             throw new ApiException(TrainingErrorCode.MAKEUP_RESERVATION_EXPIRED);
-        }
-        if (!usageEntryRepository.existsByLeaveRequest_LeaveRequestIdAndEntryType(
-                request.getLeaveRequestId(), UsageEntryType.MAKEUP_GRANT)) {
-            usageEntryRepository.save(EnrollmentUsageEntry.builder().enrollment(makeup.getEnrollment())
-                    .booking(makeup).leaveRequest(request).entryType(UsageEntryType.MAKEUP_GRANT)
-                    .units(1).occurredAt(LocalDateTime.now()).build());
         }
         attendanceRepository.findByClassSession_ClassSessionIdAndStudentEnrollment_StudentEnrollmentId(
                 request.getLeaveClassSession().getClassSessionId(), makeup.getEnrollment().getStudentEnrollmentId())

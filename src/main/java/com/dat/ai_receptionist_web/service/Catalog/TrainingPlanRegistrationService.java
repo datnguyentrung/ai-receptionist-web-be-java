@@ -4,7 +4,6 @@ import com.dat.ai_receptionist_web.domain.Catalog.CourseSchedule;
 import com.dat.ai_receptionist_web.domain.Catalog.TrainingPlan;
 import com.dat.ai_receptionist_web.domain.Catalog.TrainingPlanRequirement;
 import com.dat.ai_receptionist_web.dto.Catalog.TrainingPlanRegistrationDTO;
-import com.dat.ai_receptionist_web.enums.Catalog.FulfillmentMode;
 import com.dat.ai_receptionist_web.enums.Catalog.PlanAccessMode;
 import com.dat.ai_receptionist_web.enums.Catalog.TrainingPlanStatus;
 import com.dat.ai_receptionist_web.enums.Core.ScheduleStatus;
@@ -56,16 +55,11 @@ public class TrainingPlanRegistrationService {
                 courseScheduleRepository.findActiveOverlappingByCourseIds(recurringCourseIds, ScheduleStatus.ACTIVE, startDate, endDate);
 
         List<TrainingPlanRegistrationDTO.RecurringRequirement> recurring = requirements.stream()
-                .filter(r -> r.getFulfillmentMode() == FulfillmentMode.RECURRING)
                 .map(r -> new TrainingPlanRegistrationDTO.RecurringRequirement(
-                        r.getTrainingPlanRequirementId(), label(r), r.getSessionType(), r.getSessionsPerWeek(), r.isHomeCourseOnly(),
+                        r.getTrainingPlanRequirementId(), label(r), r.getSessionType(), r.getSessionsPerWeek(),
                         schedules.stream().filter(s -> supports(r, homeCourseId, s)).map(this::scheduleOption).toList()))
                 .toList();
-        List<TrainingPlanRegistrationDTO.FlexRequirement> flex = requirements.stream()
-                .filter(r -> r.getFulfillmentMode() == FulfillmentMode.FLEX_BOOKING)
-                .map(r -> new TrainingPlanRegistrationDTO.FlexRequirement(r.getTrainingPlanRequirementId(), r.getSessionType(),
-                        r.getSessionsPerWeek(), "Chọn từng buổi sau khi đăng ký")).toList();
-        return new TrainingPlanRegistrationDTO.RegistrationOptions(planId, homeCourseId, startDate, endDate, recurring, flex);
+        return new TrainingPlanRegistrationDTO.RegistrationOptions(planId, homeCourseId, startDate, endDate, recurring);
     }
 
     private TrainingPlanRegistrationDTO.CatalogItem catalogItem(TrainingPlan plan) {
@@ -74,14 +68,14 @@ public class TrainingPlanRegistrationService {
                 .map(course -> new TrainingPlanRegistrationDTO.CourseOption(course.getCourseId(), course.getName(), course.getCapacity())).toList();
         var requirements = requirementRepository.findByTrainingPlan_TrainingPlanId(plan.getTrainingPlanId()).stream()
                 .map(r -> new TrainingPlanRegistrationDTO.Requirement(r.getTrainingPlanRequirementId(), r.getSessionType(),
-                        r.getFulfillmentMode(), r.getSessionsPerWeek(), r.isHomeCourseOnly())).toList();
+                        r.getSessionsPerWeek())).toList();
         return new TrainingPlanRegistrationDTO.CatalogItem(plan.getTrainingPlanId(), plan.getName(), plan.getLevel(),
                 plan.getDurationMonths(), plan.getIncludedSessionCount(), plan.getBasePrice(), plan.getFinalPrice(), homeCourses, requirements);
     }
 
     private boolean supports(TrainingPlanRequirement requirement, UUID homeCourseId, CourseSchedule schedule) {
         return schedule.getSessionType() == requirement.getSessionType()
-                && (!requirement.isHomeCourseOnly() || schedule.getCourse().getCourseId().equals(homeCourseId));
+                && schedule.getCourse().getCourseId().equals(homeCourseId);
     }
 
     private TrainingPlanRegistrationDTO.ScheduleOption scheduleOption(CourseSchedule schedule) {

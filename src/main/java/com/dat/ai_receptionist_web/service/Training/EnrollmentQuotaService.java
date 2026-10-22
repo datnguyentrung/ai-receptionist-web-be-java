@@ -3,7 +3,6 @@ package com.dat.ai_receptionist_web.service.Training;
 import com.dat.ai_receptionist_web.domain.Training.StudentEnrollment;
 import com.dat.ai_receptionist_web.repository.Catalog.TrainingPlanRequirementRepository;
 import com.dat.ai_receptionist_web.repository.Finance.EnrollmentAddonPurchaseRepository;
-import com.dat.ai_receptionist_web.repository.Training.EnrollmentUsageEntryRepository;
 import com.dat.ai_receptionist_web.repository.Training.StudentSessionBookingRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,7 +16,6 @@ import java.time.LocalDate;
 public class EnrollmentQuotaService {
     private final TrainingPlanRequirementRepository requirementRepository;
     private final EnrollmentAddonPurchaseRepository addonPurchaseRepository;
-    private final EnrollmentUsageEntryRepository usageEntryRepository;
     private final StudentSessionBookingRepository bookingRepository;
 
     @Transactional(readOnly = true)
@@ -52,6 +50,6 @@ public class EnrollmentQuotaService {
 
     @Transactional(readOnly = true)
     public long normalDebits(StudentEnrollment enrollment) {
-        return usageEntryRepository.normalDebits(enrollment.getStudentEnrollmentId());
+        return bookingRepository.countNormalSettled(enrollment.getStudentEnrollmentId());
     }
 }

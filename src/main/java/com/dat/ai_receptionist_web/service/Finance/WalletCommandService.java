@@ -204,8 +204,8 @@ public class WalletCommandService {
     private LinkedHashSet<StudentEnrollmentSchedule> resolveTrainingPlanSchedules(
             TrainingPlan plan, Course homeCourse, java.util.List<WalletCommandDTO.RecurringScheduleSelection> selections,
             LocalDate start, LocalDate end) {
-        var requirements = trainingPlanRequirementRepository.findByTrainingPlan_TrainingPlanIdAndFulfillmentMode(
-                plan.getTrainingPlanId(), FulfillmentMode.RECURRING);
+        var requirements = trainingPlanRequirementRepository.findByTrainingPlan_TrainingPlanId(
+                plan.getTrainingPlanId());
         var byId = requirements.stream().collect(java.util.stream.Collectors.toMap(
                 TrainingPlanRequirement::getTrainingPlanRequirementId, requirement -> requirement));
         var selected = new java.util.LinkedHashMap<UUID, java.util.List<UUID>>();
@@ -226,7 +226,7 @@ public class WalletCommandService {
                         && schedule.getSessionType() == requirement.getSessionType()
                         && !schedule.getStartDate().isAfter(end)
                         && (schedule.getEndDate() == null || !schedule.getEndDate().isBefore(start))
-                        && (!requirement.isHomeCourseOnly() || schedule.getCourse().getCourseId().equals(homeCourse.getCourseId()))
+                        && schedule.getCourse().getCourseId().equals(homeCourse.getCourseId())
                         && trainingPlanAccessRuleRepository.existsByTrainingPlan_TrainingPlanIdAndTargetCourse_CourseIdAndSessionTypeAndAccessMode(
                         plan.getTrainingPlanId(), schedule.getCourse().getCourseId(), schedule.getSessionType(), PlanAccessMode.RECURRING);
                 if (!applicable) throw failure(CatalogErrorCode.TRAINING_PLAN_REQUIREMENT_NOT_MET);

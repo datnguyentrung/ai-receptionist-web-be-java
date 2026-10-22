@@ -54,6 +54,14 @@ public interface StudentSessionBookingRepository extends JpaRepository<StudentSe
     long countNormalReserved(@Param("enrollmentId") UUID enrollmentId);
 
     @Query("""
+        select count(b) from StudentSessionBooking b
+        where b.enrollment.studentEnrollmentId = :enrollmentId
+          and b.status = com.dat.ai_receptionist_web.enums.Training.BookingStatus.SETTLED
+          and b.source <> com.dat.ai_receptionist_web.enums.Training.BookingSource.MAKEUP
+    """)
+    long countNormalSettled(@Param("enrollmentId") UUID enrollmentId);
+
+    @Query("""
         select (count(b) > 0) from StudentSessionBooking b
         where b.enrollment.studentEnrollmentId = :enrollmentId
           and b.status = com.dat.ai_receptionist_web.enums.Training.BookingStatus.RESERVED

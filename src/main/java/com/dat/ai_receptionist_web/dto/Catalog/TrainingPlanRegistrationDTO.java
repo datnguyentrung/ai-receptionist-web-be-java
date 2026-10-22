@@ -1,6 +1,5 @@
 package com.dat.ai_receptionist_web.dto.Catalog;
 
-import com.dat.ai_receptionist_web.enums.Catalog.FulfillmentMode;
 import com.dat.ai_receptionist_web.enums.Catalog.SessionType;
 import com.dat.ai_receptionist_web.enums.Core.ScheduleLevel;
 
@@ -16,8 +15,7 @@ public final class TrainingPlanRegistrationDTO {
 
     public record CourseOption(UUID courseId, String name, Integer capacity) {}
     public record Requirement(UUID requirementId, SessionType sessionType,
-                              FulfillmentMode fulfillmentMode, int sessionsPerWeek,
-                              boolean homeCourseOnly) {}
+                              int sessionsPerWeek) {}
     public record CatalogItem(UUID trainingPlanId, String name, ScheduleLevel level,
                               int durationMonths, int includedSessionCount,
                               BigDecimal basePrice, BigDecimal finalPrice,
@@ -27,12 +25,11 @@ public final class TrainingPlanRegistrationDTO {
                                  LocalTime startTime, LocalTime endTime,
                                  SessionType sessionType) {}
     public record RecurringRequirement(UUID requirementId, String label, SessionType sessionType,
-                                       int sessionsPerWeek, boolean homeCourseOnly,
+                                       int sessionsPerWeek,
                                        List<ScheduleOption> options) {}
     public record FlexRequirement(UUID requirementId, SessionType sessionType,
                                   int sessionsPerWeek, String description) {}
     public record RegistrationOptions(UUID trainingPlanId, UUID homeCourseId,
                                       LocalDate startDate, LocalDate endDate,
-                                      List<RecurringRequirement> recurringRequirements,
-                                      List<FlexRequirement> flexRequirements) {}
+                                      List<RecurringRequirement> recurringRequirements) {}
 }

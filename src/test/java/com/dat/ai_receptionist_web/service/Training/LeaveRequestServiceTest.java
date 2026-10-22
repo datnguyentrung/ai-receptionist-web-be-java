@@ -22,7 +22,6 @@ import com.dat.ai_receptionist_web.repository.Training.LeaveRequestRepository;
 import com.dat.ai_receptionist_web.repository.Training.SessionAttendanceRepository;
 import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentRepository;
 import com.dat.ai_receptionist_web.repository.Training.StudentSessionBookingRepository;
-import com.dat.ai_receptionist_web.repository.Training.EnrollmentUsageEntryRepository;
 import com.dat.ai_receptionist_web.repository.Catalog.TrainingPlanAccessRuleRepository;
 import com.dat.ai_receptionist_web.service.Security.access.CurrentAccessContextResolver;
 import com.dat.ai_receptionist_web.service.Security.access.AccessContext;
@@ -69,7 +68,7 @@ class LeaveRequestServiceTest {
         service = new LeaveRequestService(
                 repository, mock(LeaveRequestMapper.class), personRepository, userRepository,
                 classSessionRepository, enrollmentRepository, attendanceRepository,
-                mock(StudentSessionBookingRepository.class), mock(EnrollmentUsageEntryRepository.class),
+                mock(StudentSessionBookingRepository.class),
                 mock(TrainingPlanAccessRuleRepository.class), accessContextResolver);
 
         userId = UUID.randomUUID();

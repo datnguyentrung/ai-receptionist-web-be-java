@@ -1,7 +1,6 @@
 package com.dat.ai_receptionist_web.repository;
 
 import com.dat.ai_receptionist_web.repository.Catalog.ClassScheduleRepository;
-import com.dat.ai_receptionist_web.repository.Catalog.CoursePriceRepository;
 import com.dat.ai_receptionist_web.repository.Core.UserPersonRepository;
 import com.dat.ai_receptionist_web.repository.Finance.CoursePurchaseRepository;
 import com.dat.ai_receptionist_web.repository.Finance.WalletRepository;
@@ -25,11 +24,6 @@ class ListFetchGraphContractTest {
                 "join fetch up.person");
         assertDetailedListQuery(ClassScheduleRepository.class,
                 "join fetch cs.branch");
-        assertDetailedListQuery(CoursePriceRepository.class,
-                "join fetch cp.course",
-                "left join fetch course.courseSchedules courseSchedule",
-                "left join fetch courseSchedule.classSchedule classSchedule",
-                "join fetch classSchedule.branch");
         assertDetailedListQuery(WalletRepository.class,
                 "join fetch w.person");
         assertDetailedListQuery(WalletTransactionRepository.class,
@@ -39,11 +33,8 @@ class ListFetchGraphContractTest {
                 "left join fetch tx.reviewedByUser");
         assertDetailedListQuery(CoursePurchaseRepository.class,
                 "join fetch purchase.studentPerson",
-                "join fetch purchase.coursePrice",
-                "join fetch coursePrice.course",
-                "left join fetch course.courseSchedules courseSchedule",
-                "left join fetch courseSchedule.classSchedule classSchedule",
-                "join fetch classSchedule.branch",
+                "join fetch purchase.trainingPlan",
+                "join fetch purchase.homeCourse",
                 "join fetch purchase.debitTransaction");
         assertDetailedListQuery(FitnessRecordRepository.class,
                 "join fetch fr.student",

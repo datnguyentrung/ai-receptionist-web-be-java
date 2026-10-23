@@ -128,4 +128,20 @@ class SchemaMigrationContractTest {
                 .contains("DROP CONSTRAINT IF EXISTS ck_person_code_prefix")
                 .contains("CHECK (person_code LIKE 'VQ\\_%')");
     }
+
+    @Test
+    void v26RetiresCoursePriceOnlyAfterEveryPurchaseHasItsTrainingPlan() throws Exception {
+        String sql = Files.readString(Path.of(
+                "src/main/resources/db/migration/V26__retire_legacy_course_price.sql"));
+
+        assertThat(sql)
+                .contains("training_plan_id IS NULL OR home_course_id IS NULL")
+                .contains("RAISE EXCEPTION")
+                .contains("SET type = 'TRAINING_PLAN_PURCHASE'")
+                .contains("ALTER COLUMN training_plan_id SET NOT NULL")
+                .contains("ALTER COLUMN home_course_id SET NOT NULL")
+                .contains("DROP COLUMN course_price_id")
+                .contains("DROP COLUMN legacy_course_price_id")
+                .contains("DROP TABLE catalog.course_price");
+    }
 }

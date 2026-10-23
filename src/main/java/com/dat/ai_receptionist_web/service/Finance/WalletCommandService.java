@@ -37,7 +37,6 @@ public class WalletCommandService {
     private final WalletRepository walletRepository;
     private final WalletTransactionRepository transactionRepository;
     private final CoursePurchaseRepository purchaseRepository;
-    private final CoursePriceRepository coursePriceRepository;
     private final TrainingPlanRepository trainingPlanRepository;
     private final TrainingPlanRequirementRepository trainingPlanRequirementRepository;
     private final TrainingPlanAccessRuleRepository trainingPlanAccessRuleRepository;
@@ -76,68 +75,6 @@ public class WalletCommandService {
         wallet.setBalance(after);
         transactionRepository.save(transaction);
         return walletCommandMapper.toTransactionResponse(transaction, null, null);
-    }
-
-    /**
-     * Tác dụng: Thực hiện logic purchaseCourse của lớp hiện tại.
-     * Input: Nhận WalletCommandDTO.CoursePurchaseRequest request, UUID actorUserId từ caller hoặc request.
-     * Output: Trả về WalletCommandDTO.TransactionResponse theo kết quả xử lý.
-     */
-    @Transactional
-    public WalletCommandDTO.TransactionResponse purchaseCourse(
-            WalletCommandDTO.CoursePurchaseRequest request, UUID actorUserId) {
-        Wallet wallet = lockWalletByPerson(request.studentPersonId());
-        WalletTransaction existing = transactionRepository
-                .findByTypeAndExternalReference(WalletTransactionType.COURSE_PURCHASE,
-                        request.externalReference()).orElse(null);
-        if (existing != null) {
-            ExistingCoursePurchase duplicate = existingCoursePurchase(existing, wallet, request);
-            return walletCommandMapper.toTransactionResponse(
-                    duplicate.transaction(), duplicate.purchase(), duplicate.enrollment());
-        }
-        personCodePolicy.requireStudent(wallet.getPerson());
-        requireActive(wallet);
-        CoursePrice price = coursePriceRepository.findForPurchase(request.coursePriceId())
-                .orElseThrow(() -> failure(CatalogErrorCode.COURSE_PRICE_NOT_FOUND));
-        Course course = courseRepository.findByIdForUpdate(price.getCourse().getCourseId())
-                .orElseThrow(() -> failure(CatalogErrorCode.COURSE_NOT_FOUND));
-        if (price.getStatus() != CoursePriceStatus.ACTIVE || course.getStatus() != CourseStatus.ACTIVE) {
-            throw failure(FinanceErrorCode.COURSE_NOT_AVAILABLE);
-        }
-        BigDecimal amount = money(price.getFinalPrice());
-        if (wallet.getBalance().compareTo(amount) < 0) {
-            throw failure(FinanceErrorCode.INSUFFICIENT_BALANCE);
-        }
-        long enrollmentCount = enrollmentRepository
-                .countByCoursePurchase_CoursePrice_Course_CourseId(course.getCourseId());
-        if (enrollmentCount >= course.getCapacity()) {
-            throw failure(FinanceErrorCode.COURSE_CAPACITY_EXCEEDED);
-        }
-
-        User actor = user(actorUserId);
-        BigDecimal before = wallet.getBalance();
-        BigDecimal after = before.subtract(amount);
-        WalletTransaction transaction = transactionRepository.save(approvedTransaction(
-                wallet, WalletTransactionType.COURSE_PURCHASE, WalletTransactionDirection.DEBIT,
-                amount, before, after, request.externalReference(), actor, request.note()));
-        CoursePurchase purchase = purchaseRepository.save(CoursePurchase.builder()
-                .studentPerson(wallet.getPerson())
-                .coursePrice(price)
-                .debitTransaction(transaction)
-                .build());
-        LocalDate start = LocalDate.now();
-        LocalDate end = start.plusMonths(price.getDurationMonths());
-        StudentEnrollment enrollment = StudentEnrollment.builder()
-                .studentPerson(wallet.getPerson())
-                .coursePurchase(purchase)
-                .startDate(start)
-                .endDate(end)
-                .status(StudentEnrollmentStatus.ACTIVE)
-                .build();
-        enrollment.replaceSchedules(resolvePurchaseSchedules(course, request.courseScheduleIds(), start, end));
-        enrollment = enrollmentRepository.save(enrollment);
-        wallet.setBalance(after);
-        return walletCommandMapper.toTransactionResponse(transaction, purchase, enrollment);
     }
 
     @Transactional
@@ -238,26 +175,6 @@ public class WalletCommandService {
         return result;
     }
 
-    private LinkedHashSet<StudentEnrollmentSchedule> resolvePurchaseSchedules(
-            Course course, java.util.List<UUID> ids, LocalDate start, LocalDate end) {
-        if (ids == null || ids.isEmpty()) {
-            throw failure(CatalogErrorCode.COURSE_SCHEDULE_CHANGE_CONFLICT);
-        }
-        LinkedHashSet<StudentEnrollmentSchedule> result = new LinkedHashSet<>();
-        for (UUID id : new LinkedHashSet<>(ids)) {
-            CourseSchedule schedule = courseScheduleRepository.findById(id)
-                    .orElseThrow(() -> failure(CatalogErrorCode.CLASS_SCHEDULE_NOT_FOUND));
-            if (!schedule.getCourse().getCourseId().equals(course.getCourseId())
-                    || schedule.getStatus() != ScheduleStatus.ACTIVE
-                    || schedule.getStartDate().isAfter(end)
-                    || (schedule.getEndDate() != null && schedule.getEndDate().isBefore(start))) {
-                throw failure(CatalogErrorCode.COURSE_SCHEDULE_CHANGE_CONFLICT);
-            }
-            result.add(StudentEnrollmentSchedule.builder().courseSchedule(schedule).build());
-        }
-        return result;
-    }
-
     /**
      * Tác dụng: Thực hiện logic refund của lớp hiện tại.
      * Input: Nhận WalletCommandDTO.RefundRequest request, UUID actorUserId từ caller hoặc request.
@@ -296,35 +213,12 @@ public class WalletCommandService {
     }
 
     /**
-     * Tác dụng: Thực hiện logic existingCoursePurchase của lớp hiện tại.
-     * Input: Nhận WalletTransaction existing, Wallet wallet, WalletCommandDTO.CoursePurchaseRequest request từ caller hoặc request.
-     * Output: Trả về WalletCommandDTO.TransactionResponse theo kết quả xử lý.
-     */
-    private ExistingCoursePurchase existingCoursePurchase(
-            WalletTransaction existing, Wallet wallet, WalletCommandDTO.CoursePurchaseRequest request) {
-        CoursePurchase purchase = purchaseRepository
-                .findByDebitTransaction_WalletTransactionId(existing.getWalletTransactionId())
-                .orElseThrow(() -> failure(FinanceErrorCode.LEDGER_INVARIANT_VIOLATION,
-                        "Purchase record is missing"));
-        if (!existing.getWallet().getWalletId().equals(wallet.getWalletId())
-                || !purchase.getStudentPerson().getPersonId().equals(request.studentPersonId())
-                || !purchase.getCoursePrice().getCoursePriceId().equals(request.coursePriceId())) {
-            throw failure(FinanceErrorCode.IDEMPOTENCY_CONFLICT);
-        }
-        StudentEnrollment enrollment = enrollmentRepository
-                .findByCoursePurchase_CoursePurchaseId(purchase.getCoursePurchaseId())
-                .orElseThrow(() -> failure(FinanceErrorCode.LEDGER_INVARIANT_VIOLATION,
-                        "Enrollment record is missing"));
-        return new ExistingCoursePurchase(existing, purchase, enrollment);
-    }
-
-    /**
      * Tác dụng: Thu hồi phiên hoặc quyền truy cập theo điều kiện đầu vào.
      * Input: Nhận WalletTransaction original từ caller hoặc request.
      * Output: Không trả về dữ liệu; cập nhật trạng thái hoặc ném lỗi khi xử lý thất bại.
      */
     private void revokeCourseEntitlement(WalletTransaction original) {
-        if (original.getType() != WalletTransactionType.COURSE_PURCHASE) {
+        if (original.getType() != WalletTransactionType.TRAINING_PLAN_PURCHASE) {
             return;
         }
         CoursePurchase purchase = purchaseRepository
@@ -424,13 +318,6 @@ public class WalletCommandService {
 
     private ApiException failure(ErrorCode errorCode, String safeDetail) {
         return new ApiException(errorCode, safeDetail);
-    }
-
-    private record ExistingCoursePurchase(
-            WalletTransaction transaction,
-            CoursePurchase purchase,
-            StudentEnrollment enrollment
-    ) {
     }
 }
 

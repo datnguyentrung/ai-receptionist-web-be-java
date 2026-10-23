@@ -34,5 +34,5 @@ public interface PermissionRepository extends JpaRepository<Permission, Integer>
         DELETE FROM Permission p
         WHERE p.code IN :codes
     """)
-    int deleteByCodes(Set<String> obsoleteCodes);
+    int deleteByCodes(@Param("codes") Set<String> obsoleteCodes);
 }

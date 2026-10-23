@@ -56,7 +56,7 @@ public class SessionAttendanceAccessPolicy {
     private void requireCourseAndEnrollmentEffective(ClassSession session, StudentEnrollment enrollment) {
         UUIDs.requireEqual(
                 session.getCourse().getCourseId(),
-                enrollment.getCoursePurchase().getCoursePrice().getCourse().getCourseId(),
+                enrollment.getCoursePurchase().getHomeCourse().getCourseId(),
                 TrainingErrorCode.STUDENT_ENROLLMENT_NOT_EFFECTIVE
         );
         LocalDate sessionDate = session.getSessionDate();

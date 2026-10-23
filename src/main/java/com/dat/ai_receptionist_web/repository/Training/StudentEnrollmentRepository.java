@@ -22,14 +22,14 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
         where e.studentEnrollmentId = :id
     """)
     Optional<StudentEnrollment> findDetailedByIdForUpdate(@Param("id") UUID id);
-    long countByCoursePurchase_CoursePrice_Course_CourseId(UUID courseId);
+    long countByCoursePurchase_HomeCourse_CourseId(UUID courseId);
 
     @Query("""
         select count(e)
         from StudentEnrollment e
         join e.coursePurchase p
-        join p.coursePrice pr
-        where pr.course.courseId = :courseId
+        join p.homeCourse course
+        where course.courseId = :courseId
           and e.status = com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus.ACTIVE
           and e.startDate <= :currentDate
           and e.endDate >= :currentDate
@@ -40,15 +40,15 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
     );
 
     @Query("""
-        select pr.course.courseId as courseId, count(e) as studentCount
+        select course.courseId as courseId, count(e) as studentCount
         from StudentEnrollment e
         join e.coursePurchase p
-        join p.coursePrice pr
-        where pr.course.courseId in :courseIds
+        join p.homeCourse course
+        where course.courseId in :courseIds
           and e.status = com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus.ACTIVE
           and e.startDate <= :currentDate
           and e.endDate >= :currentDate
-        group by pr.course.courseId
+        group by course.courseId
     """)
     List<CourseStudentCount> countCurrentStudentsByCourseIds(
             @Param("courseIds") List<UUID> courseIds,
@@ -67,9 +67,9 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
         select e
         from StudentEnrollment e
         join e.coursePurchase p
-        join p.coursePrice pr
+        join p.homeCourse course
         where e.studentPerson.personId = :personId
-          and pr.course.courseId = :courseId
+          and course.courseId = :courseId
           and e.status = com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus.ACTIVE
           and e.startDate <= :sessionDate
           and e.endDate >= :sessionDate
@@ -84,8 +84,8 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
         select e
         from StudentEnrollment e
         join e.coursePurchase p
-        join p.coursePrice pr
-        where pr.course.courseId = :courseId
+        join p.homeCourse course
+        where course.courseId = :courseId
           and e.status = com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus.ACTIVE
           and e.startDate <= :sessionDate
           and e.endDate >= :sessionDate
@@ -99,13 +99,13 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
         select e
         from StudentEnrollment e
         left join fetch e.coursePurchase p
-        join fetch p.coursePrice pr
-        join fetch pr.course
+        join fetch p.trainingPlan
+        join fetch p.homeCourse course
         left join fetch e.studentPerson enrollmentStudent
         left join fetch enrollmentStudent.position
         where e.startDate <= :toDate
           and e.endDate >= :fromDate
-          and (:courseId is null or pr.course.courseId = :courseId)
+          and (:courseId is null or course.courseId = :courseId)
           and (:studentPersonId is null or e.studentPerson.personId = :studentPersonId)
           and (:status is null or e.status = :status)
           and (:search = ''
@@ -131,7 +131,7 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
                       select 1
                       from CourseStaffAssignment csa
                       where csa.staffPerson.personId = :activePersonId
-                        and csa.courseSchedule.course.courseId = pr.course.courseId
+                        and csa.courseSchedule.course.courseId = course.courseId
                         and csa.startDate <= :toDate
                         and (csa.endDate is null or csa.endDate >= :fromDate)
                         and csa.assignmentStatus in (com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ACTIVE, com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ENDED)
@@ -159,8 +159,8 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
         select e
         from StudentEnrollment e
         left join fetch e.coursePurchase p
-        join fetch p.coursePrice pr
-        join fetch pr.course
+        join fetch p.trainingPlan
+        join fetch p.homeCourse course
         left join fetch e.studentPerson enrollmentStudent
         left join fetch enrollmentStudent.position
         left join fetch e.schedules enrollmentScheduleLink
@@ -188,7 +188,7 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
                       select 1
                       from CourseStaffAssignment csa
                       where csa.staffPerson.personId = :activePersonId
-                        and csa.courseSchedule.course.courseId = pr.course.courseId
+                        and csa.courseSchedule.course.courseId = course.courseId
                         and csa.startDate <= e.endDate
                         and (csa.endDate is null or csa.endDate >= e.startDate)
                         and csa.assignmentStatus in (com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ACTIVE, com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ENDED)

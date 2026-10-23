@@ -107,7 +107,7 @@ public class StudentEnrollmentService {
         personCodePolicy.requireStudent(studentPerson);
         var purchase = coursePurchaseRepository.findById(request.coursePurchaseId())
                 .orElseThrow(() -> new ApiException(FinanceErrorCode.COURSE_PURCHASE_NOT_FOUND));
-        UUID courseId = purchase.getCoursePrice().getCourse().getCourseId();
+        UUID courseId = purchase.getHomeCourse().getCourseId();
         accessPolicy.requireCanManageCoursePeriod(context, courseId, request.startDate(), request.endDate());
 
         var entity = new com.dat.ai_receptionist_web.domain.Training.StudentEnrollment();
@@ -129,7 +129,7 @@ public class StudentEnrollmentService {
         personCodePolicy.requireStudent(studentPerson);
         var purchase = coursePurchaseRepository.findById(request.coursePurchaseId())
                 .orElseThrow(() -> new ApiException(FinanceErrorCode.COURSE_PURCHASE_NOT_FOUND));
-        UUID courseId = purchase.getCoursePrice().getCourse().getCourseId();
+        UUID courseId = purchase.getHomeCourse().getCourseId();
         accessPolicy.requireCanManageCoursePeriod(context, courseId, request.startDate(), request.endDate());
 
         entity.setStudentPerson(studentPerson);

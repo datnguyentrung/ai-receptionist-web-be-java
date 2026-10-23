@@ -151,7 +151,7 @@ public class StudentEnrollmentScheduleService {
         CourseSchedule schedule = courseScheduleRepository.findDetailedByIds(List.of(scheduleId)).stream()
                 .findFirst()
                 .orElseThrow(() -> new ApiException(CatalogErrorCode.COURSE_SCHEDULE_NOT_FOUND));
-        UUID enrollmentCourseId = enrollment.getCoursePurchase().getCoursePrice().getCourse().getCourseId();
+        UUID enrollmentCourseId = enrollment.getCoursePurchase().getHomeCourse().getCourseId();
         if (!schedule.getCourse().getCourseId().equals(enrollmentCourseId)
                 || schedule.getStartDate().isAfter(enrollment.getEndDate())
                 || (schedule.getEndDate() != null && schedule.getEndDate().isBefore(enrollment.getStartDate()))) {

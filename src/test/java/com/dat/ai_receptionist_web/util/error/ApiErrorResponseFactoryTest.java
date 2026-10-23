@@ -51,7 +51,7 @@ class ApiErrorResponseFactoryTest {
         @Test
         void apiExceptionProblemDetailContainsContractFields() {
                 MDC.put(ApiErrorResponseFactory.CORRELATION_ID_MDC_KEY, "cid-1");
-                MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/course-prices");
+                MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/training-plan-purchases");
 
                 ProblemDetail body = factory.response(new ApiException(CatalogErrorCode.COURSE_NOT_FOUND), request)
                                 .getBody();
@@ -61,7 +61,7 @@ class ApiErrorResponseFactoryTest {
                 assertThat(body.getTitle()).isEqualTo("Course not found");
                 assertThat(body.getStatus()).isEqualTo(404);
                 assertThat(body.getDetail()).isEqualTo(CatalogErrorCode.COURSE_NOT_FOUND.defaultDetail());
-                assertThat(body.getInstance().toString()).isEqualTo("/api/v1/course-prices");
+                assertThat(body.getInstance().toString()).isEqualTo("/api/v1/training-plan-purchases");
                 assertThat(body.getProperties()).containsEntry("code", "COURSE_NOT_FOUND")
                                 .containsEntry("correlationId", "cid-1");
         }

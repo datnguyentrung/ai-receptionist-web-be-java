@@ -24,7 +24,6 @@ public class SystemRolePermissionSynchronizer implements ApplicationRunner {
             PermissionDefinition.CLASS_SESSION_READ.getCode(),
             PermissionDefinition.CLASS_SCHEDULE_READ.getCode(),
             PermissionDefinition.COURSE_READ.getCode(),
-            PermissionDefinition.COURSE_PRICE_READ.getCode(),
             PermissionDefinition.BELT_EXAM_READ.getCode(),
             PermissionDefinition.FITNESS_READ.getCode(),
             PermissionDefinition.FITNESS_RECORD_READ.getCode(),

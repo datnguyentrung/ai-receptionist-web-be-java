@@ -246,11 +246,11 @@ class TrainingPolicyRepositoryContractTest {
                         "from StudentEnrollment e",
                         "join e.studentPerson sp",
                         "join e.coursePurchase p",
-                        "join p.coursePrice price",
+                        "join p.homeCourse course",
                         "left join SessionAttendance a",
                         "a.classSession.classSessionId = :classSessionId",
                         "a.studentEnrollment.studentEnrollmentId = e.studentEnrollmentId",
-                        "price.course.courseId = :courseId",
+                        "course.courseId = :courseId",
                         "StudentEnrollmentStatus.ACTIVE",
                         "order by lower(sp.fullName) asc, e.studentEnrollmentId asc"
                 )

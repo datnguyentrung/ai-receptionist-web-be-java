@@ -63,11 +63,11 @@ public interface SessionAttendanceRepository extends
         from StudentEnrollment e
         join e.studentPerson sp
         join e.coursePurchase p
-        join p.coursePrice price
+        join p.homeCourse course
         left join SessionAttendance a
           on a.classSession.classSessionId = :classSessionId
          and a.studentEnrollment.studentEnrollmentId = e.studentEnrollmentId
-        where price.course.courseId = :courseId
+        where course.courseId = :courseId
           and e.status = com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus.ACTIVE
           and e.startDate <= :sessionDate
           and e.endDate >= :sessionDate

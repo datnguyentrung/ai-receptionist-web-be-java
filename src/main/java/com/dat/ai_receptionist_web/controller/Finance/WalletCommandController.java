@@ -29,18 +29,6 @@ public class WalletCommandController {
         return commandService.topUp(request, currentUserId());
     }
 
-    /**
-     * Tác dụng: Thực hiện logic purchase của lớp hiện tại.
-     * Input: Nhận WalletCommandDTO.CoursePurchaseRequest request từ caller hoặc request.
-     * Output: Trả về WalletCommandDTO.TransactionResponse theo kết quả xử lý.
-     */
-    @PostMapping("/course-purchases")
-    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).COURSE_PURCHASE_CREATE.getCode())")
-    public WalletCommandDTO.TransactionResponse purchase(
-            @Valid @RequestBody WalletCommandDTO.CoursePurchaseRequest request) {
-        return commandService.purchaseCourse(request, currentUserId());
-    }
-
     @PostMapping("/training-plan-purchases")
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).COURSE_PURCHASE_CREATE.getCode())")
     public WalletCommandDTO.TransactionResponse purchaseTrainingPlan(

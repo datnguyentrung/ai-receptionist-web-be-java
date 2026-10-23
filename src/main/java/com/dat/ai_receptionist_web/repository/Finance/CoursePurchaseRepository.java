@@ -13,11 +13,8 @@ public interface CoursePurchaseRepository extends JpaRepository<CoursePurchase, 
             select purchase
             from CoursePurchase purchase
             join fetch purchase.studentPerson
-            join fetch purchase.coursePrice coursePrice
-            join fetch coursePrice.course course
-            left join fetch course.courseSchedules courseSchedule
-            left join fetch courseSchedule.classSchedule classSchedule
-            join fetch classSchedule.branch
+            join fetch purchase.trainingPlan
+            join fetch purchase.homeCourse
             join fetch purchase.debitTransaction
             """,
             countQuery = """
@@ -27,6 +24,4 @@ public interface CoursePurchaseRepository extends JpaRepository<CoursePurchase, 
     Page<CoursePurchase> findAllDetailed(Pageable pageable);
 
     Optional<CoursePurchase> findByDebitTransaction_WalletTransactionId(UUID transactionId);
-
-    boolean existsByCoursePrice_CoursePriceId(UUID coursePriceId);
 }

@@ -4,13 +4,13 @@ import com.dat.ai_receptionist_web.domain.Finance.CoursePurchase;
 import com.dat.ai_receptionist_web.dto.Finance.CoursePurchaseDTO;
 import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.error.ApiException;
-import com.dat.ai_receptionist_web.error.code.CatalogErrorCode;
 import com.dat.ai_receptionist_web.error.code.CoreErrorCode;
 import com.dat.ai_receptionist_web.error.code.FinanceErrorCode;
 import com.dat.ai_receptionist_web.mapper.Finance.CoursePurchaseMapper;
 import com.dat.ai_receptionist_web.repository.Finance.CoursePurchaseRepository;
 import com.dat.ai_receptionist_web.repository.Core.PersonRepository;
-import com.dat.ai_receptionist_web.repository.Catalog.CoursePriceRepository;
+import com.dat.ai_receptionist_web.repository.Catalog.CourseRepository;
+import com.dat.ai_receptionist_web.repository.Catalog.TrainingPlanRepository;
 import com.dat.ai_receptionist_web.repository.Finance.WalletTransactionRepository;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +24,8 @@ public class CoursePurchaseService {
     private final CoursePurchaseRepository repository;
     private final CoursePurchaseMapper mapper;
     private final PersonRepository personRepository;
-    private final CoursePriceRepository coursePriceRepository;
+    private final TrainingPlanRepository trainingPlanRepository;
+    private final CourseRepository courseRepository;
     private final WalletTransactionRepository walletTransactionRepository;
 
     /**
@@ -56,7 +57,8 @@ public class CoursePurchaseService {
     public CoursePurchaseDTO.Response create(CoursePurchaseDTO.CreateRequest request) {
         CoursePurchase entity = new CoursePurchase();
         entity.setStudentPerson(personRepository.findById(request.studentPersonId()).orElseThrow(() -> new ApiException(CoreErrorCode.PERSON_NOT_FOUND)));
-        entity.setCoursePrice(coursePriceRepository.findById(request.coursePriceId()).orElseThrow(() -> new ApiException(CatalogErrorCode.COURSE_PRICE_NOT_FOUND)));
+        entity.setTrainingPlan(trainingPlanRepository.findById(request.trainingPlanId()).orElseThrow(() -> new ApiException(com.dat.ai_receptionist_web.error.code.CatalogErrorCode.TRAINING_PLAN_NOT_FOUND)));
+        entity.setHomeCourse(courseRepository.findById(request.homeCourseId()).orElseThrow(() -> new ApiException(com.dat.ai_receptionist_web.error.code.CatalogErrorCode.COURSE_NOT_FOUND)));
         entity.setDebitTransaction(walletTransactionRepository.findById(request.debitTransactionId()).orElseThrow(() -> new ApiException(FinanceErrorCode.WALLET_TRANSACTION_NOT_FOUND)));
         return mapper.toResponse(repository.save(entity));
     }
@@ -70,7 +72,8 @@ public class CoursePurchaseService {
     public CoursePurchaseDTO.Response update(UUID id, CoursePurchaseDTO.UpdateRequest request) {
         var entity = find(id);
         entity.setStudentPerson(personRepository.findById(request.studentPersonId()).orElseThrow(() -> new ApiException(CoreErrorCode.PERSON_NOT_FOUND)));
-        entity.setCoursePrice(coursePriceRepository.findById(request.coursePriceId()).orElseThrow(() -> new ApiException(CatalogErrorCode.COURSE_PRICE_NOT_FOUND)));
+        entity.setTrainingPlan(trainingPlanRepository.findById(request.trainingPlanId()).orElseThrow(() -> new ApiException(com.dat.ai_receptionist_web.error.code.CatalogErrorCode.TRAINING_PLAN_NOT_FOUND)));
+        entity.setHomeCourse(courseRepository.findById(request.homeCourseId()).orElseThrow(() -> new ApiException(com.dat.ai_receptionist_web.error.code.CatalogErrorCode.COURSE_NOT_FOUND)));
         entity.setDebitTransaction(walletTransactionRepository.findById(request.debitTransactionId()).orElseThrow(() -> new ApiException(FinanceErrorCode.WALLET_TRANSACTION_NOT_FOUND)));
         mapper.updateEntity(request, entity);
         return mapper.toResponse(repository.save(entity));

@@ -8,6 +8,8 @@ import org.springframework.http.HttpStatus;
 public enum FinanceErrorCode implements ErrorCode {
     COURSE_PURCHASE_NOT_FOUND("COURSE_PURCHASE_NOT_FOUND", HttpStatus.NOT_FOUND, "Course purchase not found",
             "Course purchase not found"),
+    ENROLLMENT_ADDON_PURCHASE_NOT_FOUND("ENROLLMENT_ADDON_PURCHASE_NOT_FOUND", HttpStatus.NOT_FOUND, "Enrollment addon purchase not found",
+            "Enrollment addon purchase not found"),
     WALLET_NOT_FOUND("WALLET_NOT_FOUND", HttpStatus.NOT_FOUND, "Wallet not found", "Wallet not found"),
     WALLET_TRANSACTION_NOT_FOUND("WALLET_TRANSACTION_NOT_FOUND", HttpStatus.NOT_FOUND,
             "Wallet transaction not found", "Wallet transaction not found"),

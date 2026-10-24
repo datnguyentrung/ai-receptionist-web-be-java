@@ -9,15 +9,31 @@ import org.springframework.data.repository.query.Param;
 import jakarta.persistence.LockModeType;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface StudentSessionBookingRepository extends JpaRepository<StudentSessionBooking, UUID> {
+    boolean existsByRequirement_TrainingPlanRequirementId(UUID requirementId);
     long countByClassSession_ClassSessionIdAndStatusNot(UUID classSessionId, BookingStatus status);
     Optional<StudentSessionBooking> findByStudentSessionBookingIdAndEnrollment_StudentEnrollmentId(UUID bookingId, UUID enrollmentId);
     boolean existsByEnrollment_StudentEnrollmentIdAndClassSession_ClassSessionId(UUID enrollmentId, UUID classSessionId);
     List<StudentSessionBooking> findByClassSession_ClassSessionIdAndStatus(UUID classSessionId, BookingStatus status);
+
+    @Query("""
+        select b.enrollment.studentEnrollmentId as enrollmentId,
+               b.classSession.classSessionId as classSessionId
+        from StudentSessionBooking b
+        where b.classSession.classSessionId in :classSessionIds
+    """)
+    List<EnrollmentSessionPair> findEnrollmentSessionPairsByClassSessionIds(
+            @Param("classSessionIds") Collection<UUID> classSessionIds);
+
+    interface EnrollmentSessionPair {
+        UUID getEnrollmentId();
+        UUID getClassSessionId();
+    }
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select b from StudentSessionBooking b join fetch b.enrollment e join fetch e.coursePurchase p where b.studentSessionBookingId = :id")

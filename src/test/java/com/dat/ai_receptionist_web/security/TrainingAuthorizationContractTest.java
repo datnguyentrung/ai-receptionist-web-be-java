@@ -5,6 +5,11 @@ import com.dat.ai_receptionist_web.controller.Training.CoachTimesheetController;
 import com.dat.ai_receptionist_web.controller.Training.CourseStaffAssignmentController;
 import com.dat.ai_receptionist_web.controller.Training.SessionAttendanceController;
 import com.dat.ai_receptionist_web.controller.Training.StudentEnrollmentController;
+import com.dat.ai_receptionist_web.controller.Catalog.TrainingPlanController;
+import com.dat.ai_receptionist_web.controller.Catalog.TrainingPlanRequirementController;
+import com.dat.ai_receptionist_web.controller.Catalog.TrainingPlanAccessRuleController;
+import com.dat.ai_receptionist_web.controller.Catalog.TrainingPlanAddonController;
+import com.dat.ai_receptionist_web.controller.Finance.EnrollmentAddonPurchaseController;
 import com.dat.ai_receptionist_web.dto.Training.ClassSessionDTO;
 import com.dat.ai_receptionist_web.dto.Training.CoachTimesheetDTO;
 import com.dat.ai_receptionist_web.dto.Training.CourseStaffAssignmentDTO;
@@ -143,6 +148,23 @@ class TrainingAuthorizationContractTest {
                 UUID.class,
                 Pageable.class
         );
+    }
+
+    @Test
+    void trainingPlanManagementEndpointsUseDedicatedPermissions() {
+        assertControllerUsesPermission(TrainingPlanController.class, PermissionDefinition.TRAINING_PLAN_READ);
+        assertControllerUsesPermission(TrainingPlanRequirementController.class, PermissionDefinition.TRAINING_PLAN_REQUIREMENT_READ);
+        assertControllerUsesPermission(TrainingPlanAccessRuleController.class, PermissionDefinition.TRAINING_PLAN_ACCESS_RULE_READ);
+        assertControllerUsesPermission(TrainingPlanAddonController.class, PermissionDefinition.TRAINING_PLAN_ADDON_READ);
+        assertControllerUsesPermission(EnrollmentAddonPurchaseController.class, PermissionDefinition.ENROLLMENT_ADDON_PURCHASE_READ);
+    }
+
+    private void assertControllerUsesPermission(Class<?> controller, PermissionDefinition permission) {
+        assertThat(java.util.Arrays.stream(controller.getDeclaredMethods())
+                .map(method -> method.getAnnotation(PreAuthorize.class))
+                .filter(java.util.Objects::nonNull)
+                .anyMatch(annotation -> annotation.value().contains(permission.name())))
+                .isTrue();
     }
 
     private void assertPermission(

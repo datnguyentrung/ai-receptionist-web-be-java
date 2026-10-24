@@ -153,9 +153,7 @@ class SessionAttendanceAccessPolicyTest {
                 .build();
         StudentEnrollment enrollment = StudentEnrollment.builder()
                 .studentPerson(Person.builder().personId(UUID.randomUUID()).personCode("VQ_001").build())
-                .coursePurchase(CoursePurchase.builder()
-                        .homeCourse(course)
-                        .build())
+                .coursePurchase(CoursePurchase.builder().build())
                 .startDate(startDate)
                 .endDate(endDate)
                 .status(StudentEnrollmentStatus.ACTIVE)
@@ -164,6 +162,7 @@ class SessionAttendanceAccessPolicyTest {
         enrollment.getSchedules().add(StudentEnrollmentSchedule.builder()
                 .studentEnrollment(enrollment)
                 .courseSchedule(schedule)
+                .effectiveFrom(startDate)
                 .build());
         return enrollment;
     }

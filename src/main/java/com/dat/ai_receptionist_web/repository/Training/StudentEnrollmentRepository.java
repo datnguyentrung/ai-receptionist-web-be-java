@@ -18,21 +18,28 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
         select e from StudentEnrollment e
         join fetch e.coursePurchase p
         left join fetch p.trainingPlan
-        left join fetch p.homeCourse
         where e.studentEnrollmentId = :id
     """)
     Optional<StudentEnrollment> findDetailedByIdForUpdate(@Param("id") UUID id);
-    long countByCoursePurchase_HomeCourse_CourseId(UUID courseId);
+    @Query("""
+        select count(distinct e) from StudentEnrollment e
+        join e.schedules link
+        where link.courseSchedule.course.courseId = :courseId
+    """)
+    long countByCourseScheduleCourseId(@Param("courseId") UUID courseId);
 
     @Query("""
-        select count(e)
+        select count(distinct e)
         from StudentEnrollment e
-        join e.coursePurchase p
-        join p.homeCourse course
+        join e.schedules link
+        join link.courseSchedule courseSchedule
+        join courseSchedule.course course
         where course.courseId = :courseId
           and e.status = com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus.ACTIVE
           and e.startDate <= :currentDate
           and e.endDate >= :currentDate
+          and (link.effectiveFrom is null or link.effectiveFrom <= :currentDate)
+          and (link.effectiveTo is null or link.effectiveTo >= :currentDate)
     """)
     long countCurrentStudentsByCourseId(
             @Param("courseId") UUID courseId,
@@ -40,14 +47,17 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
     );
 
     @Query("""
-        select course.courseId as courseId, count(e) as studentCount
+        select course.courseId as courseId, count(distinct e) as studentCount
         from StudentEnrollment e
-        join e.coursePurchase p
-        join p.homeCourse course
+        join e.schedules link
+        join link.courseSchedule courseSchedule
+        join courseSchedule.course course
         where course.courseId in :courseIds
           and e.status = com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus.ACTIVE
           and e.startDate <= :currentDate
           and e.endDate >= :currentDate
+          and (link.effectiveFrom is null or link.effectiveFrom <= :currentDate)
+          and (link.effectiveTo is null or link.effectiveTo >= :currentDate)
         group by course.courseId
     """)
     List<CourseStudentCount> countCurrentStudentsByCourseIds(
@@ -64,15 +74,18 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
     Optional<StudentEnrollment> findByCoursePurchase_CoursePurchaseId(UUID coursePurchaseId);
 
     @Query("""
-        select e
+        select distinct e
         from StudentEnrollment e
-        join e.coursePurchase p
-        join p.homeCourse course
+        join e.schedules link
+        join link.courseSchedule courseSchedule
+        join courseSchedule.course course
         where e.studentPerson.personId = :personId
           and course.courseId = :courseId
           and e.status = com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus.ACTIVE
           and e.startDate <= :sessionDate
           and e.endDate >= :sessionDate
+          and (link.effectiveFrom is null or link.effectiveFrom <= :sessionDate)
+          and (link.effectiveTo is null or link.effectiveTo >= :sessionDate)
     """)
     Optional<StudentEnrollment> findActiveEnrollmentForCourseOnDate(
             @Param("personId") UUID personId,
@@ -81,14 +94,17 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
     );
 
     @Query("""
-        select e
+        select distinct e
         from StudentEnrollment e
-        join e.coursePurchase p
-        join p.homeCourse course
+        join e.schedules link
+        join link.courseSchedule courseSchedule
+        join courseSchedule.course course
         where course.courseId = :courseId
           and e.status = com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus.ACTIVE
           and e.startDate <= :sessionDate
           and e.endDate >= :sessionDate
+          and (link.effectiveFrom is null or link.effectiveFrom <= :sessionDate)
+          and (link.effectiveTo is null or link.effectiveTo >= :sessionDate)
     """)
     List<StudentEnrollment> findActiveEnrollmentsForCourseOnDate(
             @Param("courseId") UUID courseId,
@@ -96,16 +112,20 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
     );
 
     @Query("""
-        select e
+        select distinct e
         from StudentEnrollment e
         left join fetch e.coursePurchase p
-        join fetch p.trainingPlan
-        join fetch p.homeCourse course
+        left join fetch p.trainingPlan
+        join e.schedules enrollmentScheduleLink
+        join enrollmentScheduleLink.courseSchedule enrollmentCourseSchedule
+        join enrollmentCourseSchedule.course course
         left join fetch e.studentPerson enrollmentStudent
         left join fetch enrollmentStudent.position
         where e.startDate <= :toDate
           and e.endDate >= :fromDate
           and (:courseId is null or course.courseId = :courseId)
+          and (enrollmentScheduleLink.effectiveFrom is null or enrollmentScheduleLink.effectiveFrom <= :toDate)
+          and (enrollmentScheduleLink.effectiveTo is null or enrollmentScheduleLink.effectiveTo >= :fromDate)
           and (:studentPersonId is null or e.studentPerson.personId = :studentPersonId)
           and (:status is null or e.status = :status)
           and (:search = ''
@@ -160,7 +180,6 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
         from StudentEnrollment e
         left join fetch e.coursePurchase p
         join fetch p.trainingPlan
-        join fetch p.homeCourse course
         left join fetch e.studentPerson enrollmentStudent
         left join fetch enrollmentStudent.position
         left join fetch e.schedules enrollmentScheduleLink
@@ -188,7 +207,7 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
                       select 1
                       from CourseStaffAssignment csa
                       where csa.staffPerson.personId = :activePersonId
-                        and csa.courseSchedule.course.courseId = course.courseId
+                        and csa.courseSchedule.course.courseId = enrollmentCourseSchedule.course.courseId
                         and csa.startDate <= e.endDate
                         and (csa.endDate is null or csa.endDate >= e.startDate)
                         and csa.assignmentStatus in (com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ACTIVE, com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ENDED)

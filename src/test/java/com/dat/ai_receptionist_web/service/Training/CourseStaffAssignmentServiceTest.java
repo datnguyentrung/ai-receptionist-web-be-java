@@ -17,6 +17,7 @@ import com.dat.ai_receptionist_web.service.Core.PersonCodePolicy;
 import com.dat.ai_receptionist_web.service.Security.access.CurrentAccessContextResolver;
 import com.dat.ai_receptionist_web.service.Security.access.AccessContext;
 import com.dat.ai_receptionist_web.service.Training.access.CourseStaffAssignmentAccessPolicy;
+import com.dat.ai_receptionist_web.service.Training.access.TrainingAccessScope;
 import jakarta.validation.Validation;
 import org.junit.jupiter.api.Test;
 
@@ -123,6 +124,39 @@ class CourseStaffAssignmentServiceTest {
         assertThat(result.get(secondScheduleId))
                 .extracting(CourseStaffAssignmentDTO.BriefResponse::assignmentType)
                 .containsExactly(AssignmentType.TEACHING_ASSISTANT);
+    }
+
+    @Test
+    void deleteRemovesAssignmentPermanently() {
+        CourseStaffAssignmentRepository repository = mock(CourseStaffAssignmentRepository.class);
+        CurrentAccessContextResolver contextResolver = mock(CurrentAccessContextResolver.class);
+        CourseStaffAssignmentAccessPolicy accessPolicy = mock(CourseStaffAssignmentAccessPolicy.class);
+        CourseStaffAssignmentService service = new CourseStaffAssignmentService(
+                repository,
+                mock(CourseStaffAssignmentMapper.class),
+                mock(PersonRepository.class),
+                mock(CourseScheduleRepository.class),
+                mock(PersonCodePolicy.class),
+                contextResolver,
+                accessPolicy
+        );
+        UUID assignmentId = UUID.randomUUID();
+        UUID courseId = UUID.randomUUID();
+        AccessContext context = new AccessContext(UUID.randomUUID(), null, UUID.randomUUID(), null, Set.of(), Set.of());
+        TrainingAccessScope scope = new TrainingAccessScope(true, false, false, false, false);
+        CourseStaffAssignment assignment = CourseStaffAssignment.builder()
+                .courseStaffAssignmentId(assignmentId)
+                .courseSchedule(CourseSchedule.builder().course(Course.builder().courseId(courseId).build()).build())
+                .startDate(LocalDate.of(2026, 10, 1))
+                .build();
+        when(contextResolver.current()).thenReturn(context);
+        when(accessPolicy.resolveWriteScope(context)).thenReturn(scope);
+        when(repository.findAccessibleById(assignmentId, context.activePersonId(), true, false, false))
+                .thenReturn(Optional.of(assignment));
+
+        service.delete(assignmentId);
+
+        verify(repository).delete(assignment);
     }
 
     private CourseStaffAssignment assignment(UUID scheduleId, String name, AssignmentType type) {

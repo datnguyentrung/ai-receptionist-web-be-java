@@ -24,8 +24,8 @@ public class TrainingPlanRegistrationController {
 
     @GetMapping("/{planId}/registration-options")
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).COURSE_PURCHASE_CREATE.getCode())")
-    public TrainingPlanRegistrationDTO.RegistrationOptions options(@PathVariable UUID planId, @RequestParam UUID homeCourseId,
+    public TrainingPlanRegistrationDTO.RegistrationOptions options(@PathVariable UUID planId,
                                                                      @RequestParam LocalDate startDate) {
-        return service.options(planId, homeCourseId, startDate);
+        return service.options(planId, startDate);
     }
 }

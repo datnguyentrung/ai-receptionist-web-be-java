@@ -42,7 +42,7 @@ public interface SessionAttendanceRepository extends
     List<SessionAttendance> findByClassSession_ClassSessionId(UUID classSessionId);
 
     @Query("""
-        select e.studentEnrollmentId as studentEnrollmentId,
+        select distinct e.studentEnrollmentId as studentEnrollmentId,
                sp.personId as studentPersonId,
                sp.fullName as studentFullName,
                sp.gender as studentGender,
@@ -63,7 +63,9 @@ public interface SessionAttendanceRepository extends
         from StudentEnrollment e
         join e.studentPerson sp
         join e.coursePurchase p
-        join p.homeCourse course
+        join e.schedules enrollmentSchedule
+        join enrollmentSchedule.courseSchedule courseSchedule
+        join courseSchedule.course course
         left join SessionAttendance a
           on a.classSession.classSessionId = :classSessionId
          and a.studentEnrollment.studentEnrollmentId = e.studentEnrollmentId
@@ -71,6 +73,8 @@ public interface SessionAttendanceRepository extends
           and e.status = com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus.ACTIVE
           and e.startDate <= :sessionDate
           and e.endDate >= :sessionDate
+          and (enrollmentSchedule.effectiveFrom is null or enrollmentSchedule.effectiveFrom <= :sessionDate)
+          and (enrollmentSchedule.effectiveTo is null or enrollmentSchedule.effectiveTo >= :sessionDate)
         order by lower(sp.fullName) asc, e.studentEnrollmentId asc
     """)
     List<ClassSessionEvaluationRow> findClassSessionEvaluationRows(

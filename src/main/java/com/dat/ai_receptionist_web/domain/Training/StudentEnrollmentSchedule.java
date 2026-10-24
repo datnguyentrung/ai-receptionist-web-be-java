@@ -13,7 +13,7 @@ import java.time.LocalDate;
 @Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor
 @Entity
 @Table(name = "student_enrollment_schedule", schema = "training", uniqueConstraints =
-        @UniqueConstraint(name = "uk_student_enrollment_schedule", columnNames = {"student_enrollment_id", "course_schedule_id"}),
+        @UniqueConstraint(name = "uk_student_enrollment_schedule", columnNames = {"student_enrollment_id", "course_schedule_id", "effective_from"}),
         indexes = @Index(name = "idx_student_enrollment_schedule_course_schedule", columnList = "course_schedule_id"))
 public class StudentEnrollmentSchedule {
     @Id @GeneratedValue @UuidGenerator

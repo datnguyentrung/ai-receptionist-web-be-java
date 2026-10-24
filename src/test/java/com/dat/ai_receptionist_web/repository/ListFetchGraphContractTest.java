@@ -34,7 +34,6 @@ class ListFetchGraphContractTest {
         assertDetailedListQuery(CoursePurchaseRepository.class,
                 "join fetch purchase.studentPerson",
                 "join fetch purchase.trainingPlan",
-                "join fetch purchase.homeCourse",
                 "join fetch purchase.debitTransaction");
         assertDetailedListQuery(FitnessRecordRepository.class,
                 "join fetch fr.student",

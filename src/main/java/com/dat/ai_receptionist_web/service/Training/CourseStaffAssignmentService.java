@@ -176,7 +176,7 @@ public class CourseStaffAssignmentService {
         var entity = findAccessible(id, context, accessPolicy.resolveWriteScope(context));
         accessPolicy.requireCanManagePeriod(
                 context, entity.getCourseSchedule().getCourse().getCourseId(), entity.getStartDate(), entity.getEndDate());
-        entity.setAssignmentStatus(CourseStaffAssignmentStatus.CANCELLED);
+        repository.delete(entity);
     }
 
     private CourseStaffAssignment findAccessible(

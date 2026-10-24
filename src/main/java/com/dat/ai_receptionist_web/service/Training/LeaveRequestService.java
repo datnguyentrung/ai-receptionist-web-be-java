@@ -13,7 +13,6 @@ import com.dat.ai_receptionist_web.enums.Training.LeaveRequestStatus;
 import com.dat.ai_receptionist_web.enums.Training.RequesterType;
 import com.dat.ai_receptionist_web.enums.Training.BookingSource;
 import com.dat.ai_receptionist_web.enums.Training.BookingStatus;
-import com.dat.ai_receptionist_web.enums.Catalog.PlanAccessMode;
 import com.dat.ai_receptionist_web.enums.Training.SessionStatus;
 import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.code.CatalogErrorCode;
@@ -206,8 +205,8 @@ public class LeaveRequestService {
             throw new ApiException(TrainingErrorCode.MAKEUP_SESSION_INCOMPATIBLE);
         }
         var plan = enrollment.getCoursePurchase().getTrainingPlan();
-        if (plan == null || !accessRuleRepository.existsByTrainingPlan_TrainingPlanIdAndTargetCourse_CourseIdAndSessionTypeAndAccessMode(
-                plan.getTrainingPlanId(), makeup.getCourse().getCourseId(), makeup.getScheduleSnapshot().getSessionType(), PlanAccessMode.FLEX)) {
+        if (plan == null || !accessRuleRepository.existsByTrainingPlan_TrainingPlanIdAndTargetCourse_CourseIdAndSessionType(
+                plan.getTrainingPlanId(), makeup.getCourse().getCourseId(), makeup.getScheduleSnapshot().getSessionType())) {
             throw new ApiException(TrainingErrorCode.MAKEUP_SESSION_INCOMPATIBLE);
         }
     }

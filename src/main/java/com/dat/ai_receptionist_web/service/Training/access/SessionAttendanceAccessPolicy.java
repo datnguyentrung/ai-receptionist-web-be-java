@@ -54,18 +54,15 @@ public class SessionAttendanceAccessPolicy {
     }
 
     private void requireCourseAndEnrollmentEffective(ClassSession session, StudentEnrollment enrollment) {
-        UUIDs.requireEqual(
-                session.getCourse().getCourseId(),
-                enrollment.getCoursePurchase().getHomeCourse().getCourseId(),
-                TrainingErrorCode.STUDENT_ENROLLMENT_NOT_EFFECTIVE
-        );
         LocalDate sessionDate = session.getSessionDate();
         if (enrollment.getStartDate().isAfter(sessionDate) || enrollment.getEndDate().isBefore(sessionDate)) {
             throw new ApiException(TrainingErrorCode.STUDENT_ENROLLMENT_NOT_EFFECTIVE);
         }
         boolean selected = enrollment.getSchedules().stream().anyMatch(link ->
-                Objects.equals(link.getCourseSchedule().getCourseScheduleId(),
-                        session.getCourseSchedule().getCourseScheduleId()));
+                link.getCourseSchedule().getCourseScheduleId()
+                        .equals(session.getCourseSchedule().getCourseScheduleId())
+                        && (link.getEffectiveFrom() == null || !link.getEffectiveFrom().isAfter(sessionDate))
+                        && (link.getEffectiveTo() == null || !link.getEffectiveTo().isBefore(sessionDate)));
         if (!selected) {
             throw new ApiException(TrainingErrorCode.STUDENT_ENROLLMENT_NOT_EFFECTIVE);
         }
@@ -112,4 +109,5 @@ public class SessionAttendanceAccessPolicy {
             }
         }
     }
+
 }

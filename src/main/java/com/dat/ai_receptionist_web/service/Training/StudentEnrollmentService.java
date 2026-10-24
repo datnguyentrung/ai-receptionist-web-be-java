@@ -107,8 +107,10 @@ public class StudentEnrollmentService {
         personCodePolicy.requireStudent(studentPerson);
         var purchase = coursePurchaseRepository.findById(request.coursePurchaseId())
                 .orElseThrow(() -> new ApiException(FinanceErrorCode.COURSE_PURCHASE_NOT_FOUND));
-        UUID courseId = purchase.getHomeCourse().getCourseId();
-        accessPolicy.requireCanManageCoursePeriod(context, courseId, request.startDate(), request.endDate());
+        var schedules = resolveSchedules(request.courseScheduleIds(), request.startDate(), request.endDate());
+        schedules.stream().map(link -> link.getCourseSchedule().getCourse().getCourseId()).distinct()
+                .forEach(courseId -> accessPolicy.requireCanManageCoursePeriod(
+                        context, courseId, request.startDate(), request.endDate()));
 
         var entity = new com.dat.ai_receptionist_web.domain.Training.StudentEnrollment();
         entity.setStudentPerson(studentPerson);
@@ -116,7 +118,7 @@ public class StudentEnrollmentService {
         entity.setStartDate(request.startDate());
         entity.setEndDate(request.endDate());
         entity.setStatus(request.status());
-        entity.replaceSchedules(resolveSchedules(courseId, request.courseScheduleIds(), request.startDate(), request.endDate()));
+        entity.replaceSchedules(schedules);
         return mapper.toResponse(repository.save(entity));
     }
 
@@ -129,12 +131,14 @@ public class StudentEnrollmentService {
         personCodePolicy.requireStudent(studentPerson);
         var purchase = coursePurchaseRepository.findById(request.coursePurchaseId())
                 .orElseThrow(() -> new ApiException(FinanceErrorCode.COURSE_PURCHASE_NOT_FOUND));
-        UUID courseId = purchase.getHomeCourse().getCourseId();
-        accessPolicy.requireCanManageCoursePeriod(context, courseId, request.startDate(), request.endDate());
+        var schedules = resolveSchedules(request.courseScheduleIds(), request.startDate(), request.endDate());
+        schedules.stream().map(link -> link.getCourseSchedule().getCourse().getCourseId()).distinct()
+                .forEach(courseId -> accessPolicy.requireCanManageCoursePeriod(
+                        context, courseId, request.startDate(), request.endDate()));
 
         entity.setStudentPerson(studentPerson);
         entity.setCoursePurchase(purchase);
-        entity.replaceSchedules(resolveSchedules(courseId, request.courseScheduleIds(), request.startDate(), request.endDate()));
+        entity.replaceSchedules(schedules);
         mapper.updateEntity(request, entity);
         return mapper.toResponse(repository.save(entity));
     }
@@ -163,7 +167,7 @@ public class StudentEnrollmentService {
     }
 
     private LinkedHashSet<com.dat.ai_receptionist_web.domain.Training.StudentEnrollmentSchedule> resolveSchedules(
-            UUID courseId, java.util.List<UUID> scheduleIds, LocalDate start, LocalDate end) {
+            java.util.List<UUID> scheduleIds, LocalDate start, LocalDate end) {
         if (scheduleIds == null || scheduleIds.isEmpty()) {
             throw new ApiException(CatalogErrorCode.COURSE_SCHEDULE_CHANGE_CONFLICT, "At least one course schedule is required");
         }
@@ -180,13 +184,12 @@ public class StudentEnrollmentService {
         LinkedHashSet<com.dat.ai_receptionist_web.domain.Training.StudentEnrollmentSchedule> links = new LinkedHashSet<>();
         for (UUID id : uniqueScheduleIds) {
             var courseSchedule = schedulesById.get(id);
-            if (!courseSchedule.getCourse().getCourseId().equals(courseId)
-                    || courseSchedule.getStartDate().isAfter(end)
+            if (courseSchedule.getStartDate().isAfter(end)
                     || (courseSchedule.getEndDate() != null && courseSchedule.getEndDate().isBefore(start))) {
                 throw new ApiException(CatalogErrorCode.COURSE_SCHEDULE_CHANGE_CONFLICT, "Course schedule does not apply to enrollment period");
             }
             links.add(com.dat.ai_receptionist_web.domain.Training.StudentEnrollmentSchedule.builder()
-                    .courseSchedule(courseSchedule).build());
+                    .courseSchedule(courseSchedule).effectiveFrom(start).build());
         }
         return links;
     }

@@ -13,13 +13,12 @@ import java.util.UUID;
 public final class TrainingPlanRegistrationDTO {
     private TrainingPlanRegistrationDTO() {}
 
-    public record CourseOption(UUID courseId, String name, Integer capacity) {}
     public record Requirement(UUID requirementId, SessionType sessionType,
                               int sessionsPerWeek) {}
     public record CatalogItem(UUID trainingPlanId, String name, ScheduleLevel level,
                               int durationMonths, int includedSessionCount,
                               BigDecimal basePrice, BigDecimal finalPrice,
-                              List<CourseOption> homeCourses, List<Requirement> requirements) {}
+                              List<Requirement> requirements) {}
     public record ScheduleOption(UUID courseScheduleId, UUID courseId, String courseName,
                                  String branchName, String dayOfWeek,
                                  LocalTime startTime, LocalTime endTime,
@@ -27,9 +26,7 @@ public final class TrainingPlanRegistrationDTO {
     public record RecurringRequirement(UUID requirementId, String label, SessionType sessionType,
                                        int sessionsPerWeek,
                                        List<ScheduleOption> options) {}
-    public record FlexRequirement(UUID requirementId, SessionType sessionType,
-                                  int sessionsPerWeek, String description) {}
-    public record RegistrationOptions(UUID trainingPlanId, UUID homeCourseId,
+    public record RegistrationOptions(UUID trainingPlanId,
                                       LocalDate startDate, LocalDate endDate,
                                       List<RecurringRequirement> recurringRequirements) {}
 }

@@ -2,7 +2,6 @@ package com.dat.ai_receptionist_web.service.Training;
 
 import com.dat.ai_receptionist_web.domain.Training.StudentSessionBooking;
 import com.dat.ai_receptionist_web.dto.Training.StudentSessionBookingDTO;
-import com.dat.ai_receptionist_web.enums.Catalog.PlanAccessMode;
 import com.dat.ai_receptionist_web.enums.Training.BookingSource;
 import com.dat.ai_receptionist_web.enums.Training.BookingStatus;
 import com.dat.ai_receptionist_web.enums.Training.SessionStatus;
@@ -38,19 +37,8 @@ public class StudentSessionBookingService {
 
     @Transactional(readOnly = true)
     public List<StudentSessionBookingDTO.SessionOption> options(UUID enrollmentId, LocalDate from, LocalDate to) {
-        var enrollment = enrollmentRepository.findDetailedByIdForUpdate(enrollmentId)
-                .orElseThrow(() -> new ApiException(TrainingErrorCode.STUDENT_ENROLLMENT_NOT_FOUND));
-        var plan = enrollment.getCoursePurchase().getTrainingPlan();
-        if (plan == null) return List.of();
-        return classSessionRepository.findFutureBookableCandidates(from, to).stream().map(session -> {
-            String reason = optionUnavailableReason(enrollment, session);
-            int remaining = Math.max(session.getCourse().getCapacity() - (int) bookingRepository
-                    .countByClassSession_ClassSessionIdAndStatusNot(session.getClassSessionId(), BookingStatus.CANCELLED), 0);
-            if (remaining == 0 && reason == null) reason = "Lớp đã đủ chỗ";
-            return new StudentSessionBookingDTO.SessionOption(session.getClassSessionId(), session.getCourse().getCourseId(),
-                    session.getCourse().getName(), session.getSessionDate(), session.getStartTime(), session.getEndTime(),
-                    remaining, reason == null, reason);
-        }).toList();
+        // Không có luồng tự chọn buổi lẻ: mọi lịch thường kỳ được chốt lúc đăng ký.
+        return List.of();
     }
 
     @Transactional(readOnly = true)
@@ -78,43 +66,7 @@ public class StudentSessionBookingService {
 
     @Transactional
     public StudentSessionBookingDTO.Response bookFlexible(UUID enrollmentId, UUID sessionId) {
-        var enrollment = enrollmentRepository.findDetailedByIdForUpdate(enrollmentId)
-                .orElseThrow(() -> new ApiException(TrainingErrorCode.STUDENT_ENROLLMENT_NOT_FOUND));
-        var session = classSessionRepository.findDetailedByIdForUpdate(sessionId)
-                .orElseThrow(() -> new ApiException(TrainingErrorCode.CLASS_SESSION_NOT_FOUND));
-        requireBookable(enrollment, session);
-
-        var plan = enrollment.getCoursePurchase().getTrainingPlan();
-        if (plan == null || !accessRuleRepository
-                .existsByTrainingPlan_TrainingPlanIdAndTargetCourse_CourseIdAndSessionTypeAndAccessMode(
-                        plan.getTrainingPlanId(), session.getCourse().getCourseId(),
-                        session.getScheduleSnapshot().getSessionType(), PlanAccessMode.FLEX)) {
-            throw new ApiException(TrainingErrorCode.TRAINING_PLAN_ACCESS_DENIED);
-        }
-        if (bookingRepository.existsReservedTimeConflict(enrollmentId, session.getSessionDate(),
-                session.getStartTime(), session.getEndTime())) {
-            throw new ApiException(TrainingErrorCode.BOOKING_TIME_CONFLICT);
-        }
-        if (bookingRepository.countByClassSession_ClassSessionIdAndStatusNot(sessionId, BookingStatus.CANCELLED)
-                >= session.getCourse().getCapacity()) {
-            throw new ApiException(TrainingErrorCode.CLASS_SESSION_FULL);
-        }
-        if (quotaService.reservedNormalInWeek(enrollment, session.getSessionDate())
-                >= quotaService.weeklyQuota(enrollment, session.getSessionDate())) {
-            throw new ApiException(TrainingErrorCode.BOOKING_WEEKLY_QUOTA_EXCEEDED);
-        }
-        long committedOrReserved = quotaService.normalDebits(enrollment)
-                + bookingRepository.countNormalReserved(enrollmentId);
-        if (committedOrReserved >= quotaService.totalGranted(enrollment)) {
-            throw new ApiException(TrainingErrorCode.BOOKING_TOTAL_QUOTA_EXCEEDED);
-        }
-        if (bookingRepository.existsByEnrollment_StudentEnrollmentIdAndClassSession_ClassSessionId(enrollmentId, sessionId)) {
-            throw new ApiException(TrainingErrorCode.BOOKING_ALREADY_EXISTS);
-        }
-        StudentSessionBooking booking = bookingRepository.save(StudentSessionBooking.builder()
-                .enrollment(enrollment).classSession(session).source(BookingSource.FLEX)
-                .status(BookingStatus.RESERVED).bookedAt(LocalDateTime.now()).build());
-        return response(booking);
+        throw new ApiException(TrainingErrorCode.SCHEDULE_CHANGE_REQUIRED);
     }
 
     @Transactional
@@ -163,8 +115,8 @@ public class StudentSessionBookingService {
         if (enrollment.getStatus() != StudentEnrollmentStatus.ACTIVE) return "Gói học chưa hoạt động";
         if (session.getSessionDate().isBefore(enrollment.getStartDate()) || session.getSessionDate().isAfter(enrollment.getEndDate())) return "Ngoài thời hạn gói học";
         if (!LocalDateTime.now().isBefore(LocalDateTime.of(session.getSessionDate(), session.getStartTime()))) return "Buổi học đã bắt đầu";
-        if (!accessRuleRepository.existsByTrainingPlan_TrainingPlanIdAndTargetCourse_CourseIdAndSessionTypeAndAccessMode(
-                plan.getTrainingPlanId(), session.getCourse().getCourseId(), session.getScheduleSnapshot().getSessionType(), PlanAccessMode.FLEX)) return "Gói học không áp dụng cho buổi này";
+        if (!accessRuleRepository.existsByTrainingPlan_TrainingPlanIdAndTargetCourse_CourseIdAndSessionType(
+                plan.getTrainingPlanId(), session.getCourse().getCourseId(), session.getScheduleSnapshot().getSessionType())) return "Gói học không áp dụng cho buổi này";
         if (bookingRepository.existsByEnrollment_StudentEnrollmentIdAndClassSession_ClassSessionId(enrollment.getStudentEnrollmentId(), session.getClassSessionId())) return "Đã có booking";
         if (bookingRepository.existsReservedTimeConflict(enrollment.getStudentEnrollmentId(), session.getSessionDate(), session.getStartTime(), session.getEndTime())) return "Trùng giờ với booking khác";
         if (bookingRepository.countByClassSession_ClassSessionIdAndStatusNot(session.getClassSessionId(), BookingStatus.CANCELLED) >= session.getCourse().getCapacity()) return "Lớp đã đủ chỗ";
@@ -183,8 +135,8 @@ public class StudentSessionBookingService {
         LocalDateTime start = LocalDateTime.of(session.getSessionDate(), session.getStartTime());
         var plan = enrollment.getCoursePurchase().getTrainingPlan();
         if (!start.isAfter(leaveStart)) reason = "Buổi học bù phải sau buổi nghỉ";
-        else if (plan == null || !accessRuleRepository.existsByTrainingPlan_TrainingPlanIdAndTargetCourse_CourseIdAndSessionTypeAndAccessMode(
-                plan.getTrainingPlanId(), session.getCourse().getCourseId(), session.getScheduleSnapshot().getSessionType(), PlanAccessMode.FLEX)) reason = "Gói học không áp dụng cho buổi này";
+        else if (plan == null || !accessRuleRepository.existsByTrainingPlan_TrainingPlanIdAndTargetCourse_CourseIdAndSessionType(
+                plan.getTrainingPlanId(), session.getCourse().getCourseId(), session.getScheduleSnapshot().getSessionType())) reason = "Gói học không áp dụng cho buổi này";
         else if (bookingRepository.existsByEnrollment_StudentEnrollmentIdAndClassSession_ClassSessionId(enrollment.getStudentEnrollmentId(), session.getClassSessionId())) reason = "Đã có booking";
         else if (bookingRepository.existsReservedTimeConflict(enrollment.getStudentEnrollmentId(), session.getSessionDate(), session.getStartTime(), session.getEndTime())) reason = "Trùng giờ với booking khác";
         int remaining = Math.max(session.getCourse().getCapacity() - (int) bookingRepository.countByClassSession_ClassSessionIdAndStatusNot(session.getClassSessionId(), BookingStatus.CANCELLED), 0);

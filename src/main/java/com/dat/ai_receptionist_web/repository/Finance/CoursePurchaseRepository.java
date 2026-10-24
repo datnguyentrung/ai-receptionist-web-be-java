@@ -14,7 +14,6 @@ public interface CoursePurchaseRepository extends JpaRepository<CoursePurchase, 
             from CoursePurchase purchase
             join fetch purchase.studentPerson
             join fetch purchase.trainingPlan
-            join fetch purchase.homeCourse
             join fetch purchase.debitTransaction
             """,
             countQuery = """
@@ -24,4 +23,5 @@ public interface CoursePurchaseRepository extends JpaRepository<CoursePurchase, 
     Page<CoursePurchase> findAllDetailed(Pageable pageable);
 
     Optional<CoursePurchase> findByDebitTransaction_WalletTransactionId(UUID transactionId);
+    boolean existsByTrainingPlan_TrainingPlanId(UUID trainingPlanId);
 }

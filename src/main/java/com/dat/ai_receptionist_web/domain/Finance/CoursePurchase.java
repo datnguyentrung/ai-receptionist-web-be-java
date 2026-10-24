@@ -1,6 +1,5 @@
 package com.dat.ai_receptionist_web.domain.Finance;
 
-import com.dat.ai_receptionist_web.domain.Catalog.Course;
 import com.dat.ai_receptionist_web.domain.Catalog.TrainingPlan;
 import com.dat.ai_receptionist_web.domain.Core.Person;
 import jakarta.persistence.*;
@@ -31,10 +30,6 @@ public class CoursePurchase {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "training_plan_id", nullable = false)
     private TrainingPlan trainingPlan;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "home_course_id", nullable = false)
-    private Course homeCourse;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "debit_transaction_id", nullable = false)

@@ -40,7 +40,6 @@ public class WalletCommandService {
     private final TrainingPlanRepository trainingPlanRepository;
     private final TrainingPlanRequirementRepository trainingPlanRequirementRepository;
     private final TrainingPlanAccessRuleRepository trainingPlanAccessRuleRepository;
-    private final CourseRepository courseRepository;
     private final CourseScheduleRepository courseScheduleRepository;
     private final StudentEnrollmentRepository enrollmentRepository;
     private final CurrentAccessContextResolver accessContextResolver;
@@ -100,17 +99,10 @@ public class WalletCommandService {
         TrainingPlan plan = trainingPlanRepository.findWithLockByTrainingPlanIdAndStatus(
                         request.trainingPlanId(), TrainingPlanStatus.ACTIVE)
                 .orElseThrow(() -> failure(CatalogErrorCode.TRAINING_PLAN_NOT_FOUND));
-        Course homeCourse = courseRepository.findByIdForUpdate(request.homeCourseId())
-                .orElseThrow(() -> failure(CatalogErrorCode.COURSE_NOT_FOUND));
-        if (homeCourse.getStatus() != CourseStatus.ACTIVE || !trainingPlanAccessRuleRepository
-                .existsByTrainingPlan_TrainingPlanIdAndTargetCourse_CourseIdAndAccessMode(
-                        plan.getTrainingPlanId(), homeCourse.getCourseId(), PlanAccessMode.HOME)) {
-            throw failure(CatalogErrorCode.TRAINING_PLAN_HOME_COURSE_NOT_ALLOWED);
-        }
         LocalDate start = request.startDate();
         LocalDate end = start.plusMonths(plan.getDurationMonths());
         LinkedHashSet<StudentEnrollmentSchedule> schedules = resolveTrainingPlanSchedules(
-                plan, homeCourse, request.recurringSchedules(), start, end);
+                plan, request.recurringSchedules(), start, end);
         BigDecimal amount = money(plan.getFinalPrice());
         if (wallet.getBalance().compareTo(amount) < 0) throw failure(FinanceErrorCode.INSUFFICIENT_BALANCE);
         User actor = user(actorUserId);
@@ -120,7 +112,7 @@ public class WalletCommandService {
                 WalletTransactionType.TRAINING_PLAN_PURCHASE, WalletTransactionDirection.DEBIT, amount,
                 before, after, request.externalReference(), actor, request.note()));
         CoursePurchase purchase = purchaseRepository.save(CoursePurchase.builder().studentPerson(wallet.getPerson())
-                .trainingPlan(plan).homeCourse(homeCourse).debitTransaction(transaction).build());
+                .trainingPlan(plan).debitTransaction(transaction).build());
         StudentEnrollment enrollment = StudentEnrollment.builder().studentPerson(wallet.getPerson())
                 .coursePurchase(purchase).startDate(start).endDate(end)
                 .status(start.isAfter(LocalDate.now()) ? StudentEnrollmentStatus.PENDING_START : StudentEnrollmentStatus.ACTIVE)
@@ -139,13 +131,14 @@ public class WalletCommandService {
     }
 
     private LinkedHashSet<StudentEnrollmentSchedule> resolveTrainingPlanSchedules(
-            TrainingPlan plan, Course homeCourse, java.util.List<WalletCommandDTO.RecurringScheduleSelection> selections,
+            TrainingPlan plan, java.util.List<WalletCommandDTO.RecurringScheduleSelection> selections,
             LocalDate start, LocalDate end) {
         var requirements = trainingPlanRequirementRepository.findByTrainingPlan_TrainingPlanId(
                 plan.getTrainingPlanId());
         var byId = requirements.stream().collect(java.util.stream.Collectors.toMap(
                 TrainingPlanRequirement::getTrainingPlanRequirementId, requirement -> requirement));
         var selected = new java.util.LinkedHashMap<UUID, java.util.List<UUID>>();
+        var selectedScheduleIds = new java.util.HashSet<UUID>();
         for (WalletCommandDTO.RecurringScheduleSelection selection : selections) {
             if (!byId.containsKey(selection.requirementId())) throw failure(CatalogErrorCode.TRAINING_PLAN_REQUIREMENT_NOT_MET);
             selected.computeIfAbsent(selection.requirementId(), ignored -> new java.util.ArrayList<>()).add(selection.courseScheduleId());
@@ -157,22 +150,41 @@ public class WalletCommandService {
                 throw failure(CatalogErrorCode.TRAINING_PLAN_REQUIREMENT_NOT_MET);
             }
             for (UUID id : ids) {
+                if (!selectedScheduleIds.add(id)) {
+                    throw failure(CatalogErrorCode.TRAINING_PLAN_REQUIREMENT_NOT_MET);
+                }
                 CourseSchedule schedule = courseScheduleRepository.findById(id)
                         .orElseThrow(() -> failure(CatalogErrorCode.COURSE_SCHEDULE_NOT_FOUND));
                 boolean applicable = schedule.getStatus() == ScheduleStatus.ACTIVE
                         && schedule.getSessionType() == requirement.getSessionType()
                         && !schedule.getStartDate().isAfter(end)
                         && (schedule.getEndDate() == null || !schedule.getEndDate().isBefore(start))
-                        && schedule.getCourse().getCourseId().equals(homeCourse.getCourseId())
-                        && trainingPlanAccessRuleRepository.existsByTrainingPlan_TrainingPlanIdAndTargetCourse_CourseIdAndSessionTypeAndAccessMode(
-                        plan.getTrainingPlanId(), schedule.getCourse().getCourseId(), schedule.getSessionType(), PlanAccessMode.RECURRING);
+                        && trainingPlanAccessRuleRepository.existsByTrainingPlan_TrainingPlanIdAndTargetCourse_CourseIdAndSessionType(
+                        plan.getTrainingPlanId(), schedule.getCourse().getCourseId(), schedule.getSessionType());
                 if (!applicable) throw failure(CatalogErrorCode.TRAINING_PLAN_REQUIREMENT_NOT_MET);
                 result.add(StudentEnrollmentSchedule.builder().courseSchedule(schedule).requirement(requirement)
                         .effectiveFrom(start).effectiveTo(end)
                         .status(com.dat.ai_receptionist_web.enums.Training.EnrollmentScheduleStatus.ACTIVE).build());
             }
         }
+        requireNoScheduleTimeConflicts(result);
         return result;
+    }
+
+    private void requireNoScheduleTimeConflicts(LinkedHashSet<StudentEnrollmentSchedule> schedules) {
+        var selected = new java.util.ArrayList<>(schedules);
+        for (int left = 0; left < selected.size(); left++) {
+            CourseSchedule first = selected.get(left).getCourseSchedule();
+            for (int right = left + 1; right < selected.size(); right++) {
+                CourseSchedule second = selected.get(right).getCourseSchedule();
+                if (first.getClassSchedule().getWeekday() == second.getClassSchedule().getWeekday()
+                        && first.getClassSchedule().getStartTime().isBefore(second.getClassSchedule().getEndTime())
+                        && second.getClassSchedule().getStartTime().isBefore(first.getClassSchedule().getEndTime())) {
+                    throw failure(CatalogErrorCode.TRAINING_PLAN_REQUIREMENT_NOT_MET,
+                            "Selected schedules overlap");
+                }
+            }
+        }
     }
 
     /**

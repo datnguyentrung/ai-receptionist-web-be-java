@@ -9,6 +9,7 @@ import com.dat.ai_receptionist_web.error.code.CatalogErrorCode;
 import com.dat.ai_receptionist_web.error.code.TrainingErrorCode;
 import com.dat.ai_receptionist_web.mapper.Training.StudentEnrollmentScheduleMapper;
 import com.dat.ai_receptionist_web.repository.Catalog.CourseScheduleRepository;
+import com.dat.ai_receptionist_web.repository.Catalog.TrainingPlanAccessRuleRepository;
 import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentRepository;
 import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentScheduleRepository;
 import com.dat.ai_receptionist_web.service.Security.access.AccessContext;
@@ -28,6 +29,7 @@ public class StudentEnrollmentScheduleService {
     private final StudentEnrollmentRepository studentEnrollmentRepository;
     private final StudentEnrollmentScheduleRepository repository;
     private final CourseScheduleRepository courseScheduleRepository;
+    private final TrainingPlanAccessRuleRepository accessRuleRepository;
     private final StudentEnrollmentScheduleMapper mapper;
     private final CurrentAccessContextResolver currentAccessContextResolver;
     private final StudentEnrollmentAccessPolicy accessPolicy;
@@ -67,6 +69,7 @@ public class StudentEnrollmentScheduleService {
         StudentEnrollmentSchedule link = StudentEnrollmentSchedule.builder()
                 .studentEnrollment(enrollment)
                 .courseSchedule(resolveApplicableSchedule(enrollment, request.courseScheduleId()))
+                .effectiveFrom(enrollment.getStartDate())
                 .build();
         return mapper.toResponse(repository.save(link));
     }
@@ -151,8 +154,10 @@ public class StudentEnrollmentScheduleService {
         CourseSchedule schedule = courseScheduleRepository.findDetailedByIds(List.of(scheduleId)).stream()
                 .findFirst()
                 .orElseThrow(() -> new ApiException(CatalogErrorCode.COURSE_SCHEDULE_NOT_FOUND));
-        UUID enrollmentCourseId = enrollment.getCoursePurchase().getHomeCourse().getCourseId();
-        if (!schedule.getCourse().getCourseId().equals(enrollmentCourseId)
+        var plan = enrollment.getCoursePurchase().getTrainingPlan();
+        if (plan == null
+                || !accessRuleRepository.existsByTrainingPlan_TrainingPlanIdAndTargetCourse_CourseIdAndSessionType(
+                plan.getTrainingPlanId(), schedule.getCourse().getCourseId(), schedule.getSessionType())
                 || schedule.getStartDate().isAfter(enrollment.getEndDate())
                 || (schedule.getEndDate() != null && schedule.getEndDate().isBefore(enrollment.getStartDate()))) {
             throw new ApiException(CatalogErrorCode.COURSE_SCHEDULE_CHANGE_CONFLICT,

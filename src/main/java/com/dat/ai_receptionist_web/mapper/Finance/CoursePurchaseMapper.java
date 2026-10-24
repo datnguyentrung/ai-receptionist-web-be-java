@@ -12,18 +12,15 @@ import org.mapstruct.MappingTarget;
 public interface CoursePurchaseMapper {
     @Mapping(target = "debitTransactionId", source = "debitTransaction.walletTransactionId")
     @Mapping(target = "trainingPlanId", source = "trainingPlan.trainingPlanId")
-    @Mapping(target = "homeCourseId", source = "homeCourse.courseId")
     CoursePurchaseDTO.Response toResponse(CoursePurchase entity);
 
     @Mapping(target = "debitTransactionId", source = "debitTransaction.walletTransactionId")
     @Mapping(target = "trainingPlanId", source = "trainingPlan.trainingPlanId")
-    @Mapping(target = "homeCourseId", source = "homeCourse.courseId")
     CoursePurchaseDTO.SimpleResponse toSimpleResponse(CoursePurchase entity);
 
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "studentPerson", ignore = true)
     @Mapping(target = "trainingPlan", ignore = true)
-    @Mapping(target = "homeCourse", ignore = true)
     @Mapping(target = "debitTransaction", ignore = true)
     void updateEntity(CoursePurchaseDTO.UpdateRequest request, @MappingTarget CoursePurchase entity);
 }

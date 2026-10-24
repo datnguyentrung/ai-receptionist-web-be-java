@@ -9,18 +9,18 @@ public final class CoursePurchaseDTO {
     }
 
     public record CreateRequest(@NotNull UUID studentPersonId, @NotNull UUID trainingPlanId,
-                                @NotNull UUID homeCourseId, @NotNull UUID debitTransactionId) {
+                                @NotNull UUID debitTransactionId) {
     }
 
     public record UpdateRequest(@NotNull UUID studentPersonId, @NotNull UUID trainingPlanId,
-                                @NotNull UUID homeCourseId, @NotNull UUID debitTransactionId) {
+                                @NotNull UUID debitTransactionId) {
     }
 
     public record Response(UUID coursePurchaseId, PersonDTO.Response studentPerson, UUID trainingPlanId,
-                           UUID homeCourseId, UUID debitTransactionId) {
+                           UUID debitTransactionId) {
     }
 
     public record SimpleResponse(UUID coursePurchaseId, PersonDTO.SimpleResponse studentPerson, UUID trainingPlanId,
-                                 UUID homeCourseId, UUID debitTransactionId) {
+                                 UUID debitTransactionId) {
     }
 }

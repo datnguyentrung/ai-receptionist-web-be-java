@@ -40,13 +40,12 @@ class WalletCommandServiceTest {
         TrainingPlanRepository plans = mock(TrainingPlanRepository.class);
         TrainingPlanRequirementRepository requirements = mock(TrainingPlanRequirementRepository.class);
         TrainingPlanAccessRuleRepository accessRules = mock(TrainingPlanAccessRuleRepository.class);
-        CourseRepository courses = mock(CourseRepository.class);
         CourseScheduleRepository schedules = mock(CourseScheduleRepository.class);
         StudentEnrollmentRepository enrollments = mock(StudentEnrollmentRepository.class);
         CurrentAccessContextResolver access = mock(CurrentAccessContextResolver.class);
         UserRepository users = mock(UserRepository.class);
         WalletCommandService service = new WalletCommandService(wallets, transactions, purchases, plans,
-                requirements, accessRules, courses, schedules, enrollments, access, users,
+                requirements, accessRules, schedules, enrollments, access, users,
                 new PersonCodePolicy(), new WalletCommandMapper() {});
 
         UUID studentId = UUID.randomUUID();
@@ -75,12 +74,10 @@ class WalletCommandServiceTest {
         when(transactions.findByTypeAndExternalReference(WalletTransactionType.TRAINING_PLAN_PURCHASE, "plan-001"))
                 .thenReturn(Optional.empty());
         when(plans.findWithLockByTrainingPlanIdAndStatus(planId, TrainingPlanStatus.ACTIVE)).thenReturn(Optional.of(plan));
-        when(courses.findByIdForUpdate(courseId)).thenReturn(Optional.of(course));
-        when(accessRules.existsByTrainingPlan_TrainingPlanIdAndTargetCourse_CourseIdAndAccessMode(planId, courseId, PlanAccessMode.HOME)).thenReturn(true);
         when(requirements.findByTrainingPlan_TrainingPlanId(planId)).thenReturn(List.of(requirement));
         when(schedules.findById(scheduleId)).thenReturn(Optional.of(schedule));
-        when(accessRules.existsByTrainingPlan_TrainingPlanIdAndTargetCourse_CourseIdAndSessionTypeAndAccessMode(
-                planId, courseId, SessionType.STANDARD, PlanAccessMode.RECURRING)).thenReturn(true);
+        when(accessRules.existsByTrainingPlan_TrainingPlanIdAndTargetCourse_CourseIdAndSessionType(
+                planId, courseId, SessionType.STANDARD)).thenReturn(true);
         when(users.findById(actorId)).thenReturn(Optional.of(User.builder().userId(actorId).build()));
         when(transactions.save(any())).thenAnswer(call -> {
             WalletTransaction transaction = call.getArgument(0);
@@ -99,12 +96,12 @@ class WalletCommandServiceTest {
         });
 
         WalletCommandDTO.TransactionResponse result = service.purchaseTrainingPlan(
-                new WalletCommandDTO.TrainingPlanPurchaseRequest(studentId, planId, courseId, start,
+                new WalletCommandDTO.TrainingPlanPurchaseRequest(studentId, planId, start,
                         List.of(new WalletCommandDTO.RecurringScheduleSelection(requirementId, scheduleId)), "plan-001", null),
                 actorId);
 
         assertThat(result.type()).isEqualTo(WalletTransactionType.TRAINING_PLAN_PURCHASE);
         assertThat(wallet.getBalance()).isEqualByComparingTo("200000");
-        verify(purchases).save(argThat(purchase -> purchase.getTrainingPlan() == plan && purchase.getHomeCourse() == course));
+        verify(purchases).save(argThat(purchase -> purchase.getTrainingPlan() == plan));
     }
 }

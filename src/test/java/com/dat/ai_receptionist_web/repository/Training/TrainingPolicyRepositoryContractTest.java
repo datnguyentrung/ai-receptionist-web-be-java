@@ -246,7 +246,7 @@ class TrainingPolicyRepositoryContractTest {
                         "from StudentEnrollment e",
                         "join e.studentPerson sp",
                         "join e.coursePurchase p",
-                        "join p.homeCourse course",
+                        "join e.schedules enrollmentSchedule",
                         "left join SessionAttendance a",
                         "a.classSession.classSessionId = :classSessionId",
                         "a.studentEnrollment.studentEnrollmentId = e.studentEnrollmentId",

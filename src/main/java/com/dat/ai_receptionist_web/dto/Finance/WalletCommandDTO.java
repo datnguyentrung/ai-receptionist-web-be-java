@@ -27,7 +27,6 @@ public final class WalletCommandDTO {
     public record TrainingPlanPurchaseRequest(
             @NotNull UUID studentPersonId,
             @NotNull UUID trainingPlanId,
-            @NotNull UUID homeCourseId,
             @NotNull java.time.LocalDate startDate,
             @NotNull List<@jakarta.validation.Valid RecurringScheduleSelection> recurringSchedules,
             @NotBlank @Size(max = 150) String externalReference,

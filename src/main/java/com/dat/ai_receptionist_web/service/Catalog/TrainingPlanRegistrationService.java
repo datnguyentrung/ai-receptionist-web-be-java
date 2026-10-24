@@ -4,7 +4,6 @@ import com.dat.ai_receptionist_web.domain.Catalog.CourseSchedule;
 import com.dat.ai_receptionist_web.domain.Catalog.TrainingPlan;
 import com.dat.ai_receptionist_web.domain.Catalog.TrainingPlanRequirement;
 import com.dat.ai_receptionist_web.dto.Catalog.TrainingPlanRegistrationDTO;
-import com.dat.ai_receptionist_web.enums.Catalog.PlanAccessMode;
 import com.dat.ai_receptionist_web.enums.Catalog.TrainingPlanStatus;
 import com.dat.ai_receptionist_web.enums.Core.ScheduleStatus;
 import com.dat.ai_receptionist_web.error.ApiException;
@@ -28,28 +27,33 @@ public class TrainingPlanRegistrationService {
     private final TrainingPlanRepository planRepository;
     private final TrainingPlanRequirementRepository requirementRepository;
     private final TrainingPlanAccessRuleRepository accessRuleRepository;
-    private final CourseRepository courseRepository;
     private final CourseScheduleRepository courseScheduleRepository;
 
     @Transactional(readOnly = true)
     public List<TrainingPlanRegistrationDTO.CatalogItem> catalog() {
-        return planRepository.findByStatusOrderByNameAsc(TrainingPlanStatus.ACTIVE).stream()
-                .map(this::catalogItem).toList();
+        List<TrainingPlan> plans = planRepository.findByStatusOrderByNameAsc(TrainingPlanStatus.ACTIVE);
+        if (plans.isEmpty()) return List.of();
+        Set<UUID> planIds = plans.stream().map(TrainingPlan::getTrainingPlanId).collect(Collectors.toSet());
+        Map<UUID, List<TrainingPlanRequirement>> requirementsByPlan = requirementRepository
+                .findDetailedByTrainingPlanIdIn(planIds).stream()
+                .collect(Collectors.groupingBy(r -> r.getTrainingPlan().getTrainingPlanId()));
+        Map<UUID, List<com.dat.ai_receptionist_web.domain.Catalog.TrainingPlanAccessRule>> rulesByPlan = accessRuleRepository
+                .findDetailedByTrainingPlanIdIn(planIds).stream()
+                .collect(Collectors.groupingBy(r -> r.getTrainingPlan().getTrainingPlanId()));
+        return plans.stream().map(plan -> catalogItem(plan,
+                rulesByPlan.getOrDefault(plan.getTrainingPlanId(), List.of()),
+                requirementsByPlan.getOrDefault(plan.getTrainingPlanId(), List.of()))).toList();
     }
 
     @Transactional(readOnly = true)
-    public TrainingPlanRegistrationDTO.RegistrationOptions options(UUID planId, UUID homeCourseId, LocalDate startDate) {
+    public TrainingPlanRegistrationDTO.RegistrationOptions options(UUID planId, LocalDate startDate) {
         TrainingPlan plan = planRepository.findByTrainingPlanIdAndStatus(planId, TrainingPlanStatus.ACTIVE)
                 .orElseThrow(() -> new ApiException(CatalogErrorCode.TRAINING_PLAN_NOT_FOUND));
-        var home = courseRepository.findById(homeCourseId)
-                .orElseThrow(() -> new ApiException(CatalogErrorCode.COURSE_NOT_FOUND));
-        boolean allowedHome = accessRuleRepository.existsByTrainingPlan_TrainingPlanIdAndTargetCourse_CourseIdAndAccessMode(
-                planId, homeCourseId, PlanAccessMode.HOME);
-        if (!allowedHome) throw new ApiException(CatalogErrorCode.TRAINING_PLAN_HOME_COURSE_NOT_ALLOWED);
 
         LocalDate endDate = startDate.plusMonths(plan.getDurationMonths());
         List<TrainingPlanRequirement> requirements = requirementRepository.findByTrainingPlan_TrainingPlanId(planId);
-        Set<UUID> recurringCourseIds = accessRuleRepository.findDetailedByTrainingPlanIdAndAccessMode(planId, PlanAccessMode.RECURRING)
+        var rules = accessRuleRepository.findDetailedByTrainingPlanId(planId);
+        Set<UUID> recurringCourseIds = rules
                 .stream().map(rule -> rule.getTargetCourse().getCourseId()).collect(Collectors.toSet());
         List<CourseSchedule> schedules = recurringCourseIds.isEmpty() ? List.of() :
                 courseScheduleRepository.findActiveOverlappingByCourseIds(recurringCourseIds, ScheduleStatus.ACTIVE, startDate, endDate);
@@ -57,25 +61,27 @@ public class TrainingPlanRegistrationService {
         List<TrainingPlanRegistrationDTO.RecurringRequirement> recurring = requirements.stream()
                 .map(r -> new TrainingPlanRegistrationDTO.RecurringRequirement(
                         r.getTrainingPlanRequirementId(), label(r), r.getSessionType(), r.getSessionsPerWeek(),
-                        schedules.stream().filter(s -> supports(r, homeCourseId, s)).map(this::scheduleOption).toList()))
+                        schedules.stream().filter(s -> supports(r, rules, s)).map(this::scheduleOption).toList()))
                 .toList();
-        return new TrainingPlanRegistrationDTO.RegistrationOptions(planId, homeCourseId, startDate, endDate, recurring);
+        return new TrainingPlanRegistrationDTO.RegistrationOptions(planId, startDate, endDate, recurring);
     }
 
-    private TrainingPlanRegistrationDTO.CatalogItem catalogItem(TrainingPlan plan) {
-        var homeCourses = accessRuleRepository.findDetailedByTrainingPlanIdAndAccessMode(plan.getTrainingPlanId(), PlanAccessMode.HOME).stream()
-                .map(rule -> rule.getTargetCourse()).distinct()
-                .map(course -> new TrainingPlanRegistrationDTO.CourseOption(course.getCourseId(), course.getName(), course.getCapacity())).toList();
-        var requirements = requirementRepository.findByTrainingPlan_TrainingPlanId(plan.getTrainingPlanId()).stream()
+    private TrainingPlanRegistrationDTO.CatalogItem catalogItem(TrainingPlan plan,
+                                                                  List<com.dat.ai_receptionist_web.domain.Catalog.TrainingPlanAccessRule> rules,
+                                                                  List<TrainingPlanRequirement> planRequirements) {
+        var requirements = planRequirements.stream()
                 .map(r -> new TrainingPlanRegistrationDTO.Requirement(r.getTrainingPlanRequirementId(), r.getSessionType(),
                         r.getSessionsPerWeek())).toList();
         return new TrainingPlanRegistrationDTO.CatalogItem(plan.getTrainingPlanId(), plan.getName(), plan.getLevel(),
-                plan.getDurationMonths(), plan.getIncludedSessionCount(), plan.getBasePrice(), plan.getFinalPrice(), homeCourses, requirements);
+                plan.getDurationMonths(), plan.getIncludedSessionCount(), plan.getBasePrice(), plan.getFinalPrice(), requirements);
     }
 
-    private boolean supports(TrainingPlanRequirement requirement, UUID homeCourseId, CourseSchedule schedule) {
+    private boolean supports(TrainingPlanRequirement requirement,
+                             List<com.dat.ai_receptionist_web.domain.Catalog.TrainingPlanAccessRule> rules,
+                             CourseSchedule schedule) {
         return schedule.getSessionType() == requirement.getSessionType()
-                && schedule.getCourse().getCourseId().equals(homeCourseId);
+                && rules.stream().anyMatch(rule -> rule.getSessionType() == requirement.getSessionType()
+                        && rule.getTargetCourse().getCourseId().equals(schedule.getCourse().getCourseId()));
     }
 
     private TrainingPlanRegistrationDTO.ScheduleOption scheduleOption(CourseSchedule schedule) {

@@ -12,6 +12,7 @@ import java.util.UUID;
 import java.time.LocalDate;
 
 public interface StudentEnrollmentScheduleRepository extends JpaRepository<StudentEnrollmentSchedule, UUID> {
+    boolean existsByRequirement_TrainingPlanRequirementId(UUID requirementId);
     boolean existsByCourseSchedule_CourseScheduleId(UUID courseScheduleId);
     @Query("""
         select link from StudentEnrollmentSchedule link
@@ -76,4 +77,32 @@ public interface StudentEnrollmentScheduleRepository extends JpaRepository<Stude
     """)
     List<StudentEnrollmentSchedule> findEffectiveByCourseScheduleAndDate(
             @Param("courseScheduleId") UUID courseScheduleId, @Param("date") LocalDate date);
+
+    @Query("""
+        select link from StudentEnrollmentSchedule link
+        join fetch link.studentEnrollment enrollment
+        join fetch link.courseSchedule courseSchedule
+        left join fetch link.requirement
+        where link.courseSchedule.courseScheduleId in :courseScheduleIds
+          and enrollment.status in (com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus.ACTIVE,
+                                    com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus.PENDING_START)
+          and enrollment.startDate <= :untilDate and enrollment.endDate >= :fromDate
+          and link.effectiveFrom <= :untilDate and (link.effectiveTo is null or link.effectiveTo >= :fromDate)
+    """)
+    List<StudentEnrollmentSchedule> findPotentiallyEffectiveByCourseScheduleIdsAndDateRange(
+            @Param("courseScheduleIds") Collection<UUID> courseScheduleIds,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("untilDate") LocalDate untilDate);
+
+    @Query("""
+        select link from StudentEnrollmentSchedule link
+        join fetch link.courseSchedule courseSchedule
+        join fetch courseSchedule.classSchedule
+        where link.studentEnrollment.studentEnrollmentId = :enrollmentId
+          and link.status = com.dat.ai_receptionist_web.enums.Training.EnrollmentScheduleStatus.ACTIVE
+          and (link.effectiveFrom is null or link.effectiveFrom <= :date)
+          and (link.effectiveTo is null or link.effectiveTo >= :date)
+    """)
+    List<StudentEnrollmentSchedule> findEffectiveByEnrollmentAndDate(
+            @Param("enrollmentId") UUID enrollmentId, @Param("date") LocalDate date);
 }

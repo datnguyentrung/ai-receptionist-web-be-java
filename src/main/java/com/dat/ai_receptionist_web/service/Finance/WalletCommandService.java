@@ -156,11 +156,10 @@ public class WalletCommandService {
                 CourseSchedule schedule = courseScheduleRepository.findById(id)
                         .orElseThrow(() -> failure(CatalogErrorCode.COURSE_SCHEDULE_NOT_FOUND));
                 boolean applicable = schedule.getStatus() == ScheduleStatus.ACTIVE
-                        && schedule.getSessionType() == requirement.getSessionType()
                         && !schedule.getStartDate().isAfter(end)
                         && (schedule.getEndDate() == null || !schedule.getEndDate().isBefore(start))
                         && trainingPlanAccessRuleRepository.existsByTrainingPlan_TrainingPlanIdAndTargetCourse_CourseIdAndSessionType(
-                        plan.getTrainingPlanId(), schedule.getCourse().getCourseId(), schedule.getSessionType());
+                        plan.getTrainingPlanId(), schedule.getCourse().getCourseId(), requirement.getSessionType());
                 if (!applicable) throw failure(CatalogErrorCode.TRAINING_PLAN_REQUIREMENT_NOT_MET);
                 result.add(StudentEnrollmentSchedule.builder().courseSchedule(schedule).requirement(requirement)
                         .effectiveFrom(start).effectiveTo(end)

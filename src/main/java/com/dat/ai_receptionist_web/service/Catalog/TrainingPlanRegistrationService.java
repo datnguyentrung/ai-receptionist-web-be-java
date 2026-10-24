@@ -61,7 +61,10 @@ public class TrainingPlanRegistrationService {
         List<TrainingPlanRegistrationDTO.RecurringRequirement> recurring = requirements.stream()
                 .map(r -> new TrainingPlanRegistrationDTO.RecurringRequirement(
                         r.getTrainingPlanRequirementId(), label(r), r.getSessionType(), r.getSessionsPerWeek(),
-                        schedules.stream().filter(s -> supports(r, rules, s)).map(this::scheduleOption).toList()))
+                        schedules.stream()
+                                .filter(s -> supports(r, rules, s))
+                                .map(s -> scheduleOption(s, r.getSessionType()))
+                                .toList()))
                 .toList();
         return new TrainingPlanRegistrationDTO.RegistrationOptions(planId, startDate, endDate, recurring);
     }
@@ -79,16 +82,16 @@ public class TrainingPlanRegistrationService {
     private boolean supports(TrainingPlanRequirement requirement,
                              List<com.dat.ai_receptionist_web.domain.Catalog.TrainingPlanAccessRule> rules,
                              CourseSchedule schedule) {
-        return schedule.getSessionType() == requirement.getSessionType()
-                && rules.stream().anyMatch(rule -> rule.getSessionType() == requirement.getSessionType()
-                        && rule.getTargetCourse().getCourseId().equals(schedule.getCourse().getCourseId()));
+        return rules.stream().anyMatch(rule -> rule.getSessionType() == requirement.getSessionType()
+                && rule.getTargetCourse().getCourseId().equals(schedule.getCourse().getCourseId()));
     }
 
-    private TrainingPlanRegistrationDTO.ScheduleOption scheduleOption(CourseSchedule schedule) {
+    private TrainingPlanRegistrationDTO.ScheduleOption scheduleOption(CourseSchedule schedule,
+                                                                       com.dat.ai_receptionist_web.enums.Catalog.SessionType sessionType) {
         var template = schedule.getClassSchedule();
         return new TrainingPlanRegistrationDTO.ScheduleOption(schedule.getCourseScheduleId(), schedule.getCourse().getCourseId(),
                 schedule.getCourse().getName(), template.getBranch().getName(), template.getWeekday().name(),
-                template.getStartTime(), template.getEndTime(), schedule.getSessionType());
+                template.getStartTime(), template.getEndTime(), sessionType);
     }
 
     private String label(TrainingPlanRequirement requirement) {

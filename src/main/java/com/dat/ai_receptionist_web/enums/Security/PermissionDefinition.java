@@ -129,6 +129,10 @@ public enum PermissionDefinition {
     STUDENT_ENROLLMENT_UPDATE("STUDENT_ENROLLMENT_UPDATE", "STUDENT_ENROLLMENT", PermissionAction.UPDATE, "Student Enrollment Update"),
     STUDENT_ENROLLMENT_DELETE("STUDENT_ENROLLMENT_DELETE", "STUDENT_ENROLLMENT", PermissionAction.DELETE, "Student Enrollment Delete"),
     WALLET_TOP_UP_CREATE("WALLET_TOP_UP_CREATE", "WALLET", PermissionAction.CREATE, "Wallet Top Up Create"),
+    WALLET_TOP_UP_REQUEST_READ("WALLET_TOP_UP_REQUEST_READ", "WALLET_TOP_UP_REQUEST", PermissionAction.READ, "Wallet Top Up Request Read"),
+    WALLET_TOP_UP_REQUEST_CREATE("WALLET_TOP_UP_REQUEST_CREATE", "WALLET_TOP_UP_REQUEST", PermissionAction.CREATE, "Wallet Top Up Request Create"),
+    WALLET_TOP_UP_REVIEW("WALLET_TOP_UP_REVIEW", "WALLET_TOP_UP_REQUEST", PermissionAction.UPDATE, "Wallet Top Up Review"),
+    WALLET_TOP_UP_DIRECT_CREATE("WALLET_TOP_UP_DIRECT_CREATE", "WALLET_TOP_UP_REQUEST", PermissionAction.CREATE, "Wallet Direct Top Up Create"),
     WALLET_REFUND_CREATE("WALLET_REFUND_CREATE", "WALLET", PermissionAction.CREATE, "Wallet Refund Create"),
     SPARRING_OPERATE("SPARRING_OPERATE", "SPARRING", PermissionAction.UPDATE, "Operate sparring rooms");
 

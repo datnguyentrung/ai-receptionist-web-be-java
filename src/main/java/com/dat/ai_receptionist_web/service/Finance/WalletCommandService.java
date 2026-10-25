@@ -179,8 +179,7 @@ public class WalletCommandService {
                 if (first.getClassSchedule().getWeekday() == second.getClassSchedule().getWeekday()
                         && first.getClassSchedule().getStartTime().isBefore(second.getClassSchedule().getEndTime())
                         && second.getClassSchedule().getStartTime().isBefore(first.getClassSchedule().getEndTime())) {
-                    throw failure(CatalogErrorCode.TRAINING_PLAN_REQUIREMENT_NOT_MET,
-                            "Selected schedules overlap");
+                    throw failure(CatalogErrorCode.TRAINING_PLAN_SCHEDULE_CONFLICT);
                 }
             }
         }

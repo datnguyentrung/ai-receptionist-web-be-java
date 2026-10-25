@@ -57,9 +57,9 @@ public enum CoreErrorCode implements ErrorCode {
     SUPABASE_STORAGE_UNAVAILABLE("SUPABASE_STORAGE_UNAVAILABLE", HttpStatus.SERVICE_UNAVAILABLE,
             "Supabase storage unavailable", "Supabase storage is temporarily unavailable"),
     SUPABASE_STORAGE_UPLOAD_FAILED("SUPABASE_STORAGE_UPLOAD_FAILED", HttpStatus.BAD_GATEWAY,
-            "Supabase storage upload failed", "Could not upload face image"),
+            "Supabase storage upload failed", "Could not upload stored image"),
     SUPABASE_STORAGE_DELETE_FAILED("SUPABASE_STORAGE_DELETE_FAILED", HttpStatus.BAD_GATEWAY,
-            "Supabase storage delete failed", "Could not delete face image");
+            "Supabase storage delete failed", "Could not delete stored image");
 
     private final String code;
     private final HttpStatus status;

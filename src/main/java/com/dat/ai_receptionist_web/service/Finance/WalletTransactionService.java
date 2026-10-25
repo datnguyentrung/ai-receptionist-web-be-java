@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.dat.ai_receptionist_web.service.Security.access.CurrentAccessContextResolver;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +25,8 @@ public class WalletTransactionService {
     private final WalletTransactionMapper mapper;
     private final WalletRepository walletRepository;
     private final UserRepository userRepository;
+    private final CurrentAccessContextResolver accessContextResolver;
+    private final WalletAccessPolicy accessPolicy;
 
     /**
      * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
@@ -32,7 +35,12 @@ public class WalletTransactionService {
      */
     @Transactional(readOnly = true)
     public PageResponse<WalletTransactionDTO.SimpleResponse> list(Pageable pageable) {
-        return PageResponse.of(repository.findAllDetailed(pageable), mapper::toSimpleResponse);
+        var context = accessContextResolver.current();
+        if (accessPolicy.isFinanceStaff(context)) {
+            return PageResponse.of(repository.findAllDetailed(pageable), mapper::toSimpleResponse);
+        }
+        if (context.activePersonId() == null) throw new ApiException(SecurityErrorCode.ACCESS_DENIED);
+        return PageResponse.of(repository.findAllDetailedByPersonId(context.activePersonId(), pageable), mapper::toSimpleResponse);
     }
 
     /**
@@ -42,7 +50,11 @@ public class WalletTransactionService {
      */
     @Transactional(readOnly = true)
     public WalletTransactionDTO.Response get(UUID id) {
-        return mapper.toResponse(find(id));
+        var transaction = repository.findWithWalletById(id)
+                .orElseThrow(() -> new ApiException(FinanceErrorCode.WALLET_TRANSACTION_NOT_FOUND));
+        accessPolicy.requireCanReadPersonWallet(
+                accessContextResolver.current(), transaction.getWallet().getPerson().getPersonId());
+        return mapper.toResponse(transaction);
     }
 
     /**

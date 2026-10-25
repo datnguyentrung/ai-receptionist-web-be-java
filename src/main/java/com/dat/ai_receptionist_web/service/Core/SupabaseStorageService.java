@@ -15,6 +15,10 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
@@ -23,6 +27,7 @@ import java.util.UUID;
 @Slf4j
 @Service
 public class SupabaseStorageService {
+    private static final long MAX_IMAGE_PIXELS = 25_000_000L;
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
             MediaType.IMAGE_JPEG_VALUE,
             MediaType.IMAGE_PNG_VALUE,
@@ -67,6 +72,31 @@ public class SupabaseStorageService {
         }
     }
 
+    public ValidatedImage validateTopUpProof(MultipartFile file) {
+        ValidatedImage source = validateImage(file);
+        if (!Set.of(MediaType.IMAGE_JPEG, MediaType.IMAGE_PNG).contains(source.contentType())) {
+            throw new ApiException(CoreErrorCode.UNSUPPORTED_IMAGE_TYPE);
+        }
+        try {
+            BufferedImage decoded = ImageIO.read(new ByteArrayInputStream(source.bytes()));
+            if (decoded == null || decoded.getWidth() <= 0 || decoded.getHeight() <= 0
+                    || (long) decoded.getWidth() * decoded.getHeight() > MAX_IMAGE_PIXELS) {
+                throw new ApiException(CoreErrorCode.INVALID_IMAGE_FILE);
+            }
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            if (!ImageIO.write(decoded, source.extension(), output)) {
+                throw new ApiException(CoreErrorCode.INVALID_IMAGE_FILE);
+            }
+            byte[] sanitized = output.toByteArray();
+            if (sanitized.length == 0 || sanitized.length > properties.getStorage().getMaxFileSize()) {
+                throw new ApiException(GeneralErrorCode.FILE_TOO_LARGE);
+            }
+            return new ValidatedImage(source.contentType(), source.extension(), sanitized);
+        } catch (IOException exception) {
+            throw new ApiException(CoreErrorCode.INVALID_IMAGE_FILE);
+        }
+    }
+
     public String uploadPersonFaceImage(UUID personId, MultipartFile file) {
         return uploadPersonFaceImage(personId, validateImage(file));
     }
@@ -86,8 +116,7 @@ public class SupabaseStorageService {
             log.info("Uploaded face image: personId={}, objectPath={}", personId, objectPath);
             return objectPath;
         } catch (RestClientResponseException exception) {
-            log.error("Supabase face-image upload failed: personId={}, objectPath={}, status={}",
-                    personId, objectPath, exception.getStatusCode().value(), exception);
+            logStorageResponseFailure("face-image upload", bucket, objectPath, exception);
             throw new ApiException(toStorageErrorCode(exception, CoreErrorCode.SUPABASE_STORAGE_UPLOAD_FAILED));
         } catch (ResourceAccessException exception) {
             log.error("Supabase face-image upload unavailable: personId={}, objectPath={}",
@@ -100,30 +129,50 @@ public class SupabaseStorageService {
         }
     }
 
+    public String uploadTopUpProof(UUID requestId, ValidatedImage image) {
+        String objectPath = "requests/%s/%s.%s".formatted(requestId, UUID.randomUUID(), image.extension());
+        return uploadPrivateImage(properties.getStorage().getTopUpProofBucket(), objectPath, image);
+    }
+
+    public void deleteTopUpProof(String objectPath) {
+        deleteObject(properties.getStorage().getTopUpProofBucket(), objectPath);
+    }
+
+    public String createTopUpProofSignedUrl(String objectPath) {
+        return createSignedUrl(properties.getStorage().getTopUpProofBucket(), objectPath);
+    }
+
+    public long topUpProofSignedUrlTtlSeconds() {
+        return properties.getStorage().getSignedUrlTtlSeconds();
+    }
+
     public void deleteObject(String objectPath) {
+        deleteObject(properties.getStorage().getFaceImageBucket(), objectPath);
+    }
+
+    private void deleteObject(String bucket, String objectPath) {
         if (!StringUtils.hasText(objectPath)) {
             return;
         }
-        requireConfigured();
+        requireConfigured(bucket);
         try {
             client().delete()
                     .uri(uriBuilder -> storageObjectUri(
                             uriBuilder,
-                            properties.getStorage().getFaceImageBucket(),
+                            bucket,
                             objectPath
                     ))
                     .retrieve()
                     .toBodilessEntity();
-            log.info("Deleted face image: objectPath={}", objectPath);
+            log.info("Deleted storage object from bucket={}", bucket);
         } catch (RestClientResponseException exception) {
-            log.error("Supabase face-image delete failed: objectPath={}, status={}",
-                    objectPath, exception.getStatusCode().value(), exception);
+            logStorageResponseFailure("delete", bucket, objectPath, exception);
             throw new ApiException(toStorageErrorCode(exception, CoreErrorCode.SUPABASE_STORAGE_DELETE_FAILED));
         } catch (ResourceAccessException exception) {
-            log.error("Supabase face-image delete unavailable: objectPath={}", objectPath, exception);
+            log.error("Supabase storage delete unavailable: bucket={}", bucket, exception);
             throw new ApiException(CoreErrorCode.SUPABASE_STORAGE_UNAVAILABLE);
         } catch (RuntimeException exception) {
-            log.error("Supabase face-image delete failed: objectPath={}", objectPath, exception);
+            log.error("Supabase storage delete failed: bucket={}", bucket, exception);
             throw new ApiException(CoreErrorCode.SUPABASE_STORAGE_DELETE_FAILED);
         }
     }
@@ -141,14 +190,18 @@ public class SupabaseStorageService {
     }
 
     public String createSignedUrl(String objectPath) {
+        return createSignedUrl(properties.getStorage().getFaceImageBucket(), objectPath);
+    }
+
+    private String createSignedUrl(String bucket, String objectPath) {
         if (!StringUtils.hasText(objectPath)) {
             return null;
         }
-        requireConfigured();
+        requireConfigured(bucket);
         try {
             SignedUrlResponse response = client().post()
                     .uri(uriBuilder -> uriBuilder
-                            .pathSegment("object", "sign", properties.getStorage().getFaceImageBucket())
+                            .pathSegment("object", "sign", bucket)
                             .pathSegment(objectPath.split("/"))
                             .build())
                     .body(Map.of("expiresIn", properties.getStorage().getSignedUrlTtlSeconds()))
@@ -159,17 +212,16 @@ public class SupabaseStorageService {
             }
             return toAbsoluteStorageUrl(response.signedURL());
         } catch (RestClientResponseException exception) {
-            log.error("Supabase signed-url creation failed: objectPath={}, status={}",
-                    objectPath, exception.getStatusCode().value(), exception);
+            logStorageResponseFailure("signed-url creation", bucket, objectPath, exception);
             throw new ApiException(toStorageErrorCode(exception, CoreErrorCode.SUPABASE_STORAGE_UNAVAILABLE));
         } catch (ResourceAccessException exception) {
-            log.error("Supabase signed-url creation unavailable: objectPath={}", objectPath, exception);
+            log.error("Supabase signed-url creation unavailable: bucket={}", bucket, exception);
             throw new ApiException(CoreErrorCode.SUPABASE_STORAGE_UNAVAILABLE);
         } catch (RuntimeException exception) {
             if (exception instanceof ApiException apiException) {
                 throw apiException;
             }
-            log.error("Supabase signed-url creation failed: objectPath={}", objectPath, exception);
+            log.error("Supabase signed-url creation failed: bucket={}", bucket, exception);
             throw new ApiException(CoreErrorCode.SUPABASE_STORAGE_UNAVAILABLE);
         }
     }
@@ -183,10 +235,39 @@ public class SupabaseStorageService {
     }
 
     private void requireConfigured() {
+        requireConfigured(properties.getStorage().getFaceImageBucket());
+    }
+
+    private void requireConfigured(String bucket) {
         if (!StringUtils.hasText(properties.getUrl())
                 || !StringUtils.hasText(properties.getServiceRoleKey())
-                || !StringUtils.hasText(properties.getStorage().getFaceImageBucket())) {
+                || !StringUtils.hasText(bucket)) {
             throw new ApiException(CoreErrorCode.SUPABASE_STORAGE_NOT_CONFIGURED);
+        }
+    }
+
+    private String uploadPrivateImage(String bucket, String objectPath, ValidatedImage image) {
+        requireConfigured(bucket);
+        try {
+            client().post()
+                    .uri(uriBuilder -> storageObjectUri(uriBuilder, bucket, objectPath))
+                    .header("x-upsert", "false")
+                    .contentType(image.contentType())
+                    .body(image.bytes())
+                    .retrieve()
+                    .toBodilessEntity();
+            log.info("Uploaded private image: bucket={}", bucket);
+            return objectPath;
+        } catch (RestClientResponseException exception) {
+            logStorageResponseFailure("private-image upload", bucket, objectPath, exception);
+            throw new ApiException(toStorageErrorCode(exception, CoreErrorCode.SUPABASE_STORAGE_UPLOAD_FAILED));
+        } catch (ResourceAccessException exception) {
+            log.error("Supabase private-image upload unavailable: bucket={}", bucket, exception);
+            throw new ApiException(CoreErrorCode.SUPABASE_STORAGE_UNAVAILABLE);
+        } catch (RuntimeException exception) {
+            if (exception instanceof ApiException apiException) throw apiException;
+            log.error("Supabase private-image upload failed: bucket={}", bucket, exception);
+            throw new ApiException(CoreErrorCode.SUPABASE_STORAGE_UPLOAD_FAILED);
         }
     }
 
@@ -194,6 +275,29 @@ public class SupabaseStorageService {
         return exception.getStatusCode().is5xxServerError()
                 ? CoreErrorCode.SUPABASE_STORAGE_UNAVAILABLE
                 : fallback;
+    }
+
+    private static void logStorageResponseFailure(
+            String operation,
+            String bucket,
+            String objectPath,
+            RestClientResponseException exception
+    ) {
+        log.error(
+                "Supabase storage {} failed: bucket={}, objectPath={}, upstreamStatus={}, upstreamBody={}",
+                operation,
+                bucket,
+                objectPath,
+                exception.getStatusCode().value(),
+                abbreviatedResponseBody(exception),
+                exception);
+    }
+
+    private static String abbreviatedResponseBody(RestClientResponseException exception) {
+        String body = exception.getResponseBodyAsString();
+        if (!StringUtils.hasText(body)) return "<empty>";
+        String normalized = body.replaceAll("\\s+", " ").trim();
+        return normalized.length() <= 1_000 ? normalized : normalized.substring(0, 1_000) + "…";
     }
 
     private static boolean matchesSignature(String contentType, byte[] bytes) {

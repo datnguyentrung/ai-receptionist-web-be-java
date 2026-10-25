@@ -47,6 +47,10 @@ class SystemRolePermissionSynchronizerTest {
                 PermissionDefinition.WALLET_TRANSACTION_UPDATE.getCode(),
                 PermissionDefinition.WALLET_TRANSACTION_DELETE.getCode(),
                 PermissionDefinition.WALLET_TOP_UP_CREATE.getCode(),
+                PermissionDefinition.WALLET_TOP_UP_REQUEST_READ.getCode(),
+                PermissionDefinition.WALLET_TOP_UP_REQUEST_CREATE.getCode(),
+                PermissionDefinition.WALLET_TOP_UP_REVIEW.getCode(),
+                PermissionDefinition.WALLET_TOP_UP_DIRECT_CREATE.getCode(),
                 PermissionDefinition.WALLET_REFUND_CREATE.getCode()
         );
     }
@@ -68,7 +72,8 @@ class SystemRolePermissionSynchronizerTest {
                 PermissionDefinition.WALLET_TRANSACTION_READ.getCode(),
                 PermissionDefinition.COURSE_PURCHASE_READ.getCode(),
                 PermissionDefinition.COURSE_PURCHASE_CREATE.getCode(),
-                PermissionDefinition.WALLET_TOP_UP_CREATE.getCode()
+                PermissionDefinition.WALLET_TOP_UP_REQUEST_READ.getCode(),
+                PermissionDefinition.WALLET_TOP_UP_REQUEST_CREATE.getCode()
         );
         assertThat(permissions).doesNotContain(
                 PermissionDefinition.LEAVE_REQUEST_CREATE.getCode(),
@@ -86,6 +91,19 @@ class SystemRolePermissionSynchronizerTest {
     }
 
     @Test
+    void financeStaffReceivesOnlyWalletReviewPermissions() {
+        assertThat(synchronizer.getPermissionsForRole(SystemRoleDefinition.FINANCE_STAFF))
+                .containsExactlyInAnyOrder(
+                        PermissionDefinition.PERSON_READ.getCode(),
+                        PermissionDefinition.WALLET_READ.getCode(),
+                        PermissionDefinition.WALLET_TRANSACTION_READ.getCode(),
+                        PermissionDefinition.WALLET_TOP_UP_REQUEST_READ.getCode(),
+                        PermissionDefinition.WALLET_TOP_UP_REVIEW.getCode(),
+                        PermissionDefinition.WALLET_TOP_UP_DIRECT_CREATE.getCode())
+                .doesNotContain(PermissionDefinition.WALLET_UPDATE.getCode());
+    }
+
+    @Test
     void runReplacesAllSystemRolePermissionsInOneBulkCall() {
         when(rolePermissionService.replaceAll(anyMap()))
                 .thenReturn(new RolePermissionService.BulkSyncResult(0, 0));
@@ -98,7 +116,8 @@ class SystemRolePermissionSynchronizerTest {
         assertThat(desired.getValue().keySet()).containsExactlyInAnyOrder(
                 SystemRoleDefinition.SUPER_ADMIN.getCode(),
                 SystemRoleDefinition.SYSTEM_ADMIN.getCode(),
-                SystemRoleDefinition.GUARDIAN.getCode()
+                SystemRoleDefinition.GUARDIAN.getCode(),
+                SystemRoleDefinition.FINANCE_STAFF.getCode()
         );
     }
 }

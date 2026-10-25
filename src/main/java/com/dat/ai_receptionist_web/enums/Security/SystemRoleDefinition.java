@@ -23,6 +23,12 @@ public enum SystemRoleDefinition {
             "GUARDIAN",
             "Guardian",
             "Parent or guardian with access to dependent student information"
+    ),
+
+    FINANCE_STAFF(
+            "FINANCE_STAFF",
+            "Finance Staff",
+            "Reviews payment evidence and posts approved wallet top ups"
     );
 
     private final String code;

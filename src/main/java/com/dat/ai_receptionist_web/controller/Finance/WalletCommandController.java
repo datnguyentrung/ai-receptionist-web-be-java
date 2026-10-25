@@ -17,18 +17,6 @@ import java.util.UUID;
 public class WalletCommandController {
     private final WalletCommandService commandService;
 
-    /**
-     * Tác dụng: Chuyển đổi dữ liệu sang kiểu kết quả phù hợp cho lớp đang xử lý.
-     * Input: Nhận WalletCommandDTO.TopUpRequest request từ caller hoặc request.
-     * Output: Trả về WalletCommandDTO.TransactionResponse theo kết quả xử lý.
-     */
-    @PostMapping("/top-up")
-    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).WALLET_TOP_UP_CREATE.getCode())")
-    public WalletCommandDTO.TransactionResponse topUp(
-            @Valid @RequestBody WalletCommandDTO.TopUpRequest request) {
-        return commandService.topUp(request, currentUserId());
-    }
-
     @PostMapping("/training-plan-purchases")
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).COURSE_PURCHASE_CREATE.getCode())")
     public WalletCommandDTO.TransactionResponse purchaseTrainingPlan(

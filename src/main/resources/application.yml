@@ -150,8 +150,38 @@ rate-limit:
       limit: 10
       window: 5m
       subject: IP
-    - name: wallet-top-up
-      path: /api/v1/wallets/top-up
+    - name: wallet-top-up-request-create
+      path: /api/v1/wallet-top-up-requests
+      method: POST
+      limit: 5
+      window: 1m
+      subject: AUTHENTICATED
+    - name: wallet-top-up-direct-create
+      path: /api/v1/wallet-top-up-requests/direct
+      method: POST
+      limit: 5
+      window: 1m
+      subject: AUTHENTICATED
+    - name: wallet-top-up-proof-upload
+      path: /api/v1/wallet-top-up-requests/*/proof
+      method: PUT
+      limit: 5
+      window: 1m
+      subject: AUTHENTICATED
+    - name: wallet-top-up-submit
+      path: /api/v1/wallet-top-up-requests/*/submit
+      method: POST
+      limit: 5
+      window: 1m
+      subject: AUTHENTICATED
+    - name: wallet-top-up-review
+      path: /api/v1/wallet-top-up-requests/*/approve
+      method: POST
+      limit: 10
+      window: 1m
+      subject: AUTHENTICATED
+    - name: wallet-top-up-reject
+      path: /api/v1/wallet-top-up-requests/*/reject
       method: POST
       limit: 10
       window: 1m
@@ -206,6 +236,7 @@ supabase:
   service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:}
   storage:
     face-image-bucket: ${SUPABASE_FACE_IMAGE_BUCKET:face-images}
+    top-up-proof-bucket: ${SUPABASE_TOP_UP_PROOF_BUCKET:wallet-top-up-proofs}
     max-file-size: ${SUPABASE_FACE_IMAGE_MAX_SIZE:5242880}
     signed-url-ttl-seconds: ${SUPABASE_FACE_IMAGE_SIGNED_URL_TTL_SECONDS:3600}
 

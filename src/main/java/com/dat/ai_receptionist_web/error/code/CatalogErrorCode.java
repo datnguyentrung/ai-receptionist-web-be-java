@@ -33,6 +33,8 @@ public enum CatalogErrorCode implements ErrorCode {
             "Training plan home course not allowed", "The plan cannot be purchased with this home course"),
     TRAINING_PLAN_REQUIREMENT_NOT_MET("TRAINING_PLAN_REQUIREMENT_NOT_MET", HttpStatus.UNPROCESSABLE_CONTENT,
             "Training plan requirement not met", "Recurring schedule selections do not satisfy the plan requirements"),
+    TRAINING_PLAN_SCHEDULE_CONFLICT("TRAINING_PLAN_SCHEDULE_CONFLICT", HttpStatus.UNPROCESSABLE_CONTENT,
+            "Training plan schedule conflict", "Selected recurring schedules overlap"),
     COURSE_SCHEDULE_PENDING_NOT_FOUND("COURSE_SCHEDULE_PENDING_NOT_FOUND", HttpStatus.NOT_FOUND,
             "Pending schedule change not found", "No pending schedule change exists for this course"),
     COURSE_SCHEDULE_CHANGE_CONFLICT("COURSE_SCHEDULE_CHANGE_CONFLICT", HttpStatus.CONFLICT,

@@ -10,6 +10,7 @@ import com.dat.ai_receptionist_web.mapper.Finance.WalletMapper;
 import com.dat.ai_receptionist_web.repository.Finance.WalletRepository;
 import com.dat.ai_receptionist_web.repository.Core.PersonRepository;
 import com.dat.ai_receptionist_web.enums.Finance.WalletStatus;
+import com.dat.ai_receptionist_web.service.Security.access.CurrentAccessContextResolver;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +23,8 @@ public class WalletService {
     private final WalletRepository repository;
     private final WalletMapper mapper;
     private final PersonRepository personRepository;
+    private final CurrentAccessContextResolver accessContextResolver;
+    private final WalletAccessPolicy accessPolicy;
 
     /**
      * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
@@ -30,7 +33,13 @@ public class WalletService {
      */
     @Transactional(readOnly = true)
     public PageResponse<WalletDTO.SimpleResponse> list(Pageable pageable) {
-        return PageResponse.of(repository.findAllDetailed(pageable), mapper::toSimpleResponse);
+        var context = accessContextResolver.current();
+        if (accessPolicy.isFinanceStaff(context)) {
+            return PageResponse.of(repository.findAllDetailed(pageable), mapper::toSimpleResponse);
+        }
+        if (context.activePersonId() == null) throw new com.dat.ai_receptionist_web.error.ApiException(
+                com.dat.ai_receptionist_web.error.code.SecurityErrorCode.ACCESS_DENIED);
+        return PageResponse.of(repository.findByPerson_PersonId(context.activePersonId(), pageable), mapper::toSimpleResponse);
     }
 
     /**
@@ -40,7 +49,17 @@ public class WalletService {
      */
     @Transactional(readOnly = true)
     public WalletDTO.Response get(UUID id) {
-        return mapper.toResponse(find(id));
+        var wallet = find(id);
+        accessPolicy.requireCanReadPersonWallet(accessContextResolver.current(), wallet.getPerson().getPersonId());
+        return mapper.toResponse(wallet);
+    }
+
+    @Transactional(readOnly = true)
+    public WalletDTO.Response getByPersonId(UUID personId) {
+        accessPolicy.requireCanReadPersonWallet(accessContextResolver.current(), personId);
+        var wallet = repository.findByPerson_PersonId(personId)
+                .orElseThrow(() -> new ApiException(FinanceErrorCode.WALLET_NOT_FOUND));
+        return mapper.toResponse(wallet);
     }
 
     /**

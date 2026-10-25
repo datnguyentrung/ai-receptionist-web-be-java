@@ -40,7 +40,9 @@ public interface RolePermissionRepository extends JpaRepository<RolePermission, 
             where rp.role.code = :roleCode
               and rp.permission.code in :permissionCodes
             """)
-    void deleteByRoleCodeAndPermissionCodeIn(String roleCode, Set<String> toRemove);
+    void deleteByRoleCodeAndPermissionCodeIn(
+            @Param("roleCode") String roleCode,
+            @Param("permissionCodes") Set<String> toRemove);
 
     @Query("""
             select distinct rp.role.code

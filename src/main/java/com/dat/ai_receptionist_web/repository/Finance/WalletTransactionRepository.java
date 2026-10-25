@@ -27,7 +27,20 @@ public interface WalletTransactionRepository extends JpaRepository<WalletTransac
             """)
     Page<WalletTransaction> findAllDetailed(Pageable pageable);
 
-    @EntityGraph(attributePaths = "wallet")
+    @Query(value = """
+            select tx from WalletTransaction tx
+            join fetch tx.wallet wallet
+            join fetch wallet.person person
+            join fetch tx.createdByUser
+            left join fetch tx.reviewedByUser
+            where person.personId = :personId
+            """, countQuery = """
+            select count(tx) from WalletTransaction tx
+            where tx.wallet.person.personId = :personId
+            """)
+    Page<WalletTransaction> findAllDetailedByPersonId(@Param("personId") UUID personId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"wallet", "wallet.person", "createdByUser", "reviewedByUser"})
     @Query("select tx from WalletTransaction tx where tx.walletTransactionId = :id")
     Optional<WalletTransaction> findWithWalletById(@Param("id") UUID id);
 }

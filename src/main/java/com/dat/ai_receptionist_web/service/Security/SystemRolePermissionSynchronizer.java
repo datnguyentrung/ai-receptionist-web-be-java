@@ -31,7 +31,17 @@ public class SystemRolePermissionSynchronizer implements ApplicationRunner {
             PermissionDefinition.WALLET_TRANSACTION_READ.getCode(),
             PermissionDefinition.COURSE_PURCHASE_READ.getCode(),
             PermissionDefinition.COURSE_PURCHASE_CREATE.getCode(),
-            PermissionDefinition.WALLET_TOP_UP_CREATE.getCode()
+            PermissionDefinition.WALLET_TOP_UP_REQUEST_READ.getCode(),
+            PermissionDefinition.WALLET_TOP_UP_REQUEST_CREATE.getCode()
+    );
+
+    private static final Set<String> FINANCE_STAFF_PERMISSIONS = Set.of(
+            PermissionDefinition.PERSON_READ.getCode(),
+            PermissionDefinition.WALLET_READ.getCode(),
+            PermissionDefinition.WALLET_TRANSACTION_READ.getCode(),
+            PermissionDefinition.WALLET_TOP_UP_REQUEST_READ.getCode(),
+            PermissionDefinition.WALLET_TOP_UP_REVIEW.getCode(),
+            PermissionDefinition.WALLET_TOP_UP_DIRECT_CREATE.getCode()
     );
 
     private static final Set<String> SYSTEM_ADMIN_EXCLUDED_PERMISSIONS = Set.of(
@@ -44,6 +54,10 @@ public class SystemRolePermissionSynchronizer implements ApplicationRunner {
             PermissionDefinition.WALLET_TRANSACTION_UPDATE.getCode(),
             PermissionDefinition.WALLET_TRANSACTION_DELETE.getCode(),
             PermissionDefinition.WALLET_TOP_UP_CREATE.getCode(),
+            PermissionDefinition.WALLET_TOP_UP_REQUEST_READ.getCode(),
+            PermissionDefinition.WALLET_TOP_UP_REQUEST_CREATE.getCode(),
+            PermissionDefinition.WALLET_TOP_UP_REVIEW.getCode(),
+            PermissionDefinition.WALLET_TOP_UP_DIRECT_CREATE.getCode(),
             PermissionDefinition.WALLET_REFUND_CREATE.getCode()
     );
 
@@ -81,6 +95,9 @@ public class SystemRolePermissionSynchronizer implements ApplicationRunner {
     Set<String> getPermissionsForRole(SystemRoleDefinition role) {
         if (role == SystemRoleDefinition.GUARDIAN) {
             return Collections.unmodifiableSet(new TreeSet<>(GUARDIAN_PERMISSIONS));
+        }
+        if (role == SystemRoleDefinition.FINANCE_STAFF) {
+            return Collections.unmodifiableSet(new TreeSet<>(FINANCE_STAFF_PERMISSIONS));
         }
 
         Set<String> permissionCodes = allPermissionCodes();

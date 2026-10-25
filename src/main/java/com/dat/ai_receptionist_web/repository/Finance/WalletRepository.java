@@ -23,6 +23,9 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
 
     Optional<Wallet> findByPerson_PersonId(UUID personId);
 
+    @EntityGraph(attributePaths = "person")
+    Page<Wallet> findByPerson_PersonId(UUID personId, Pageable pageable);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select w from Wallet w where w.person.personId = :personId")
     Optional<Wallet> findByPersonIdForUpdate(@Param("personId") UUID personId);

@@ -25,6 +25,20 @@ public interface UserPersonRepository extends JpaRepository<UserPerson, UUID> {
             """)
     Page<UserPerson> findAllDetailed(Pageable pageable);
 
+    @Query(value = """
+            select up
+            from UserPerson up
+            join fetch up.user
+            join fetch up.person
+            where up.person.personId = :personId
+            """,
+            countQuery = """
+            select count(up)
+            from UserPerson up
+            where up.person.personId = :personId
+            """)
+    Page<UserPerson> findAllDetailedByPersonId(@Param("personId") UUID personId, Pageable pageable);
+
     @EntityGraph(attributePaths = "person")
     List<UserPerson> findAllByUser_UserIdAndActiveTrue(UUID userId);
 

@@ -14,6 +14,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 
+import java.util.UUID;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ListFetchGraphContractTest {
@@ -54,6 +56,21 @@ class ListFetchGraphContractTest {
         assertDetailedListQuery(RolePermissionRepository.class,
                 "join fetch rp.role",
                 "join fetch rp.permission");
+    }
+
+    @Test
+    void userPersonPersonFilterKeepsTheMappingGraphAndHasAPaginationCountQuery() throws Exception {
+        Query query = UserPersonRepository.class
+                .getMethod("findAllDetailedByPersonId", UUID.class, Pageable.class)
+                .getAnnotation(Query.class);
+
+        assertThat(query.value()).contains(
+                "join fetch up.user",
+                "join fetch up.person",
+                "where up.person.personId = :personId");
+        assertThat(query.countQuery())
+                .contains("where up.person.personId = :personId")
+                .doesNotContain("fetch");
     }
 
     private static void assertDetailedListQuery(Class<?> repositoryType, String... expectedFetches) throws Exception {

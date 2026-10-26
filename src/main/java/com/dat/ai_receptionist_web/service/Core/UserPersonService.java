@@ -30,8 +30,11 @@ public class UserPersonService {
      * Output: Trả về PageResponse<UserPersonDTO.SimpleResponse> theo kết quả xử lý.
      */
     @Transactional(readOnly = true)
-    public PageResponse<UserPersonDTO.SimpleResponse> list(Pageable pageable) {
-        return PageResponse.of(repository.findAllDetailed(pageable), mapper::toSimpleResponse);
+    public PageResponse<UserPersonDTO.SimpleResponse> list(Pageable pageable, UUID personId) {
+        var result = personId == null
+                ? repository.findAllDetailed(pageable)
+                : repository.findAllDetailedByPersonId(personId, pageable);
+        return PageResponse.of(result, mapper::toSimpleResponse);
     }
 
     /**

@@ -31,6 +31,15 @@ spring:
       repositories:
         enabled: true
 
+  mail:
+    host: ${SPRING_MAIL_HOST:}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${SPRING_MAIL_SMTP_AUTH:true}
+      mail.smtp.starttls.enable: ${SPRING_MAIL_STARTTLS_ENABLE:true}
+
   rabbitmq:
     host: ${SPRING_RABBITMQ_HOST:localhost}
     port: ${SPRING_RABBITMQ_PORT:5672}
@@ -126,6 +135,24 @@ rate-limit:
   # Enable only when the edge proxy overwrites X-Forwarded-For from untrusted clients.
   trust-forwarded-headers: ${RATE_LIMIT_TRUST_FORWARDED_HEADERS:false}
   policies:
+    - name: password-reset-options
+      path: /api/v1/auth/password-reset/options
+      method: POST
+      limit: 10
+      window: 15m
+      subject: IP
+    - name: password-reset-send
+      path: /api/v1/auth/password-reset/send
+      method: POST
+      limit: 10
+      window: 15m
+      subject: IP
+    - name: password-reset-verify
+      path: /api/v1/auth/password-reset/verify
+      method: POST
+      limit: 20
+      window: 15m
+      subject: IP
     - name: login-web
       path: /api/v1/auth/login
       method: POST

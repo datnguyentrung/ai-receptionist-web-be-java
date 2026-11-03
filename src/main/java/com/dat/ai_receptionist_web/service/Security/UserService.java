@@ -278,7 +278,22 @@ public class UserService {
             throw new ApiException(
                     SecurityErrorCode.PASSWORD_CONFIRMATION_MISMATCH);
         }
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
+            throw new ApiException(SecurityErrorCode.PASSWORD_REUSE_NOT_ALLOWED);
+        }
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+    }
+
+    @Transactional
+    public void resetPassword(UUID userId, String newPassword, String confirmPassword) {
+        User user = getUserById(userId);
+        if (!newPassword.equals(confirmPassword)) {
+            throw new ApiException(SecurityErrorCode.PASSWORD_CONFIRMATION_MISMATCH);
+        }
+        if (passwordEncoder.matches(newPassword, user.getPasswordHash())) {
+            throw new ApiException(SecurityErrorCode.PASSWORD_REUSE_NOT_ALLOWED);
+        }
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
     }
 
     /**

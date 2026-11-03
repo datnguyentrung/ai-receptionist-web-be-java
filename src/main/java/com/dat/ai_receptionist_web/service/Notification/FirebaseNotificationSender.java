@@ -37,6 +37,24 @@ public class FirebaseNotificationSender {
             return false;
         }
     }
+
+    public boolean sendPasswordResetCode(Set<String> tokens, String code) {
+        if (tokens.isEmpty() || firebaseMessaging == null) return false;
+        try {
+            MulticastMessage message = MulticastMessage.builder().addAllTokens(tokens)
+                    .setNotification(Notification.builder()
+                            .setTitle("Mã đặt lại mật khẩu")
+                            .setBody("Mã OTP của bạn: " + code + ". Có hiệu lực trong 5 phút.")
+                            .build())
+                    .putData("type", "PASSWORD_RESET_CODE")
+                    .putData("code", code)
+                    .build();
+            return firebaseMessaging.sendEachForMulticast(message).getSuccessCount() > 0;
+        } catch (FirebaseMessagingException exception) {
+            log.error("Password reset FCM delivery failed for {} tokens", tokens.size(), exception);
+            return false;
+        }
+    }
 }
 
 

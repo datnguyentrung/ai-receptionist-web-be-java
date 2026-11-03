@@ -32,6 +32,7 @@ public class AuthenticationController {
     private final AuthSessionService sessionService;
     private final SecurityUtil securityUtil;
     private final AuthenticationMapper authenticationMapper;
+    private final PasswordRecoveryService passwordRecoveryService;
 
     @Value("${jwt.refresh-token-validity-in-seconds}")
     private long refreshTokenExpiration;
@@ -197,6 +198,50 @@ public class AuthenticationController {
     @PostMapping("/update-fcm")
     public void updateFcm(@Valid @RequestBody LoginReq.UpdateFcmReq request) {
         sessionService.updateFcm(currentSessionId(), request.getFcmToken(), request.getPlatform());
+    }
+
+    @PostMapping("/password-reset/options")
+    public PasswordRecoveryReq.Options passwordResetOptions(@Valid @RequestBody PasswordRecoveryReq.Start request) {
+        return passwordRecoveryService.options(request.phoneNumber());
+    }
+
+    @PostMapping("/password-reset/send")
+    public PasswordRecoveryReq.Sent sendPasswordResetCode(@Valid @RequestBody PasswordRecoveryReq.Send request) {
+        return passwordRecoveryService.send(request);
+    }
+
+    @PostMapping("/password-reset/verify")
+    public PasswordRecoveryReq.Verified verifyPasswordResetCode(@Valid @RequestBody PasswordRecoveryReq.Verify request) {
+        return passwordRecoveryService.verify(request);
+    }
+
+    @PostMapping("/password-reset/complete")
+    public void completePasswordReset(@Valid @RequestBody PasswordRecoveryReq.Complete request) {
+        passwordRecoveryService.complete(request, userService);
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordReq request) {
+        UUID userId = currentUserId();
+        userService.changePassword(userId, request);
+        sessionService.revokeAll(userId);
+        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, deleteRefreshCookie().toString()).build();
+    }
+
+    @GetMapping("/recovery-emails")
+    public List<PasswordRecoveryReq.EmailVerification> recoveryEmails() {
+        return passwordRecoveryService.recoveryEmails(currentUserId());
+    }
+
+    @PostMapping("/recovery-emails/{userPersonId}/send")
+    public PasswordRecoveryReq.Sent sendRecoveryEmailVerification(@PathVariable UUID userPersonId) {
+        return passwordRecoveryService.sendEmailVerification(currentUserId(), userPersonId);
+    }
+
+    @PostMapping("/recovery-emails/{userPersonId}/verify")
+    public void verifyRecoveryEmail(@PathVariable UUID userPersonId,
+                                    @Valid @RequestBody PasswordRecoveryReq.EmailVerificationCode request) {
+        passwordRecoveryService.verifyEmail(currentUserId(), userPersonId, request.code());
     }
 
     /**

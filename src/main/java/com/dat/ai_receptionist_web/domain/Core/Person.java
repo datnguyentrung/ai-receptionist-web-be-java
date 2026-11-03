@@ -53,6 +53,12 @@ public class Person {
     @Email
     private String email;
 
+    @Column(name = "recovery_email_verified_value", length = 100)
+    private String recoveryEmailVerifiedValue;
+
+    @Column(name = "recovery_email_verified_at")
+    private LocalDateTime recoveryEmailVerifiedAt;
+
     @Column(name = "national_code", length = 50)
     private String nationalCode;
 

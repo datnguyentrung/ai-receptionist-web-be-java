@@ -62,6 +62,14 @@ public enum SecurityErrorCode implements ErrorCode {
             "Active context unavailable", "Active context is no longer available"),
     PERSON_CONTEXT_NOT_OWNED("PERSON_CONTEXT_NOT_OWNED", HttpStatus.FORBIDDEN,
             "Person context not owned by user", "Person context is not owned by user"),
+    PASSWORD_RESET_INVALID("PASSWORD_RESET_INVALID", HttpStatus.BAD_REQUEST,
+            "Password reset invalid", "The password reset code or request is invalid"),
+    PASSWORD_RESET_EXPIRED("PASSWORD_RESET_EXPIRED", HttpStatus.BAD_REQUEST,
+            "Password reset expired", "The password reset code has expired"),
+    PASSWORD_RESET_CHANNEL_UNAVAILABLE("PASSWORD_RESET_CHANNEL_UNAVAILABLE", HttpStatus.BAD_REQUEST,
+            "Password reset channel unavailable", "This password reset channel is not available"),
+    PASSWORD_REUSE_NOT_ALLOWED("PASSWORD_REUSE_NOT_ALLOWED", HttpStatus.BAD_REQUEST,
+            "Password reuse not allowed", "The new password must be different from the current password"),
     MISSING_AUTHENTICATED_USER("MISSING_AUTHENTICATED_USER", HttpStatus.FORBIDDEN,
             "Missing authenticated user", "Missing authenticated user");
 

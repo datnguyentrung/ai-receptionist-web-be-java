@@ -11,20 +11,44 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
+// Module phát hành và xác thực ticket tạm thời cho WebSocket Đối kháng.
 public class SparringSocketTicketService {
     private static final long TICKET_TTL_MS = 60_000;
     private final SecureRandom random = new SecureRandom();
     private final ConcurrentHashMap<String, Ticket> tickets = new ConcurrentHashMap<>();
 
-    public IssuedTicket issue(String roomCode, UUID userId, boolean operator) {
+    // Tạo ticket ngẫu nhiên, gắn ticket với phòng và quyền operator của người dùng.
+    public IssuedTicket issue(
+            String roomCode,
+            UUID userId,
+            boolean operator
+    ) {
+        return issue(roomCode, userId, operator, "sparring");
+    }
+
+    /** Loại room ngăn ticket phòng luyện tập bị dùng cho endpoint Đối kháng thật. */
+    public IssuedTicket issue(String roomCode, UUID userId, boolean operator, String roomType) {
         byte[] bytes = new byte[24];
         random.nextBytes(bytes);
         String value = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         long expiresAt = Instant.now().toEpochMilli() + TICKET_TTL_MS;
-        tickets.put(value, new Ticket(roomCode, userId, operator, expiresAt));
-        return new IssuedTicket(value, expiresAt);
+        tickets.put(
+                value,
+                new Ticket(
+                        roomCode,
+                        userId,
+                        operator,
+                        roomType,
+                        expiresAt
+                )
+        );
+        return new IssuedTicket(
+                value,
+                expiresAt
+        );
     }
 
+    // Kiểm tra ticket có tồn tại và còn hạn trước khi cho phép handshake WebSocket.
     public Ticket resolve(String ticket) {
         Ticket value = tickets.get(ticket);
         if (value == null || value.expiresAtEpochMs() < Instant.now().toEpochMilli()) {
@@ -34,6 +58,18 @@ public class SparringSocketTicketService {
         return value;
     }
 
-    public record Ticket(String roomCode, UUID userId, boolean operator, long expiresAtEpochMs) { }
-    public record IssuedTicket(String value, long expiresAtEpochMs) { }
+    public record Ticket(
+            String roomCode,
+            UUID userId,
+            boolean operator,
+            String roomType,
+            long expiresAtEpochMs
+    ) {
+    }
+
+    public record IssuedTicket(
+            String value,
+            long expiresAtEpochMs
+    ) {
+    }
 }

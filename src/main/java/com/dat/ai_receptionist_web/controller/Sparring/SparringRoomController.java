@@ -15,18 +15,26 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/sparring/rooms")
 @RequiredArgsConstructor
+// Controller REST mỏng: nhận request, lấy thông tin người dùng và ủy quyền xử lý cho các module Đối kháng.
 public class SparringRoomController {
     private final SparringRoomRegistry rooms;
     private final SparringSocketTicketService tickets;
 
     @PostMapping
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).SPARRING_OPERATE.getCode())")
-    public SparringRoomResponse create() { return rooms.create(); }
+    // Tạo một phòng đấu mới và trả về mã phòng cùng snapshot ban đầu.
+    public SparringRoomResponse create() {
+        return rooms.create();
+    }
 
     @GetMapping("/{roomCode}")
-    public SparringRoomResponse get(@PathVariable String roomCode) { return rooms.get(roomCode); }
+    // Kiểm tra mã phòng và lấy trạng thái hiện tại của phòng.
+    public SparringRoomResponse get(@PathVariable String roomCode) {
+        return rooms.get(roomCode);
+    }
 
     @PostMapping("/{roomCode}/socket-ticket")
+    // Phát hành ticket ngắn hạn để client được phép mở kết nối WebSocket vào phòng.
     public SparringSocketTicketResponse socketTicket(@PathVariable String roomCode) {
         rooms.get(roomCode);
         UUID userId = SecurityUtil.getCurrentUserId().orElseThrow();
@@ -34,7 +42,16 @@ public class SparringRoomController {
                 .map(jwt -> jwt.getClaimAsStringList("permissions"))
                 .map(values -> values.contains(PermissionDefinition.SPARRING_OPERATE.getCode()))
                 .orElse(false);
-        SparringSocketTicketService.IssuedTicket ticket = tickets.issue(roomCode, userId, operator);
-        return new SparringSocketTicketResponse(roomCode, ticket.value(), operator, ticket.expiresAtEpochMs());
+        SparringSocketTicketService.IssuedTicket ticket = tickets.issue(
+                roomCode,
+                userId,
+                operator
+        );
+        return new SparringSocketTicketResponse(
+                roomCode,
+                ticket.value(),
+                operator,
+                ticket.expiresAtEpochMs()
+        );
     }
 }

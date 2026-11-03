@@ -264,7 +264,10 @@ supabase:
   storage:
     face-image-bucket: ${SUPABASE_FACE_IMAGE_BUCKET:face-images}
     top-up-proof-bucket: ${SUPABASE_TOP_UP_PROOF_BUCKET:wallet-top-up-proofs}
+    # Bucket private riêng cho video của phòng tập trọng tài; phải được tạo trên Supabase.
+    sparring-practice-video-bucket: ${SUPABASE_SPARRING_PRACTICE_VIDEO_BUCKET:sparring-practice-videos}
     max-file-size: ${SUPABASE_FACE_IMAGE_MAX_SIZE:5242880}
+    max-video-file-size: ${SUPABASE_SPARRING_PRACTICE_VIDEO_MAX_SIZE:524288000}
     signed-url-ttl-seconds: ${SUPABASE_FACE_IMAGE_SIGNED_URL_TTL_SECONDS:3600}
 
 avatar:

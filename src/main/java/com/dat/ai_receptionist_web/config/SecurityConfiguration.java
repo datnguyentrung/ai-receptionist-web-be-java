@@ -74,6 +74,7 @@ public class SecurityConfiguration {
         http.csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
+                        // WebSocket Đối kháng dùng ticket riêng ở handshake nên endpoint cần được mở ở security layer.
                         .requestMatchers("/actuator/health", "/actuator/info", "/ws/**").permitAll()
                         .requestMatchers("/api/v1/auth/login", "/api/v1/auth/refresh",
                                 "/api/v1/auth/logout", "/api/v1/auth/mobile/login",

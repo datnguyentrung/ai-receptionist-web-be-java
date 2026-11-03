@@ -19,7 +19,9 @@ public class SupabaseProperties {
     public static class Storage {
         private String faceImageBucket = "face-images";
         private String topUpProofBucket = "wallet-top-up-proofs";
+        private String sparringPracticeVideoBucket = "sparring-practice-videos";
         private long maxFileSize = 5_242_880L;
+        private long maxVideoFileSize = 524_288_000L;
         private long signedUrlTtlSeconds = 3_600L;
     }
 }

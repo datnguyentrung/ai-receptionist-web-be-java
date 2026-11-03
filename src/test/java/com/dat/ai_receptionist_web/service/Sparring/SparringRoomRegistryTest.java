@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class SparringRoomRegistryTest {
+    // Kiểm tra room mới có mã 4 chữ số và judge được phép cộng điểm hợp lệ.
     @Test
     void createsFourDigitRoomsAndAcceptsJudgeScores() {
         SparringRoomRegistry registry = new SparringRoomRegistry();
@@ -30,6 +31,7 @@ class SparringRoomRegistryTest {
         }
     }
 
+    // Kiểm tra operator có thể đổi tên, chỉnh điểm và chỉnh penalty trong giới hạn.
     @Test
     void operatorUpdatesNamesAndUsesConfigurableScoreAndPenaltyDeltas() {
         SparringRoomRegistry registry = new SparringRoomRegistry();
@@ -53,6 +55,7 @@ class SparringRoomRegistryTest {
         }
     }
 
+    // Kiểm tra command trái quyền và các giá trị vượt giới hạn bị từ chối.
     @Test
     void rejectsUnauthorizedOrInvalidCompetitorNamesAndOutOfRangeDeltas() {
         SparringRoomRegistry registry = new SparringRoomRegistry();
@@ -74,6 +77,7 @@ class SparringRoomRegistryTest {
         }
     }
 
+    // Kiểm tra mỗi Registry giữ room riêng và judge không được gọi command operator.
     @Test
     void rejectsOperatorCommandsFromJudgeDevicesAndDoesNotShareRoomsBetweenRegistries() {
         SparringRoomRegistry first = new SparringRoomRegistry();

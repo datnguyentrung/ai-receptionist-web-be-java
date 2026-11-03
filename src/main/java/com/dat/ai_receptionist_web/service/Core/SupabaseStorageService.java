@@ -146,6 +146,34 @@ public class SupabaseStorageService {
         return properties.getStorage().getSignedUrlTtlSeconds();
     }
 
+    /** Cấp URL upload có hạn để browser gửi video trực tiếp tới private bucket. */
+    public SignedUpload createPracticeVideoUploadUrl(String objectPath) {
+        String bucket = properties.getStorage().getSparringPracticeVideoBucket();
+        requireConfigured(bucket);
+        try {
+            SignedUploadResponse response = client().post()
+                    .uri(uriBuilder -> uriBuilder.pathSegment("object", "upload", "sign", bucket)
+                            .pathSegment(objectPath.split("/")).build())
+                    .body(Map.of("upsert", false))
+                    .retrieve().body(SignedUploadResponse.class);
+            if (response == null || !StringUtils.hasText(response.url())) throw new ApiException(CoreErrorCode.SUPABASE_STORAGE_UNAVAILABLE);
+            return new SignedUpload(toAbsoluteStorageUrl(response.url()), objectPath);
+        } catch (RestClientResponseException exception) {
+            logStorageResponseFailure("signed practice-video upload-url", bucket, objectPath, exception);
+            throw new ApiException(toStorageErrorCode(exception, CoreErrorCode.SUPABASE_STORAGE_UPLOAD_FAILED));
+        } catch (ResourceAccessException exception) {
+            throw new ApiException(CoreErrorCode.SUPABASE_STORAGE_UNAVAILABLE);
+        }
+    }
+
+    public String createPracticeVideoSignedUrl(String objectPath) {
+        return createSignedUrl(properties.getStorage().getSparringPracticeVideoBucket(), objectPath);
+    }
+
+    public void deletePracticeVideo(String objectPath) {
+        deleteObject(properties.getStorage().getSparringPracticeVideoBucket(), objectPath);
+    }
+
     public void deleteObject(String objectPath) {
         deleteObject(properties.getStorage().getFaceImageBucket(), objectPath);
     }
@@ -349,5 +377,11 @@ public class SupabaseStorageService {
     }
 
     private record SignedUrlResponse(String signedURL) {
+    }
+
+    private record SignedUploadResponse(String url) {
+    }
+
+    public record SignedUpload(String url, String objectPath) {
     }
 }

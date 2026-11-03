@@ -72,6 +72,18 @@
       "sourceType": "github",
       "skillPath": "skills/engineering/setup-matt-pocock-skills/SKILL.md",
       "computedHash": "1114faf86d8658d6b3c729e7e604fbfecdee3fa112f23c4889463e87da662aec"
+    },
+    "video-engineer": {
+      "source": "belokonm/claude-supercode-skills",
+      "sourceType": "github",
+      "skillPath": "video-engineer-skill/SKILL.md",
+      "computedHash": "4c185d18fb49fe83e813b189dd54af234831920b56aa7157f7ccacfcee77e3ae"
+    },
+    "websocket-engineer": {
+      "source": "jeffallan/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/websocket-engineer/SKILL.md",
+      "computedHash": "4bef4aa100aed52e40e3acf88defb3cdc55afd399cbeb95c505aac2bd1b19fd6"
     }
   }
 }

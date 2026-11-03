@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 
 @RequiredArgsConstructor
+// Danh sách lỗi nghiệp vụ ổn định của module Đối kháng.
 public enum SparringErrorCode implements ErrorCode {
     ROOM_NOT_FOUND("SPARRING_ROOM_NOT_FOUND", HttpStatus.NOT_FOUND, "Sparring room not found", "This ring code is not active"),
     INVALID_ROOM_CODE("SPARRING_ROOM_CODE_INVALID", HttpStatus.BAD_REQUEST, "Invalid ring code", "Ring code must contain exactly four digits"),

@@ -31,7 +31,7 @@ public class CorsConfig {
         configuration.setAllowCredentials(true);
         // Cache pre-flight request trong 1 giờ
         configuration.setMaxAge(3600L);
-        // Áp dụng cho tất cả endpoint
+        // Áp dụng cho tất cả endpoint HTTP, bao gồm các request REST cấp socket-ticket.
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;

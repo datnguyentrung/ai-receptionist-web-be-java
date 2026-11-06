@@ -105,7 +105,10 @@ public class SparringPracticeRoomRegistry {
             if ("start".equals(type) || "resume".equals(type)) { if (!canStart()) throw invalid(); state.status="COUNTDOWN"; state.countdownEndsAt=Instant.now().toEpochMilli()+COUNTDOWN_MS; return state.copy(judges); }
             if ("reset".equals(type)) { state.reset(); judges.values().forEach(j -> j.ready=false); return state.copy(judges); }
             if ("close".equals(type)) { state.status="CLOSED"; return state.copy(judges); }
-            if ("videoEnded".equals(type)) { state.status="FINISHED"; return state.copy(judges); }
+            if ("videoEnded".equals(type)) {
+                if ("RUNNING".equals(state.status)) state.mediaOffset+=Math.max(0,Instant.now().toEpochMilli()-state.startedAt);
+                state.startedAt=0; state.status="FINISHED"; return state.copy(judges);
+            }
             throw invalid();
         }
         synchronized Snapshot videoUploaded(String objectPath, String signedUrl) { lastTouched=Instant.now().toEpochMilli(); if (state.videoUploaded) throw invalid(); state.videoUploaded=true; state.objectPath=objectPath; state.videoUrl=signedUrl; return state.copy(judges); }

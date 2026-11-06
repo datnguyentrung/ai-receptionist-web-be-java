@@ -2,6 +2,8 @@ package com.dat.ai_receptionist_web.controller.Sparring;
 
 import com.dat.ai_receptionist_web.dto.Sparring.*;
 import com.dat.ai_receptionist_web.enums.Security.PermissionDefinition;
+import com.dat.ai_receptionist_web.error.ApiException;
+import com.dat.ai_receptionist_web.error.code.SparringErrorCode;
 import com.dat.ai_receptionist_web.service.Core.SupabaseStorageService;
 import com.dat.ai_receptionist_web.service.Sparring.SparringPracticeRoomRegistry;
 import com.dat.ai_receptionist_web.service.Sparring.SparringSocketTicketService;
@@ -30,11 +32,22 @@ public class SparringPracticeRoomController {
     public SparringPracticeRoomResponse get(@PathVariable String roomCode) { return rooms.get(roomCode); }
 
     @PostMapping("/{roomCode}/socket-ticket")
-    public SparringSocketTicketResponse socketTicket(@PathVariable String roomCode) {
+    public SparringSocketTicketResponse socketTicket(
+            @PathVariable String roomCode,
+            @RequestParam(defaultValue = "judge") String role
+    ) {
         rooms.get(roomCode);
         UUID userId=SecurityUtil.getCurrentUserId().orElseThrow();
-        boolean operator=SecurityUtil.getJwt().map(jwt -> jwt.getClaimAsStringList("permissions"))
+        boolean hasOperatorPermission=SecurityUtil.getJwt().map(jwt -> jwt.getClaimAsStringList("permissions"))
                 .map(values -> values.contains(PermissionDefinition.SPARRING_OPERATE.getCode())).orElse(false);
+        boolean operator = switch (role) {
+            case "judge" -> false;
+            case "operator" -> {
+                if (!hasOperatorPermission) throw new ApiException(SparringErrorCode.COMMAND_NOT_ALLOWED);
+                yield true;
+            }
+            default -> throw new ApiException(SparringErrorCode.COMMAND_INVALID);
+        };
         SparringSocketTicketService.IssuedTicket ticket=tickets.issue(roomCode,userId,operator,"practice");
         return new SparringSocketTicketResponse(roomCode,ticket.value(),operator,ticket.expiresAtEpochMs());
     }

@@ -14,7 +14,9 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -25,15 +27,32 @@ public class FaceCheckInController {
 
     @PostMapping(value = {"/face-check-in", "/face-check-ins"}, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.ACCEPTED)
-    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).SESSION_ATTENDANCE_CREATE.getCode())"
-            + " or hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).COACH_TIMESHEET_CREATE.getCode())")
-    public FaceCheckInResponse checkIn(@RequestPart("file") MultipartFile file) {
-        return service.checkIn(file);
+    @PreAuthorize(
+            "hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).SESSION_ATTENDANCE_CREATE.getCode())" +
+                    " or hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).COACH_TIMESHEET_CREATE.getCode())")
+    public FaceCheckInResponse checkIn(
+            @RequestPart(required = false) MultipartFile file,
+            @RequestPart(required = false) List<Float> embeddingFace
+    ) {
+        boolean hasFile = file != null && !file.isEmpty();
+        boolean hasEmbedding = embeddingFace != null && !embeddingFace.isEmpty();
+
+        if (!hasFile && !hasEmbedding) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Phải cung cấp ít nhất một trong hai: file hoặc embeddingFace."
+            );
+        }
+        return service.checkIn(
+                file,
+                embeddingFace
+        );
     }
 
     @GetMapping("/face-check-ins/{requestId}")
-    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).SESSION_ATTENDANCE_READ.getCode())"
-            + " or hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).COACH_TIMESHEET_READ.getCode())")
+    @PreAuthorize(
+            "hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).SESSION_ATTENDANCE_READ.getCode())" +
+                    " or hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).COACH_TIMESHEET_READ.getCode())")
     public FaceCheckInResponse get(@PathVariable UUID requestId) {
         return service.get(requestId);
     }

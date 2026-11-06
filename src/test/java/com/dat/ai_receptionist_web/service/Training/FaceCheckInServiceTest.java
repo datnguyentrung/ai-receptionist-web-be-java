@@ -77,7 +77,7 @@ class FaceCheckInServiceTest {
         when(faceImageUrlResolver.resolve(personId, person.getFaceImagePath()))
                 .thenReturn("https://signed.example/face.jpg");
 
-        FaceCheckInResponse response = service.checkIn(file);
+        FaceCheckInResponse response = service.checkIn(file, null);
 
         assertThat(response.status()).isEqualTo(FaceCheckInResponse.Status.PENDING);
         assertThat(response.requestId()).isNotNull();
@@ -263,7 +263,7 @@ class FaceCheckInServiceTest {
         when(faceIdentificationService.identify(file))
                 .thenThrow(new ApiException(CoreErrorCode.FACE_NOT_MATCHED));
 
-        assertThatThrownBy(() -> service.checkIn(file))
+        assertThatThrownBy(() -> service.checkIn(file, null))
                 .isInstanceOf(ApiException.class)
                 .extracting("errorCode")
                 .isEqualTo(CoreErrorCode.FACE_NOT_MATCHED);

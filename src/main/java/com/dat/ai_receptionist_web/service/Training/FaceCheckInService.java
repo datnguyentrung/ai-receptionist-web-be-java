@@ -27,6 +27,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -45,10 +46,12 @@ public class FaceCheckInService {
     @Value("${app.face-check-in.expire-after:30s}")
     private Duration expireAfter;
 
+
+
     @Transactional
-    public FaceCheckInResponse checkIn(MultipartFile file) {
+    public FaceCheckInResponse checkIn(MultipartFile file, List<Float> embeddingFace) {
         LocalDateTime now = LocalDateTime.now();
-        var identifiedPerson = faceIdentificationService.identify(file);
+        var identifiedPerson = faceIdentificationService.identify(file, embeddingFace);
         Person person = personRepository.findById(identifiedPerson.personId())
                 .orElseThrow(() -> new ApiException(CoreErrorCode.PERSON_NOT_FOUND));
         UUID requestId = UUID.randomUUID();

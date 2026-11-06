@@ -13,7 +13,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
-/** API cho host web tạo/cấu hình phòng tập và cho mọi client lấy ticket socket. */
+/**
+ * API cho host web tạo/cấu hình phòng tập và cho mọi client lấy ticket socket.
+ */
 @RestController
 @RequestMapping("/api/v1/sparring/practice-rooms")
 @RequiredArgsConstructor
@@ -24,35 +26,63 @@ public class SparringPracticeRoomController {
 
     @PostMapping
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).SPARRING_OPERATE.getCode())")
-    public SparringPracticeRoomResponse create(@Valid @RequestBody SparringPracticeCreateRequest request) { return rooms.create(request); }
+    public SparringPracticeRoomResponse create(@Valid @RequestBody SparringPracticeCreateRequest request) {
+        return rooms.create(request);
+    }
 
     @GetMapping("/{roomCode}")
-    public SparringPracticeRoomResponse get(@PathVariable String roomCode) { return rooms.get(roomCode); }
+    public SparringPracticeRoomResponse get(@PathVariable String roomCode) {
+        return rooms.get(roomCode);
+    }
 
     @PostMapping("/{roomCode}/socket-ticket")
     public SparringSocketTicketResponse socketTicket(@PathVariable String roomCode) {
         rooms.get(roomCode);
-        UUID userId=SecurityUtil.getCurrentUserId().orElseThrow();
-        boolean operator=SecurityUtil.getJwt().map(jwt -> jwt.getClaimAsStringList("permissions"))
+        UUID userId = SecurityUtil.getCurrentUserId().orElseThrow();
+        boolean operator = SecurityUtil.getJwt().map(jwt -> jwt.getClaimAsStringList("permissions"))
                 .map(values -> values.contains(PermissionDefinition.SPARRING_OPERATE.getCode())).orElse(false);
-        SparringSocketTicketService.IssuedTicket ticket=tickets.issue(roomCode,userId,operator,"practice");
-        return new SparringSocketTicketResponse(roomCode,ticket.value(),operator,ticket.expiresAtEpochMs());
+        SparringSocketTicketService.IssuedTicket ticket = tickets.issue(
+                roomCode,
+                userId,
+                operator,
+                "practice"
+        );
+        return new SparringSocketTicketResponse(
+                roomCode,
+                ticket.value(),
+                operator,
+                ticket.expiresAtEpochMs()
+        );
     }
 
     @PostMapping("/{roomCode}/video-upload")
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).SPARRING_OPERATE.getCode())")
     public SparringPracticeUploadResponse createVideoUpload(@PathVariable String roomCode) {
-        String objectPath=rooms.expectedVideoPath(roomCode);
-        SupabaseStorageService.SignedUpload upload=storage.createPracticeVideoUploadUrl(objectPath);
-        return new SparringPracticeUploadResponse(upload.url(),upload.objectPath(),524_288_000L);
+        String objectPath = rooms.expectedVideoPath(roomCode);
+        SupabaseStorageService.SignedUpload upload = storage.createPracticeVideoUploadUrl(objectPath);
+        return new SparringPracticeUploadResponse(
+                upload.url(),
+                upload.objectPath(),
+                524_288_000L
+        );
     }
 
-    /** Browser chỉ gọi sau PUT thành công vào Supabase; server khi đó mới công bố URL xem. */
+    /**
+     * Browser chỉ gọi sau PUT thành công vào Supabase; server khi đó mới công bố URL xem.
+     */
     @PostMapping("/{roomCode}/video-upload-complete")
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).SPARRING_OPERATE.getCode())")
-    public SparringPracticeRoomResponse completeVideoUpload(@PathVariable String roomCode, @RequestBody UploadComplete request) {
-        if (!rooms.expectedVideoPath(roomCode).equals(request.objectPath())) throw new IllegalArgumentException("Unexpected video path");
-        return rooms.videoUploaded(roomCode,request.objectPath(),storage.createPracticeVideoSignedUrl(request.objectPath()));
+    public SparringPracticeRoomResponse completeVideoUpload(
+            @PathVariable String roomCode,
+            @RequestBody UploadComplete request
+    ) {
+        if (!rooms.expectedVideoPath(roomCode).equals(request.objectPath()))
+            throw new IllegalArgumentException("Unexpected video path");
+        return rooms.videoUploaded(
+                roomCode,
+                request.objectPath(),
+                storage.createPracticeVideoSignedUrl(request.objectPath())
+        );
     }
 
     @PostMapping("/{roomCode}/close")
@@ -62,5 +92,6 @@ public class SparringPracticeRoomController {
         if (objectPath != null) storage.deletePracticeVideo(objectPath);
     }
 
-    public record UploadComplete(String objectPath) { }
+    public record UploadComplete(String objectPath) {
+    }
 }

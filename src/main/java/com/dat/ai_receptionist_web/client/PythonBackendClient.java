@@ -29,10 +29,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.time.Duration;
-import java.util.Iterator;
-import java.util.Locale;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @Component
 @Slf4j
@@ -352,7 +349,7 @@ public class PythonBackendClient {
 
     public record FaceEmbeddingResponse(
             boolean success,
-            java.util.List<Float> embedding,
+            List<Float> embedding,
             Integer dimension,
             String model,
             String errorCode,

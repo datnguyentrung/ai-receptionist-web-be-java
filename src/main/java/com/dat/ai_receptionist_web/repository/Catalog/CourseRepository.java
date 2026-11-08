@@ -8,8 +8,16 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface CourseRepository extends JpaRepository<Course, UUID> {
+    @Query("""
+            select c from Course c
+            where (:search is null or :search = '' or lower(c.name) like lower(concat('%', :search, '%')))
+              and (:status is null or c.status = :status)
+            """)
+    Page<Course> findList(@Param("search") String search, @Param("status") CourseStatus status, Pageable pageable);
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from Course c where c.courseId = :id")
     Optional<Course> findByIdForUpdate(@Param("id") UUID id);

@@ -7,6 +7,7 @@ import com.dat.ai_receptionist_web.domain.Training.SessionAttendance;
 import com.dat.ai_receptionist_web.domain.Training.command.AttendanceCommand;
 import com.dat.ai_receptionist_web.domain.Training.command.AttendanceCommandStatus;
 import com.dat.ai_receptionist_web.domain.Training.command.AttendanceCommandType;
+import com.dat.ai_receptionist_web.domain.Training.scan.FaceCheckInStage;
 import com.dat.ai_receptionist_web.dto.Training.CheckInCandidate;
 import com.dat.ai_receptionist_web.dto.Training.FaceCheckInResponse;
 import com.dat.ai_receptionist_web.dto.Training.command.FaceCheckInCommandMessage;
@@ -19,6 +20,7 @@ import com.dat.ai_receptionist_web.repository.Training.SessionAttendanceReposito
 import com.dat.ai_receptionist_web.service.Core.PersonFaceImageUrlResolver;
 import com.dat.ai_receptionist_web.service.Training.command.AttendanceCommandService;
 import com.dat.ai_receptionist_web.service.Training.command.AttendanceCommandStore;
+import com.dat.ai_receptionist_web.service.Training.scan.FaceCheckInScanService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -43,6 +45,7 @@ public class FaceCheckInService {
     private final PersonFaceImageUrlResolver faceImageUrlResolver;
     private final AttendanceCommandService attendanceCommandService;
     private final AttendanceCommandStore attendanceCommandStore;
+    private final FaceCheckInScanService faceCheckInScanService;
     @Value("${app.face-check-in.expire-after:30s}")
     private Duration expireAfter;
 
@@ -51,7 +54,9 @@ public class FaceCheckInService {
     @Transactional
     public FaceCheckInResponse checkIn(MultipartFile file, List<Float> embeddingFace) {
         LocalDateTime now = LocalDateTime.now();
-        var identifiedPerson = faceIdentificationService.identify(file, embeddingFace);
+        var identifiedPerson = embeddingFace == null
+                ? faceIdentificationService.identify(file)
+                : faceIdentificationService.identify(file, embeddingFace);
         Person person = personRepository.findById(identifiedPerson.personId())
                 .orElseThrow(() -> new ApiException(CoreErrorCode.PERSON_NOT_FOUND));
         UUID requestId = UUID.randomUUID();
@@ -81,12 +86,18 @@ public class FaceCheckInService {
     }
 
     @Transactional
-    public FaceCheckInResponse processQueuedCheckIn(UUID personId, float confidence, LocalDateTime requestedAt) {
+    public FaceCheckInResponse processQueuedCheckIn(
+            UUID requestId, UUID personId, float confidence, LocalDateTime requestedAt) {
         Person person = personRepository.findById(personId)
                 .orElseThrow(() -> new ApiException(CoreErrorCode.PERSON_NOT_FOUND));
         try {
             CheckInCandidate candidate = attendanceContextResolver.resolve(personId, requestedAt);
-            return dispatch(person, confidence, candidate, requestedAt);
+            faceCheckInScanService.recordJavaProgress(requestId, FaceCheckInStage.ELIGIBILITY_CHECKED);
+            FaceCheckInResponse result = dispatch(person, confidence, candidate, requestedAt);
+            if (result.status() == FaceCheckInResponse.Status.SUCCESS) {
+                faceCheckInScanService.recordJavaProgress(requestId, FaceCheckInStage.ATTENDANCE_SAVED);
+            }
+            return result;
         } catch (ApiException exception) {
             return rejectedResponse(person, confidence, exception);
         }

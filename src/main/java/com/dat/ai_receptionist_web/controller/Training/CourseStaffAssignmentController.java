@@ -38,10 +38,11 @@ public class CourseStaffAssignmentController {
             @RequestParam(required = false) UUID courseScheduleId,
             @RequestParam(required = false) List<AssignmentType> assignmentTypes,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate effectiveOn,
+            @RequestParam(required = false) UUID staffPersonId,
             @RequestParam(required = false) String search,
             Pageable pageable
     ) {
-        return service.list(courseId, courseScheduleId, assignmentTypes, effectiveOn, search, pageable);
+        return service.list(courseId, courseScheduleId, staffPersonId, assignmentTypes, effectiveOn, search, pageable);
     }
 
     @GetMapping("/{id}")

@@ -239,6 +239,10 @@ app:
       prefetch-count: ${APP_RABBITMQ_LISTENER_PREFETCH_COUNT:1}
   face-check-in:
     expire-after: ${APP_FACE_CHECK_IN_EXPIRE_AFTER:30s}
+    scan-expire-after: ${APP_FACE_CHECK_IN_SCAN_EXPIRE_AFTER:30s}
+    upload-ticket-bytes: ${APP_FACE_CHECK_IN_UPLOAD_TICKET_BYTES:32}
+  fog:
+    internal-secret: ${FOG_INTERNAL_SECRET:}
   bootstrap:
     users:
       - role-code: SUPER_ADMIN

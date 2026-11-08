@@ -22,6 +22,7 @@ import com.dat.ai_receptionist_web.repository.Training.SessionAttendanceReposito
 import com.dat.ai_receptionist_web.service.Core.PersonFaceImageUrlResolver;
 import com.dat.ai_receptionist_web.service.Training.command.AttendanceCommandService;
 import com.dat.ai_receptionist_web.service.Training.command.AttendanceCommandStore;
+import com.dat.ai_receptionist_web.service.Training.scan.FaceCheckInScanService;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -50,6 +51,7 @@ class FaceCheckInServiceTest {
     private final PersonFaceImageUrlResolver faceImageUrlResolver = mock(PersonFaceImageUrlResolver.class);
     private final AttendanceCommandService attendanceCommandService = mock(AttendanceCommandService.class);
     private final AttendanceCommandStore attendanceCommandStore = mock(AttendanceCommandStore.class);
+    private final FaceCheckInScanService faceCheckInScanService = mock(FaceCheckInScanService.class);
 
     private final FaceCheckInService service = new FaceCheckInService(
             faceIdentificationService,
@@ -61,7 +63,8 @@ class FaceCheckInServiceTest {
             personRepository,
             faceImageUrlResolver,
             attendanceCommandService,
-            attendanceCommandStore
+            attendanceCommandStore,
+            faceCheckInScanService
     );
 
     @Test
@@ -118,6 +121,7 @@ class FaceCheckInServiceTest {
                 .thenReturn("https://signed.example/face.jpg");
 
         FaceCheckInResponse response = service.processQueuedCheckIn(
+                UUID.randomUUID(),
                 personId,
                 confidence,
                 LocalDateTime.of(2026, 9, 27, 18, 20)
@@ -160,6 +164,7 @@ class FaceCheckInServiceTest {
                 .thenReturn("https://signed.example/face.jpg");
 
         FaceCheckInResponse response = service.processQueuedCheckIn(
+                UUID.randomUUID(),
                 personId,
                 confidence,
                 LocalDateTime.of(2026, 9, 27, 18, 20)
@@ -184,6 +189,7 @@ class FaceCheckInServiceTest {
                 .thenReturn("https://signed.example/face.jpg");
 
         FaceCheckInResponse response = service.processQueuedCheckIn(
+                UUID.randomUUID(),
                 personId,
                 confidence,
                 LocalDateTime.of(2026, 9, 27, 18, 20)
@@ -211,6 +217,7 @@ class FaceCheckInServiceTest {
                 .thenReturn("https://signed.example/face.jpg");
 
         FaceCheckInResponse response = service.processQueuedCheckIn(
+                UUID.randomUUID(),
                 personId,
                 confidence,
                 LocalDateTime.of(2026, 9, 27, 18, 20)

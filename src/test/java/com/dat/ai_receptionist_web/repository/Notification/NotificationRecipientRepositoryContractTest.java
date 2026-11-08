@@ -39,8 +39,8 @@ class NotificationRecipientRepositoryContractTest {
                 .contains("(:read is null or nr.read = :read)")
                 .contains("(:type is null or nr.notification.notificationType = :type)")
                 .contains(":search is null")
-                .contains("lower(nr.notification.title) like lower(concat('%', :search, '%'))")
-                .contains("lower(nr.notification.body) like lower(concat('%', :search, '%'))");
+                .contains("lower(nr.notification.title) like cast(:search as string)")
+                .contains("lower(nr.notification.body) like cast(:search as string)");
     }
 
     @Test

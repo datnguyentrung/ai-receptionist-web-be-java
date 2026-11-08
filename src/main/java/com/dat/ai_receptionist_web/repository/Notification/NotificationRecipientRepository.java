@@ -40,8 +40,8 @@ public interface NotificationRecipientRepository extends JpaRepository<Notificat
           and (:type is null or nr.notification.notificationType = :type)
           and (
             :search is null
-            or lower(nr.notification.title) like lower(concat('%', :search, '%'))
-            or lower(nr.notification.body) like lower(concat('%', :search, '%'))
+            or lower(nr.notification.title) like cast(:search as string)
+            or lower(nr.notification.body) like cast(:search as string)
           )
         order by nr.createdAt desc, nr.notificationRecipientId desc
         """)

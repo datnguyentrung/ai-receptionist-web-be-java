@@ -9,11 +9,11 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.LocalDateTime;
 import java.time.LocalDate;
-import java.util.UUID;
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -33,24 +33,47 @@ public class Course {
     @OneToMany(mappedBy = "course", fetch = FetchType.LAZY)
     private List<CourseSchedule> courseSchedules;
 
-    /** Transitional read helper for legacy service code; API contracts expose courseSchedules only. */
+    /**
+     * Transitional read helper for legacy service code; API contracts expose courseSchedules only.
+     */
     @Transient
     public ClassSchedule getClassSchedule() {
-        return courseSchedules == null ? null : courseSchedules.stream()
-                .filter(schedule -> schedule.getEndDate() == null)
-                .max(Comparator.comparing(CourseSchedule::getStartDate))
-                .map(CourseSchedule::getClassSchedule)
-                .orElseGet(() -> courseSchedules.isEmpty() ? null : courseSchedules.get(0).getClassSchedule());
+        return courseSchedules == null ? null : courseSchedules.stream().filter(schedule -> schedule.getEndDate() == null).max(Comparator.comparing(CourseSchedule::getStartDate)).map(CourseSchedule::getClassSchedule).orElseGet(() -> courseSchedules.isEmpty() ? null : courseSchedules.get(0).getClassSchedule());
     }
 
-    @Transient public ClassSchedule getNextClassSchedule() { return null; }
-    @Transient public LocalDate getNextScheduleEffectiveFrom() { return null; }
-    /** @deprecated schedule mutations are now performed through CourseScheduleService. */
-    @Deprecated public void setClassSchedule(ClassSchedule ignored) { throw new UnsupportedOperationException("Use COURSE_SCHEDULE"); }
-    /** @deprecated schedule mutations are now performed through CourseScheduleService. */
-    @Deprecated public void setNextClassSchedule(ClassSchedule ignored) { throw new UnsupportedOperationException("Use COURSE_SCHEDULE"); }
-    /** @deprecated schedule mutations are now performed through CourseScheduleService. */
-    @Deprecated public void setNextScheduleEffectiveFrom(LocalDate ignored) { throw new UnsupportedOperationException("Use COURSE_SCHEDULE"); }
+    @Transient
+    public ClassSchedule getNextClassSchedule() {
+        return null;
+    }
+
+    @Transient
+    public LocalDate getNextScheduleEffectiveFrom() {
+        return null;
+    }
+
+    /**
+     * @deprecated schedule mutations are now performed through CourseScheduleService.
+     */
+    @Deprecated
+    public void setClassSchedule(ClassSchedule ignored) {
+        throw new UnsupportedOperationException("Use COURSE_SCHEDULE");
+    }
+
+    /**
+     * @deprecated schedule mutations are now performed through CourseScheduleService.
+     */
+    @Deprecated
+    public void setNextClassSchedule(ClassSchedule ignored) {
+        throw new UnsupportedOperationException("Use COURSE_SCHEDULE");
+    }
+
+    /**
+     * @deprecated schedule mutations are now performed through CourseScheduleService.
+     */
+    @Deprecated
+    public void setNextScheduleEffectiveFrom(LocalDate ignored) {
+        throw new UnsupportedOperationException("Use COURSE_SCHEDULE");
+    }
 
     @Column(name = "name", nullable = false, length = 255)
     private String name;

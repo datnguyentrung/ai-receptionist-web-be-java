@@ -38,7 +38,12 @@ public class CourseService {
 
     @Transactional(readOnly = true)
     public PageResponse<CourseDTO.SimpleResponse> list(Pageable pageable) {
-        Page<Course> courses = repository.findAll(pageable);
+        return list(null, null, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<CourseDTO.SimpleResponse> list(String search, CourseStatus status, Pageable pageable) {
+        Page<Course> courses = repository.findList(search == null ? null : search.trim(), status, pageable);
         List<UUID> courseIds = courses.getContent().stream()
                 .map(Course::getCourseId)
                 .toList();

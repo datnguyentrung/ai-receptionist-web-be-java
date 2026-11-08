@@ -20,11 +20,12 @@ public class FaceIdentificationService {
     }
 
     public IdentifiedPerson identify(MultipartFile file, List<Float> embeddingFace) {
-        var embeddingResponse = personService.generateFaceEmbedding(file);
+        List<Float> embedding = embeddingFace;
+        if (embedding == null) {
+            embedding = personService.generateFaceEmbedding(file).embedding();
+        }
         PersonService.NearestPersonMatch nearestPerson =
-                personService.findNearestPersonByEmbedding(
-                        embeddingFace != null ? embeddingFace : embeddingResponse.embedding()
-                );
+                personService.findNearestPersonByEmbedding(embedding);
         if (nearestPerson.personId() == null) {
             throw new ApiException(CoreErrorCode.FACE_NOT_MATCHED);
         }

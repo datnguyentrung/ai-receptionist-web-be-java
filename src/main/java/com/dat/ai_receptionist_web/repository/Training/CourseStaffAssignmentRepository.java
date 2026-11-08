@@ -205,6 +205,7 @@ public interface CourseStaffAssignmentRepository extends JpaRepository<CourseSta
         left join fetch classSchedule.branch
         where (:courseId is null or course.courseId = :courseId)
           and (:courseScheduleId is null or courseSchedule.courseScheduleId = :courseScheduleId)
+          and (:staffPersonId is null or staffPerson.personId = :staffPersonId)
           and a.assignmentType in :assignmentTypes
           and (:filterEffectiveOn = false or (
               a.startDate <= :effectiveOn
@@ -244,6 +245,7 @@ public interface CourseStaffAssignmentRepository extends JpaRepository<CourseSta
             @Param("managedCourses") boolean managedCourses,
             @Param("courseId") UUID courseId,
             @Param("courseScheduleId") UUID courseScheduleId,
+            @Param("staffPersonId") UUID staffPersonId,
             @Param("assignmentTypes") Collection<AssignmentType> assignmentTypes,
             @Param("filterEffectiveOn") boolean filterEffectiveOn,
             @Param("effectiveOn") LocalDate effectiveOn,

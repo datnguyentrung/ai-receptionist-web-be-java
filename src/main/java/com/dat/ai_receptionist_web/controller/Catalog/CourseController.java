@@ -3,6 +3,7 @@ package com.dat.ai_receptionist_web.controller.Catalog;
 import com.dat.ai_receptionist_web.dto.Catalog.CourseDTO;
 import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.service.Catalog.CourseService;
+import com.dat.ai_receptionist_web.enums.Catalog.CourseStatus;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -25,8 +26,11 @@ public class CourseController {
      */
     @GetMapping
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).COURSE_READ.getCode())")
-    public PageResponse<CourseDTO.SimpleResponse> list(Pageable pageable) {
-        return service.list(pageable);
+    public PageResponse<CourseDTO.SimpleResponse> list(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) CourseStatus status,
+            Pageable pageable) {
+        return service.list(search, status, pageable);
     }
 
     /**

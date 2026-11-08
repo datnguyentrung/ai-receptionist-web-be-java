@@ -16,15 +16,8 @@ public interface AttendanceContextRepository extends Repository<com.dat.ai_recep
                 cs.session_date,
                 cs.start_time,
                 cs.end_time,
-                case
-                    when c.next_schedule_id is not null
-                     and c.next_schedule_effective_from is not null
-                     and cs.session_date >= c.next_schedule_effective_from
-                    then c.next_schedule_id
-                    else c.schedule_id
-                end as effective_schedule_id
+                cs.course_schedule_id as effective_schedule_id
             from training.class_session cs
-            join catalog.course c on c.course_id = cs.course_id
             where
                 cs.status = 'ACTIVE'
                 and (
@@ -45,8 +38,13 @@ public interface AttendanceContextRepository extends Repository<com.dat.ai_recep
                 a.start_time as "startTime",
                 a.end_time as "endTime"
             from active_sessions a
+            join training.student_enrollment_schedule ses
+              on ses.course_schedule_id = a.effective_schedule_id
+             and ses.status = 'ACTIVE'
+             and (ses.effective_from is null or a.session_date >= ses.effective_from)
+             and (ses.effective_to is null or a.session_date <= ses.effective_to)
             join training.student_enrollment se
-              on se.class_schedule_id = a.effective_schedule_id
+              on se.student_enrollment_id = ses.student_enrollment_id
             where
                 se.student_person_id = :personId
                 and se.status = 'ACTIVE'
@@ -63,7 +61,7 @@ public interface AttendanceContextRepository extends Repository<com.dat.ai_recep
                 a.end_time as "endTime"
             from active_sessions a
             join training.course_staff_assignment csa
-              on csa.course_id = a.course_id
+              on csa.course_schedule_id = a.effective_schedule_id
             where
                 csa.staff_person_id = :personId
                 and csa.assignment_status = 'ACTIVE'

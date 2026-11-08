@@ -47,6 +47,7 @@ public class CourseStaffAssignmentService {
     public PageResponse<CourseStaffAssignmentDTO.SimpleResponse> list(
             UUID courseId,
             UUID courseScheduleId,
+            UUID staffPersonId,
             Collection<AssignmentType> assignmentTypes,
             LocalDate effectiveOn,
             String search,
@@ -68,6 +69,7 @@ public class CourseStaffAssignmentService {
                 scope.managedCourses(),
                 courseId,
                 courseScheduleId,
+                staffPersonId,
                 resolvedTypes,
                 filterEffectiveOn,
                 resolvedEffectiveOn,

@@ -62,6 +62,16 @@ public class AttendanceCommandWorker {
             );
             store.markFailed(message.requestId(), error);
             faceCheckInScanService.complete(message.requestId(), FaceCheckInStage.FAILED, null, error);
+        } catch (RuntimeException exception) {
+            log.error("Face check-in command failed requestId={} personId={}",
+                    message.requestId(), message.personId(), exception);
+            FaceCheckInResponse.ErrorSummary error = new FaceCheckInResponse.ErrorSummary(
+                    GeneralErrorCode.INTERNAL_SERVER_ERROR.code(),
+                    GeneralErrorCode.INTERNAL_SERVER_ERROR.title(),
+                    GeneralErrorCode.INTERNAL_SERVER_ERROR.defaultDetail()
+            );
+            store.markFailed(message.requestId(), error);
+            faceCheckInScanService.complete(message.requestId(), FaceCheckInStage.FAILED, null, error);
         }
     }
 

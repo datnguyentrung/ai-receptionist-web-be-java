@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.service.Training;
 
 import com.dat.ai_receptionist_web.domain.Catalog.Course;
+import com.dat.ai_receptionist_web.domain.Catalog.CourseSchedule;
 import com.dat.ai_receptionist_web.domain.Training.ClassSession;
 import com.dat.ai_receptionist_web.dto.Training.ClassSessionDTO;
 import com.dat.ai_receptionist_web.enums.Core.Belt;
@@ -56,7 +57,7 @@ class ClassSessionServiceTest {
     );
 
     @Test
-    void getIncludesRoundedLearningProgressForAccessibleCourse() {
+    void getIncludesStatusBreakdownLearningProgressForAccessibleCourse() {
         AccessContext context = unrestrictedContext();
         ClassSession session = session(
                 LocalDate.of(2026, 9, 30), LocalTime.of(18, 0), "Course");
@@ -73,7 +74,7 @@ class ClassSessionServiceTest {
                 session.getStartTime(),
                 session.getEndTime(),
                 null,
-                new ClassSessionDTO.LearningProgress(12, 36, 33)
+                new ClassSessionDTO.LearningProgress(24, 0, 12, 0, 0, 0, 36)
         );
 
         when(accessContextResolver.current()).thenReturn(context);
@@ -82,18 +83,27 @@ class ClassSessionServiceTest {
         when(repository.findAccessibleById(
                 session.getClassSessionId(), context.activePersonId(), true))
                 .thenReturn(Optional.of(session));
-        when(repository.findLearningProgressByCourseId(session.getCourse().getCourseId()))
+        when(repository.findLearningProgressByCourseScheduleId(session.getCourseSchedule().getCourseScheduleId()))
                 .thenReturn(row);
+        when(row.getScheduled()).thenReturn(24L);
+        when(row.getActive()).thenReturn(0L);
         when(row.getCompleted()).thenReturn(12L);
+        when(row.getTerminated()).thenReturn(0L);
+        when(row.getCancelled()).thenReturn(0L);
+        when(row.getPostponed()).thenReturn(0L);
         when(row.getTotal()).thenReturn(36L);
         when(mapper.toResponse(eq(session), any(ClassSessionDTO.LearningProgress.class)))
                 .thenReturn(response);
 
         assertThat(service.get(session.getClassSessionId())).isSameAs(response);
         verify(mapper).toResponse(eq(session), argThat(progress ->
-                progress.completed() == 12
-                        && progress.total() == 36
-                        && progress.percent() == 33));
+                progress.scheduled() == 24
+                        && progress.active() == 0
+                        && progress.completed() == 12
+                        && progress.terminated() == 0
+                        && progress.cancelled() == 0
+                        && progress.postponed() == 0
+                        && progress.total() == 36));
     }
 
     @Test
@@ -242,9 +252,15 @@ class ClassSessionServiceTest {
                 .courseId(UUID.randomUUID())
                 .name(courseName)
                 .build();
+        CourseSchedule courseSchedule = CourseSchedule.builder()
+                .courseScheduleId(UUID.randomUUID())
+                .course(course)
+                .startDate(date.minusDays(1))
+                .build();
         return ClassSession.builder()
                 .classSessionId(UUID.randomUUID())
                 .course(course)
+                .courseSchedule(courseSchedule)
                 .sessionDate(date)
                 .startTime(startTime)
                 .endTime(startTime.plusHours(1))

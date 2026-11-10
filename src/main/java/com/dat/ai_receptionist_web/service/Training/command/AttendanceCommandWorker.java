@@ -6,6 +6,7 @@ import com.dat.ai_receptionist_web.dto.Training.command.FaceCheckInCommandMessag
 import com.dat.ai_receptionist_web.dto.Training.command.SessionAttendanceCommandMessage;
 import com.dat.ai_receptionist_web.domain.Training.scan.FaceCheckInStage;
 import com.dat.ai_receptionist_web.error.ApiException;
+import com.dat.ai_receptionist_web.error.code.GeneralErrorCode;
 import com.dat.ai_receptionist_web.service.Training.FaceCheckInService;
 import com.dat.ai_receptionist_web.service.Training.scan.FaceCheckInScanService;
 import lombok.RequiredArgsConstructor;
@@ -81,6 +82,14 @@ public class AttendanceCommandWorker {
                     exception.getErrorCode().code(),
                     exception.getErrorCode().title(),
                     exception.responseDetail()
+            ));
+        } catch (RuntimeException exception) {
+            log.error("Session attendance command failed requestId={} type={}",
+                    message.requestId(), message.type(), exception);
+            store.markFailed(message.requestId(), new FaceCheckInResponse.ErrorSummary(
+                    GeneralErrorCode.INTERNAL_SERVER_ERROR.code(),
+                    GeneralErrorCode.INTERNAL_SERVER_ERROR.title(),
+                    GeneralErrorCode.INTERNAL_SERVER_ERROR.defaultDetail()
             ));
         }
     }

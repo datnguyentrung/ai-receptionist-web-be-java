@@ -6,6 +6,8 @@ import com.dat.ai_receptionist_web.domain.Training.SessionAttendance;
 import com.dat.ai_receptionist_web.domain.Training.StudentEnrollment;
 import com.dat.ai_receptionist_web.enums.Training.AssignmentType;
 import com.dat.ai_receptionist_web.enums.Security.RelationshipType;
+import com.dat.ai_receptionist_web.enums.Training.SessionStatus;
+import com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus;
 import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.code.TrainingErrorCode;
 import com.dat.ai_receptionist_web.service.Security.access.AccessContext;
@@ -36,6 +38,15 @@ public class SessionAttendanceAccessPolicy {
             StudentEnrollment enrollment,
             CourseStaffAssignment participantAssignment
     ) {
+        if ((enrollment == null) == (participantAssignment == null)) {
+            throw new ApiException(TrainingErrorCode.SESSION_ATTENDANCE_PARTICIPANT_INVALID);
+        }
+        if (enrollment != null && enrollment.getStatus() != StudentEnrollmentStatus.ACTIVE) {
+            throw new ApiException(TrainingErrorCode.ENROLLMENT_NOT_ACTIVE);
+        }
+        if (session.getStatus() != SessionStatus.SCHEDULED && session.getStatus() != SessionStatus.ACTIVE) {
+            throw new ApiException(TrainingErrorCode.CLASS_SESSION_IMMUTABLE);
+        }
         requireParticipantEffective(session, enrollment, participantAssignment);
         requireAttendanceEditable(session);
     }

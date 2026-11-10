@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -18,6 +19,10 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, UUID
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from ClassSession c join fetch c.course join fetch c.courseSchedule where c.classSessionId = :id")
     Optional<ClassSession> findDetailedByIdForUpdate(@Param("id") UUID id);
+
+    @Query("select c from ClassSession c join fetch c.course join fetch c.courseSchedule where c.classSessionId = :id")
+    Optional<ClassSession> findDetailedById(@Param("id") UUID id);
+
     boolean existsByCourseSchedule_CourseScheduleId(UUID courseScheduleId);
     @Modifying
     @Query(value = """
@@ -34,23 +39,59 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, UUID
     );
 
     @Query("""
-        select count(c) as total,
-               coalesce(sum(case
-                   when c.status = com.dat.ai_receptionist_web.enums.Training.SessionStatus.COMPLETED
-                   then 1 else 0 end), 0) as completed
-        from ClassSession c
-        where c.course.courseId = :courseId
-          and c.status not in (
-              com.dat.ai_receptionist_web.enums.Training.SessionStatus.CANCELLED,
-              com.dat.ai_receptionist_web.enums.Training.SessionStatus.TERMINATED
-          )
+        select coalesce(sum(case when c.status = com.dat.ai_receptionist_web.enums.Training.SessionStatus.SCHEDULED then 1 else 0 end), 0) as scheduled,
+               coalesce(sum(case when c.status = com.dat.ai_receptionist_web.enums.Training.SessionStatus.ACTIVE then 1 else 0 end), 0) as active,
+               coalesce(sum(case when c.status = com.dat.ai_receptionist_web.enums.Training.SessionStatus.COMPLETED then 1 else 0 end), 0) as completed,
+               coalesce(sum(case when c.status = com.dat.ai_receptionist_web.enums.Training.SessionStatus.TERMINATED then 1 else 0 end), 0) as terminated,
+               coalesce(sum(case when c.status = com.dat.ai_receptionist_web.enums.Training.SessionStatus.CANCELLED then 1 else 0 end), 0) as cancelled,
+               coalesce(sum(case when c.status = com.dat.ai_receptionist_web.enums.Training.SessionStatus.POSTPONED then 1 else 0 end), 0) as postponed,
+               count(c) as total
+        from CourseSchedule schedule
+        left join ClassSession c on c.courseSchedule.courseScheduleId = schedule.courseScheduleId
+            and c.sessionDate >= schedule.startDate
+            and (schedule.endDate is null or c.sessionDate <= schedule.endDate)
+        where schedule.courseScheduleId = :courseScheduleId
     """)
-    LearningProgressRow findLearningProgressByCourseId(@Param("courseId") UUID courseId);
+    LearningProgressRow findLearningProgressByCourseScheduleId(@Param("courseScheduleId") UUID courseScheduleId);
 
     interface LearningProgressRow {
-        long getTotal();
+        long getScheduled();
+
+        long getActive();
 
         long getCompleted();
+
+        long getTerminated();
+
+        long getCancelled();
+
+        long getPostponed();
+
+        long getTotal();
+    }
+
+    @Query("""
+        select schedule.courseScheduleId as courseScheduleId,
+               coalesce(sum(case when c.status = com.dat.ai_receptionist_web.enums.Training.SessionStatus.SCHEDULED then 1 else 0 end), 0) as scheduled,
+               coalesce(sum(case when c.status = com.dat.ai_receptionist_web.enums.Training.SessionStatus.ACTIVE then 1 else 0 end), 0) as active,
+               coalesce(sum(case when c.status = com.dat.ai_receptionist_web.enums.Training.SessionStatus.COMPLETED then 1 else 0 end), 0) as completed,
+               coalesce(sum(case when c.status = com.dat.ai_receptionist_web.enums.Training.SessionStatus.TERMINATED then 1 else 0 end), 0) as terminated,
+               coalesce(sum(case when c.status = com.dat.ai_receptionist_web.enums.Training.SessionStatus.CANCELLED then 1 else 0 end), 0) as cancelled,
+               coalesce(sum(case when c.status = com.dat.ai_receptionist_web.enums.Training.SessionStatus.POSTPONED then 1 else 0 end), 0) as postponed,
+               count(c) as total
+        from CourseSchedule schedule
+        left join ClassSession c on c.courseSchedule.courseScheduleId = schedule.courseScheduleId
+            and c.sessionDate >= schedule.startDate
+            and (schedule.endDate is null or c.sessionDate <= schedule.endDate)
+        where schedule.courseScheduleId in :courseScheduleIds
+        group by schedule.courseScheduleId
+    """)
+    List<CourseScheduleLearningProgressRow> findLearningProgressByCourseScheduleIds(
+            @Param("courseScheduleIds") Collection<UUID> courseScheduleIds
+    );
+
+    interface CourseScheduleLearningProgressRow extends LearningProgressRow {
+        UUID getCourseScheduleId();
     }
 
     @Modifying

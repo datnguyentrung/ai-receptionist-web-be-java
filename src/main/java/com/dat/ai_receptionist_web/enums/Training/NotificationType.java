@@ -7,5 +7,6 @@ public enum NotificationType {
     CLASS_SCHEDULE,        // Thông báo lịch học
     COACH_TIMESHEET,       // Thông báo chấm công huấn luyện viên
     ANNOUNCEMENT,          // Thông báo chung
-    CLASS_SESSION_REPORT   // Thông báo báo cáo buổi học
+    CLASS_SESSION_REPORT,  // Thông báo báo cáo buổi học
+    DEVICE_ALERT           // Cảnh báo thiết bị
 }

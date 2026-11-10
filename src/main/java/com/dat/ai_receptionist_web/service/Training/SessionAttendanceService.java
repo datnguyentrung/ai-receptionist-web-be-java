@@ -1,10 +1,12 @@
 package com.dat.ai_receptionist_web.service.Training;
 
+import com.dat.ai_receptionist_web.domain.Catalog.Course;
 import com.dat.ai_receptionist_web.domain.Training.ClassSession;
 import com.dat.ai_receptionist_web.domain.Training.CourseStaffAssignment;
 import com.dat.ai_receptionist_web.domain.Training.SessionAttendance;
 import com.dat.ai_receptionist_web.domain.Training.StudentEnrollment;
 import com.dat.ai_receptionist_web.domain.Training.command.AttendanceCommandType;
+import com.dat.ai_receptionist_web.dto.Catalog.CourseDTO;
 import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.dto.Training.SessionAttendanceDTO;
 import com.dat.ai_receptionist_web.dto.Training.SessionAttendanceFilter;
@@ -30,6 +32,7 @@ import com.dat.ai_receptionist_web.service.Training.command.AttendanceCommandSer
 import com.dat.ai_receptionist_web.service.Training.access.SessionAttendanceAccessPolicy;
 import com.dat.ai_receptionist_web.service.Training.access.TrainingAccessScope;
 import com.dat.ai_receptionist_web.specification.SessionAttendanceSpecification;
+import com.dat.ai_receptionist_web.util.SecurityUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -117,9 +120,13 @@ public class SessionAttendanceService {
     }
 
     @Transactional
-    public SessionAttendanceDTO.Response create(SessionAttendanceDTO.CreateRequest request) {
+    public SessionAttendanceDTO.BriefResponse create(SessionAttendanceDTO.CreateRequest request) {
+        return toBriefResponse(createAttendance(request).attendance());
+    }
+
+    private CreatedAttendance createAttendance(SessionAttendanceDTO.CreateRequest request) {
         AccessContext context = currentAccessContextResolver.current();
-        var session = classSessionRepository.findById(request.classSessionId())
+        ClassSession session = classSessionRepository.findDetailedById(request.classSessionId())
                 .orElseThrow(() -> new ApiException(TrainingErrorCode.CLASS_SESSION_NOT_FOUND));
         StudentEnrollment enrollment = resolveEnrollment(request.studentEnrollmentId());
         CourseStaffAssignment participantAssignment = resolveParticipantAssignment(request.courseStaffAssignmentId());
@@ -141,7 +148,7 @@ public class SessionAttendanceService {
         entity.setEvaluationStatus(request.evaluationStatus());
         entity.setNote(request.note());
         SessionAttendance saved = repository.save(entity);
-        return mapper.toResponse(saved, allowedActions(saved, context));
+        return new CreatedAttendance(saved, context);
     }
 
     @Transactional
@@ -200,8 +207,12 @@ public class SessionAttendanceService {
     }
 
     @Transactional
-    public SessionAttendanceDTO.Response updateEvaluation(UUID id, SessionAttendanceDTO.UpdateEvaluationRequest request) {
-        SessionAttendance entity = findManageable(id);
+    public SessionAttendanceDTO.EvaluationUpdateResult updateEvaluation(
+            UUID id,
+            SessionAttendanceDTO.UpdateEvaluationRequest request
+    ) {
+        SessionAttendance entity = repository.findEvaluationUpdateById(id)
+                .orElseThrow(() -> new ApiException(TrainingErrorCode.SESSION_ATTENDANCE_NOT_FOUND));
         accessPolicy.requireCanUpdate(entity);
         if (request.evaluationStatus() != null) {
             entity.setEvaluationStatus(request.evaluationStatus());
@@ -209,8 +220,14 @@ public class SessionAttendanceService {
         if (request.note() != null) {
             entity.setNote(request.note());
         }
-        SessionAttendance saved = repository.save(entity);
-        return toResponseForCurrentAccess(saved);
+        SessionAttendance saved = repository.saveAndFlush(entity);
+        return new SessionAttendanceDTO.EvaluationUpdateResult(
+                saved.getSessionAttendanceId(),
+                saved.getClassSession().getClassSessionId(),
+                saved.getEvaluationStatus(),
+                saved.getNote(),
+                saved.getUpdatedAt()
+        );
     }
 
     @Transactional
@@ -276,7 +293,11 @@ public class SessionAttendanceService {
                 request.evaluationStatus() == null ? EvaluationStatus.PENDING : request.evaluationStatus(),
                 request.note()
         );
-        return create(createRequest);
+        CreatedAttendance created = createAttendance(createRequest);
+        return mapper.toResponse(
+                created.attendance(),
+                allowedActions(created.attendance(), created.context())
+        );
     }
 
     @Transactional
@@ -370,7 +391,7 @@ public class SessionAttendanceService {
         if (studentEnrollmentId == null) {
             return null;
         }
-        return studentEnrollmentRepository.findById(studentEnrollmentId)
+        return studentEnrollmentRepository.findDetailedForAttendanceById(studentEnrollmentId)
                 .orElseThrow(() -> new ApiException(TrainingErrorCode.STUDENT_ENROLLMENT_NOT_FOUND));
     }
 
@@ -378,7 +399,7 @@ public class SessionAttendanceService {
         if (courseStaffAssignmentId == null) {
             return null;
         }
-        CourseStaffAssignment assignment = courseStaffAssignmentRepository.findById(courseStaffAssignmentId)
+        CourseStaffAssignment assignment = courseStaffAssignmentRepository.findDetailedForAttendanceById(courseStaffAssignmentId)
                 .orElseThrow(() -> new ApiException(TrainingErrorCode.COURSE_STAFF_ASSIGNMENT_NOT_FOUND));
         if (assignment.getAssignmentType() != AssignmentType.ASSISTANT_COACH) {
             throw new ApiException(TrainingErrorCode.COURSE_STAFF_ASSIGNMENT_NOT_EFFECTIVE);
@@ -472,12 +493,44 @@ public class SessionAttendanceService {
     }
 
     private SessionAttendanceDTO.Response toResponseForCurrentAccess(SessionAttendance entity) {
-        try {
-            AccessContext context = currentAccessContextResolver.current();
-            return mapper.toResponse(entity, allowedActions(entity, context));
-        } catch (RuntimeException exception) {
+        if (SecurityUtil.getJwt().isEmpty()) {
             return mapper.toResponse(entity, SessionAttendanceDTO.AllowedActions.none());
         }
+        AccessContext context = currentAccessContextResolver.current();
+        return mapper.toResponse(entity, allowedActions(entity, context));
+    }
+
+    private SessionAttendanceDTO.BriefResponse toBriefResponse(SessionAttendance entity) {
+        ClassSession session = entity.getClassSession();
+        Course course = session.getCourse();
+        StudentEnrollment enrollment = entity.getStudentEnrollment();
+        CourseStaffAssignment assignment = entity.getCourseStaffAssignment();
+        var participant = enrollment != null
+                ? enrollment.getStudentPerson()
+                : assignment.getStaffPerson();
+        return new SessionAttendanceDTO.BriefResponse(
+                entity.getSessionAttendanceId(),
+                new SessionAttendanceDTO.ClassSessionBrief(
+                        session.getClassSessionId(),
+                        new CourseDTO.BriefResponse(course.getCourseId(), course.getName()),
+                        session.getSessionDate(),
+                        session.getStartTime(),
+                        session.getEndTime(),
+                        session.getStatus()
+                ),
+                enrollment == null ? null : enrollment.getStudentEnrollmentId(),
+                assignment == null ? null : assignment.getCourseStaffAssignmentId(),
+                participant.getPersonId(),
+                participant.getFullName(),
+                entity.getCheckInTime(),
+                entity.getAttendanceStatus(),
+                entity.getEvaluationStatus(),
+                entity.getNote(),
+                entity.getCreatedAt()
+        );
+    }
+
+    private record CreatedAttendance(SessionAttendance attendance, AccessContext context) {
     }
 
     private SessionAttendance checkInResolvedStaff(UUID classSessionId, UUID courseStaffAssignmentId,

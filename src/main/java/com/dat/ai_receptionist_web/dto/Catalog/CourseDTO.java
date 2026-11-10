@@ -71,6 +71,13 @@ public final class CourseDTO {
     ) {
     }
 
+    /** Course summary for embedding in another resource; deliberately contains no schedules. */
+    public record BriefResponse(
+            UUID courseId,
+            String name
+    ) {
+    }
+
     /** Internal compatibility type while the session planner is migrated. Not exposed by CourseController. */
     public record ScheduleChangeRequest(UUID classScheduleId, LocalDate effectiveFrom) {}
     public record CourseScheduleChangeResponse(Response course, List<UUID> cancelledSessionIds, List<UUID> generatedSessionIds) {}

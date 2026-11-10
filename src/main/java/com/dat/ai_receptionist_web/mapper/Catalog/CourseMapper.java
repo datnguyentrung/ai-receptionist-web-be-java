@@ -35,6 +35,8 @@ public interface CourseMapper {
     @Mapping(target = "currentStudentCount", constant = "0")
     CourseDTO.SimpleResponse toSimpleResponse(Course entity);
 
+    CourseDTO.BriefResponse toBriefResponse(Course entity);
+
     @Mapping(target = "courseSchedules", ignore = true)
     @Mapping(target = "courseId", source = "entity.courseId")
     @Mapping(target = "name", source = "entity.name")

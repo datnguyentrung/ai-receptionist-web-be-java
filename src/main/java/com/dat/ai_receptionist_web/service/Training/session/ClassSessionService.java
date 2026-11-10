@@ -75,7 +75,8 @@ public class ClassSessionService {
         AccessContext context = currentAccessContextResolver.current();
         ClassSession session = findAccessible(id, context, accessPolicy.resolveReadScope(context));
         ClassSessionRepository.LearningProgressRow progress =
-                repository.findLearningProgressByCourseId(session.getCourse().getCourseId());
+                repository.findLearningProgressByCourseScheduleId(
+                        session.getCourseSchedule().getCourseScheduleId());
         return mapper.toResponse(session, toLearningProgress(progress));
     }
 
@@ -238,12 +239,15 @@ public class ClassSessionService {
     private ClassSessionDTO.LearningProgress toLearningProgress(
             ClassSessionRepository.LearningProgressRow row
     ) {
-        long total = row.getTotal();
-        long completed = row.getCompleted();
-        int percent = total == 0
-                ? 0
-                : (int) Math.min(Math.round((completed * 100.0) / total), 100L);
-        return new ClassSessionDTO.LearningProgress(completed, total, percent);
+        return new ClassSessionDTO.LearningProgress(
+                row.getScheduled(),
+                row.getActive(),
+                row.getCompleted(),
+                row.getTerminated(),
+                row.getCancelled(),
+                row.getPostponed(),
+                row.getTotal()
+        );
     }
 
     private ClassSessionDTO.EvaluationStudent toEvaluationStudent(

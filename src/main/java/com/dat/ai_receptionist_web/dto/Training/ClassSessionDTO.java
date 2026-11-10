@@ -2,12 +2,12 @@ package com.dat.ai_receptionist_web.dto.Training;
 
 import com.dat.ai_receptionist_web.dto.Catalog.CourseDTO;
 import com.dat.ai_receptionist_web.dto.Core.PersonDTO;
+import com.dat.ai_receptionist_web.enums.Core.ScheduleLevel;
 import com.dat.ai_receptionist_web.enums.Training.AttendanceStatus;
 import com.dat.ai_receptionist_web.enums.Training.EvaluationStatus;
-import com.dat.ai_receptionist_web.enums.Core.ScheduleLevel;
-import jakarta.validation.constraints.*;
 import com.dat.ai_receptionist_web.enums.Training.SessionStatus;
 import com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus;
+import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -67,9 +67,13 @@ public final class ClassSessionDTO {
     }
 
     public record LearningProgress(
+            long scheduled,
+            long active,
             long completed,
-            long total,
-            int percent
+            long terminated,
+            long cancelled,
+            long postponed,
+            long total
     ) {
     }
 

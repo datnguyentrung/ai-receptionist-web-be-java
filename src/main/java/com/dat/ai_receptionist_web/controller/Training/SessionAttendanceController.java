@@ -48,7 +48,7 @@ public class SessionAttendanceController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).SESSION_ATTENDANCE_CREATE.getCode())")
-    public SessionAttendanceDTO.Response create(@Valid @RequestBody SessionAttendanceDTO.CreateRequest request) {
+    public SessionAttendanceDTO.BriefResponse create(@Valid @RequestBody SessionAttendanceDTO.CreateRequest request) {
         return service.create(request);
     }
 

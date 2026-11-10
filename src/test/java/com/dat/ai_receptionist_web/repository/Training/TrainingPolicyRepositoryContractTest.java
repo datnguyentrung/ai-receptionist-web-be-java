@@ -220,17 +220,22 @@ class TrainingPolicyRepositoryContractTest {
     @Test
     void classSessionLearningProgressUsesOneAggregateQuery() throws Exception {
         Query progressQuery = ClassSessionRepository.class
-                .getMethod("findLearningProgressByCourseId", UUID.class)
+                .getMethod("findLearningProgressByCourseScheduleId", UUID.class)
                 .getAnnotation(Query.class);
 
         assertThat(progressQuery).isNotNull();
         assertThat(progressQuery.value())
                 .contains(
                         "count(c) as total",
+                        "SessionStatus.SCHEDULED",
+                        "SessionStatus.ACTIVE",
                         "SessionStatus.COMPLETED",
-                        "c.course.courseId = :courseId",
-                        "SessionStatus.CANCELLED",
-                        "SessionStatus.TERMINATED")
+                        "SessionStatus.TERMINATED",
+                        "SessionStatus.POSTPONED",
+                        "schedule.courseScheduleId = :courseScheduleId",
+                        "c.sessionDate >= schedule.startDate",
+                        "schedule.endDate is null or c.sessionDate <= schedule.endDate",
+                        "SessionStatus.CANCELLED")
                 .doesNotContain("fetch", "order by");
     }
 

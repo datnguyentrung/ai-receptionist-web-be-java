@@ -77,6 +77,7 @@ public class SecurityConfiguration {
                         // WebSocket Đối kháng dùng ticket riêng ở handshake nên endpoint cần được mở ở security layer.
                         .requestMatchers("/actuator/health", "/actuator/info", "/ws/**").permitAll()
                         .requestMatchers("/api/v1/internal/face-check-in-scans/**").permitAll()
+                        .requestMatchers("/api/v1/internal/fog/**", "/api/v1/device-provisioning/**", "/api/v1/device-runtime/**").permitAll()
                         .requestMatchers("/api/v1/auth/login", "/api/v1/auth/refresh",
                                 "/api/v1/auth/logout", "/api/v1/auth/mobile/login",
                                 "/api/v1/auth/mobile/refresh", "/api/v1/auth/mobile/logout",

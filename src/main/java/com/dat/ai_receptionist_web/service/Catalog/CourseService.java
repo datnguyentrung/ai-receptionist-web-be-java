@@ -53,9 +53,9 @@ public class CourseService {
         Map<UUID, List<CourseScheduleDTO.SimpleResponse>> schedulesByCourseId =
                 courseScheduleService.findSimpleResponsesByCourseIds(courseIds);
         return PageResponse.of(courses, course -> mapper.withSchedules(mapper.toSimpleResponse(
-                        course,
-                        currentStudentCountByCourseId.getOrDefault(course.getCourseId(), 0)),
-                schedulesByCourseId.getOrDefault(course.getCourseId(), List.of())));
+                                course,
+                                currentStudentCountByCourseId.getOrDefault(course.getCourseId(), 0)),
+                        schedulesByCourseId.getOrDefault(course.getCourseId(), List.of())));
     }
 
     @Transactional(readOnly = true)
@@ -115,8 +115,8 @@ public class CourseService {
                 course.getCourseId(),
                 currentDate));
         return mapper.withSchedules(mapper.toResponse(
-                course,
-                currentStudentCount), courseScheduleService.findResponsesByCourseId(course.getCourseId()));
+                        course,
+                        currentStudentCount), courseScheduleService.findResponsesByCourseId(course.getCourseId()));
     }
 
     private Map<UUID, Integer> getCurrentStudentCountByCourseIds(List<UUID> courseIds,

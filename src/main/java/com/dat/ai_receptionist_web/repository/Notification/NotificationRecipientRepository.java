@@ -7,6 +7,9 @@ import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import java.util.*;
 public interface NotificationRecipientRepository extends JpaRepository<NotificationRecipient, UUID> {
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("delete from NotificationRecipient nr where nr.notification.notificationId in :notificationIds")
+    void deleteByNotificationIds(@Param("notificationIds") Collection<UUID> notificationIds);
     @Query(value = """
             select nr
             from NotificationRecipient nr

@@ -4,6 +4,8 @@ import com.dat.ai_receptionist_web.domain.Catalog.CourseSchedule;
 import com.dat.ai_receptionist_web.domain.Training.StudentEnrollment;
 import com.dat.ai_receptionist_web.domain.Training.StudentEnrollmentSchedule;
 import com.dat.ai_receptionist_web.dto.Training.StudentEnrollmentDTO;
+import com.dat.ai_receptionist_web.dto.Catalog.CourseDTO;
+import com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO;
 import com.dat.ai_receptionist_web.mapper.Catalog.CourseScheduleMapper;
 import com.dat.ai_receptionist_web.mapper.Training.StudentEnrollmentMapper;
 import com.dat.ai_receptionist_web.repository.Catalog.CourseScheduleRepository;
@@ -22,6 +24,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -50,6 +53,13 @@ class StudentEnrollmentServiceTest {
         LocalDate to = LocalDate.now();
         StudentEnrollmentDTO.SimpleResponse response = new StudentEnrollmentDTO.SimpleResponse(
                 enrollmentId, null, null, List.of(), from, to, null);
+        var simpleSchedule = new CourseScheduleDTO.SimpleResponse(
+                link.getCourseSchedule().getCourseScheduleId(),
+                new CourseDTO.BriefResponse(UUID.randomUUID(), "Course A"),
+                null, from, null, null);
+        CourseScheduleLearningProgressService learningProgressService = mock(CourseScheduleLearningProgressService.class);
+        var learningProgress = new com.dat.ai_receptionist_web.dto.Training.ClassSessionDTO.LearningProgress(
+                5, 0, 0, 0, 0, 0, 5);
 
         when(contextResolver.current()).thenReturn(context);
         when(accessPolicy.resolveReadScope(context)).thenReturn(
@@ -60,6 +70,10 @@ class StudentEnrollmentServiceTest {
                 .thenReturn(new PageImpl<>(List.of(enrollment)));
         when(enrollmentScheduleRepository.findDetailedByStudentEnrollmentIds(List.of(enrollmentId)))
                 .thenReturn(List.of(link));
+        when(courseScheduleMapper.toSimpleResponse(link.getCourseSchedule())).thenReturn(simpleSchedule);
+        when(learningProgressService.getByCourseScheduleIds(anyList())).thenReturn(Map.of(
+                simpleSchedule.courseScheduleId(), learningProgress));
+        when(courseScheduleMapper.withLearningProgress(simpleSchedule, learningProgress)).thenReturn(simpleSchedule);
         when(enrollmentMapper.toSimpleResponse(eq(enrollment), anyList())).thenReturn(response);
 
         StudentEnrollmentService service = new StudentEnrollmentService(
@@ -72,7 +86,8 @@ class StudentEnrollmentServiceTest {
                 courseScheduleMapper,
                 mock(PersonCodePolicy.class),
                 contextResolver,
-                accessPolicy);
+                accessPolicy,
+                learningProgressService);
 
         var result = service.list(from, to, null, null, null, null, pageable);
 

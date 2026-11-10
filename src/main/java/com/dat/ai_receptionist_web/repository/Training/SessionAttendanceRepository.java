@@ -46,6 +46,20 @@ public interface SessionAttendanceRepository extends
     List<SessionAttendance> findByClassSession_ClassSessionId(UUID classSessionId);
 
     @Query("""
+        select distinct a
+        from SessionAttendance a
+        join fetch a.classSession session
+        join fetch session.courseSchedule sessionSchedule
+        left join fetch a.studentEnrollment enrollment
+        left join fetch enrollment.schedules enrollmentScheduleLink
+        left join fetch enrollmentScheduleLink.courseSchedule enrollmentSchedule
+        left join fetch a.courseStaffAssignment assignment
+        left join fetch assignment.courseSchedule assignmentSchedule
+        where a.sessionAttendanceId = :id
+    """)
+    Optional<SessionAttendance> findEvaluationUpdateById(@Param("id") UUID id);
+
+    @Query("""
                 select distinct e.studentEnrollmentId as studentEnrollmentId,
                        sp.personId as studentPersonId,
                        lower(sp.fullName) as studentFullNameSort,

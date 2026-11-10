@@ -42,6 +42,22 @@ class CourseStaffAssignmentRepositoryContractTest {
     }
 
     @Test
+    void primaryCoachRangeQueryFetchesScheduleAndCourseUsedForGrouping() throws Exception {
+        Query query = CourseStaffAssignmentRepository.class
+                .getMethod("findEffectivePrimaryCoachAssignmentsForCourseIdsBetween",
+                        Collection.class, LocalDate.class, LocalDate.class)
+                .getAnnotation(Query.class);
+
+        assertThat(query).isNotNull();
+        assertThat(query.value())
+                .contains("join fetch a.staffPerson")
+                .contains("join fetch a.courseSchedule courseSchedule")
+                .contains("join fetch courseSchedule.course course")
+                .contains("where course.courseId in :courseIds")
+                .contains("order by course.courseId");
+    }
+
+    @Test
     void primaryCoachConflictQueryChecksScheduleRolePeriodStatusAndExcludedAssignment() throws Exception {
         Query query = CourseStaffAssignmentRepository.class
                 .getMethod("existsOverlappingPrimaryAssignment", java.util.UUID.class,

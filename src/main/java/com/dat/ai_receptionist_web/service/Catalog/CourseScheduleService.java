@@ -14,6 +14,7 @@ import com.dat.ai_receptionist_web.repository.Catalog.CourseScheduleRepository;
 import com.dat.ai_receptionist_web.repository.Training.ClassSessionRepository;
 import com.dat.ai_receptionist_web.repository.Training.CourseStaffAssignmentRepository;
 import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentScheduleRepository;
+import com.dat.ai_receptionist_web.service.Training.CourseScheduleLearningProgressService;
 import com.dat.ai_receptionist_web.service.Training.CourseStaffAssignmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -39,10 +40,17 @@ public class CourseScheduleService {
     private final ClassSessionRepository classSessionRepository;
     private final CourseStaffAssignmentRepository courseStaffAssignmentRepository;
     private final StudentEnrollmentScheduleRepository studentEnrollmentScheduleRepository;
+    private final CourseScheduleLearningProgressService courseScheduleLearningProgressService;
 
     @Transactional(readOnly = true)
     public PageResponse<CourseScheduleDTO.SimpleResponse> list(Pageable pageable) {
-        return PageResponse.of(repository.findAllDetailed(pageable), mapper::toSimpleResponse);
+        var schedules = repository.findAllDetailed(pageable);
+        Map<UUID, com.dat.ai_receptionist_web.dto.Training.ClassSessionDTO.LearningProgress> progressByScheduleId =
+                courseScheduleLearningProgressService.getByCourseScheduleIds(schedules.getContent().stream()
+                        .map(CourseSchedule::getCourseScheduleId)
+                        .toList());
+        return PageResponse.of(schedules, schedule -> mapper.withLearningProgress(mapper.toSimpleResponse(schedule),
+                progressByScheduleId.get(schedule.getCourseScheduleId())));
     }
 
     @Transactional(readOnly = true)
@@ -95,11 +103,17 @@ public class CourseScheduleService {
         if (courseIds.isEmpty()) {
             return Map.of();
         }
-        return repository.findDetailedByCourseIds(courseIds).stream()
+        List<CourseSchedule> schedules = repository.findDetailedByCourseIds(courseIds);
+        Map<UUID, com.dat.ai_receptionist_web.dto.Training.ClassSessionDTO.LearningProgress> progressByScheduleId =
+                courseScheduleLearningProgressService.getByCourseScheduleIds(schedules.stream()
+                        .map(CourseSchedule::getCourseScheduleId)
+                        .toList());
+        return schedules.stream()
                 .collect(Collectors.groupingBy(
                         schedule -> schedule.getCourse().getCourseId(),
                         LinkedHashMap::new,
-                        Collectors.mapping(mapper::toSimpleResponse, Collectors.toList())
+                        Collectors.mapping(schedule -> mapper.withLearningProgress(mapper.toSimpleResponse(schedule),
+                                progressByScheduleId.get(schedule.getCourseScheduleId())), Collectors.toList())
                 ));
     }
 

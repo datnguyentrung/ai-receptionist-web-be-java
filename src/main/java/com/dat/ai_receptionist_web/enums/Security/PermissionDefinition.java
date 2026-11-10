@@ -134,7 +134,11 @@ public enum PermissionDefinition {
     WALLET_TOP_UP_REVIEW("WALLET_TOP_UP_REVIEW", "WALLET_TOP_UP_REQUEST", PermissionAction.UPDATE, "Wallet Top Up Review"),
     WALLET_TOP_UP_DIRECT_CREATE("WALLET_TOP_UP_DIRECT_CREATE", "WALLET_TOP_UP_REQUEST", PermissionAction.CREATE, "Wallet Direct Top Up Create"),
     WALLET_REFUND_CREATE("WALLET_REFUND_CREATE", "WALLET", PermissionAction.CREATE, "Wallet Refund Create"),
-    SPARRING_OPERATE("SPARRING_OPERATE", "SPARRING", PermissionAction.UPDATE, "Operate sparring rooms");
+    SPARRING_OPERATE("SPARRING_OPERATE", "SPARRING", PermissionAction.UPDATE, "Operate sparring rooms"),
+    DEVICE_READ("DEVICE_READ", "DEVICE", PermissionAction.READ, "Device Read"),
+    DEVICE_CREATE("DEVICE_CREATE", "DEVICE", PermissionAction.CREATE, "Device Create"),
+    DEVICE_UPDATE("DEVICE_UPDATE", "DEVICE", PermissionAction.UPDATE, "Device Update"),
+    DEVICE_DELETE("DEVICE_DELETE", "DEVICE", PermissionAction.DELETE, "Device Delete");
 
     private final String code;
     private final String model;

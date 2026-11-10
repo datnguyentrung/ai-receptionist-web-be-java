@@ -42,6 +42,7 @@ public class CourseStaffAssignmentService {
     private final PersonCodePolicy personCodePolicy;
     private final CurrentAccessContextResolver currentAccessContextResolver;
     private final CourseStaffAssignmentAccessPolicy accessPolicy;
+    private final CourseScheduleLearningProgressService courseScheduleLearningProgressService;
 
     @Transactional(readOnly = true)
     public PageResponse<CourseStaffAssignmentDTO.SimpleResponse> list(
@@ -62,7 +63,7 @@ public class CourseStaffAssignmentService {
         LocalDate resolvedEffectiveOn = filterEffectiveOn
                 ? effectiveOn
                 : LocalDate.of(1970, 1, 1);
-        return PageResponse.of(repository.findAccessible(
+        var assignments = repository.findAccessible(
                 context.activePersonId(),
                 scope.unrestricted(),
                 scope.self(),
@@ -75,7 +76,15 @@ public class CourseStaffAssignmentService {
                 resolvedEffectiveOn,
                 search == null ? "" : search.trim(),
                 pageable
-        ), mapper::toSimpleResponse);
+        );
+        Map<UUID, com.dat.ai_receptionist_web.dto.Training.ClassSessionDTO.LearningProgress> progressByScheduleId =
+                courseScheduleLearningProgressService.getByCourseScheduleIds(
+                assignments.getContent().stream()
+                        .map(assignment -> assignment.getCourseSchedule().getCourseScheduleId())
+                        .toList());
+        return PageResponse.of(assignments, assignment -> mapper.withLearningProgress(
+                mapper.toSimpleResponse(assignment),
+                progressByScheduleId.get(assignment.getCourseSchedule().getCourseScheduleId())));
     }
 
     @Transactional(readOnly = true)

@@ -68,7 +68,8 @@ class CourseStaffAssignmentServiceTest {
                 scheduleRepository,
                 mock(PersonCodePolicy.class),
                 contextResolver,
-                accessPolicy
+                accessPolicy,
+                mock(CourseScheduleLearningProgressService.class)
         );
         when(contextResolver.current()).thenReturn(context);
         when(scheduleRepository.findDetailedById(scheduleId)).thenReturn(Optional.of(schedule));
@@ -95,7 +96,8 @@ class CourseStaffAssignmentServiceTest {
                 mock(CourseScheduleRepository.class),
                 mock(PersonCodePolicy.class),
                 mock(CurrentAccessContextResolver.class),
-                mock(CourseStaffAssignmentAccessPolicy.class)
+                mock(CourseStaffAssignmentAccessPolicy.class),
+                mock(CourseScheduleLearningProgressService.class)
         );
         LocalDate today = LocalDate.of(2026, 10, 16);
         UUID firstScheduleId = UUID.randomUUID();
@@ -138,7 +140,8 @@ class CourseStaffAssignmentServiceTest {
                 mock(CourseScheduleRepository.class),
                 mock(PersonCodePolicy.class),
                 contextResolver,
-                accessPolicy
+                accessPolicy,
+                mock(CourseScheduleLearningProgressService.class)
         );
         UUID assignmentId = UUID.randomUUID();
         UUID courseId = UUID.randomUUID();

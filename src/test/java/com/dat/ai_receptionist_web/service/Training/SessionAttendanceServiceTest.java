@@ -3,6 +3,7 @@ package com.dat.ai_receptionist_web.service.Training;
 import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.dto.Training.SessionAttendanceDTO;
 import com.dat.ai_receptionist_web.dto.Training.SessionAttendanceFilter;
+import com.dat.ai_receptionist_web.domain.Training.SessionAttendance;
 import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.code.GeneralErrorCode;
 import com.dat.ai_receptionist_web.mapper.Training.SessionAttendanceMapper;
@@ -26,9 +27,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -36,17 +40,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class SessionAttendanceServiceTest {
     private final SessionAttendanceRepository repository = mock(SessionAttendanceRepository.class);
+    private final SessionAttendanceMapper mapper = mock(SessionAttendanceMapper.class);
     private final CurrentAccessContextResolver currentAccessContextResolver = mock(CurrentAccessContextResolver.class);
     private final SessionAttendanceAccessPolicy accessPolicy = mock(SessionAttendanceAccessPolicy.class);
 
     private final SessionAttendanceService service = new SessionAttendanceService(
             repository,
-            mock(SessionAttendanceMapper.class),
+            mapper,
             mock(ClassSessionRepository.class),
             mock(StudentEnrollmentRepository.class),
             mock(CourseStaffAssignmentRepository.class),
@@ -59,6 +66,7 @@ class SessionAttendanceServiceTest {
 
     @BeforeEach
     void setUpAccess() {
+        SecurityContextHolder.clearContext();
         when(currentAccessContextResolver.current()).thenReturn(new AccessContext(
                 UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), null, Set.of(), Set.of()));
         when(accessPolicy.resolveReadScope(any()))
@@ -125,6 +133,34 @@ class SessionAttendanceServiceTest {
         assertThat(result.stats().totalRecords()).isEqualTo(20);
         assertThat(result.stats().attendanceRate()).isEqualTo(75.0);
         assertThat(result.attendances().getContent()).isEmpty();
+    }
+
+    @Test
+    void updateEvaluationReturnsCompactResultWithoutResolvingAuthenticatedUser() {
+        UUID attendanceId = UUID.randomUUID();
+        UUID classSessionId = UUID.randomUUID();
+        SessionAttendance attendance = new SessionAttendance();
+        attendance.setSessionAttendanceId(attendanceId);
+        attendance.setClassSession(com.dat.ai_receptionist_web.domain.Training.ClassSession.builder()
+                .classSessionId(classSessionId)
+                .build());
+        attendance.setUpdatedAt(LocalDateTime.now());
+        when(repository.findEvaluationUpdateById(attendanceId)).thenReturn(Optional.of(attendance));
+        when(repository.saveAndFlush(attendance)).thenReturn(attendance);
+
+        SessionAttendanceDTO.EvaluationUpdateResult result = service.updateEvaluation(
+                attendanceId,
+                new SessionAttendanceDTO.UpdateEvaluationRequest(
+                        com.dat.ai_receptionist_web.enums.Training.EvaluationStatus.AVERAGE, "Đạt")
+        );
+
+        assertThat(result.sessionAttendanceId()).isEqualTo(attendanceId);
+        assertThat(result.classSessionId()).isEqualTo(classSessionId);
+        assertThat(result.evaluationStatus())
+                .isEqualTo(com.dat.ai_receptionist_web.enums.Training.EvaluationStatus.AVERAGE);
+        assertThat(result.note()).isEqualTo("Đạt");
+        verify(currentAccessContextResolver, never()).current();
+        verifyNoInteractions(mapper);
     }
 
     private static SessionAttendanceFilter filter() {

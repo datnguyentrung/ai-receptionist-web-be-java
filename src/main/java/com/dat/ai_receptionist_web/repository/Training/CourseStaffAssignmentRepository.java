@@ -16,6 +16,17 @@ import java.util.UUID;
 
 public interface CourseStaffAssignmentRepository extends JpaRepository<CourseStaffAssignment, UUID> {
     boolean existsByCourseSchedule_CourseScheduleId(UUID courseScheduleId);
+
+    @Query("""
+        select a
+        from CourseStaffAssignment a
+        join fetch a.staffPerson staffPerson
+        left join fetch staffPerson.position
+        join fetch a.courseSchedule courseSchedule
+        where a.courseStaffAssignmentId = :id
+    """)
+    Optional<CourseStaffAssignment> findDetailedForAttendanceById(@Param("id") UUID id);
+
     @Query("""
         select a
         from CourseStaffAssignment a
@@ -61,7 +72,9 @@ public interface CourseStaffAssignmentRepository extends JpaRepository<CourseSta
         from CourseStaffAssignment a
         join fetch a.staffPerson staffPerson
         left join fetch staffPerson.position
-        where a.courseSchedule.course.courseId in :courseIds
+        join fetch a.courseSchedule courseSchedule
+        join fetch courseSchedule.course course
+        where course.courseId in :courseIds
           and a.assignmentType = com.dat.ai_receptionist_web.enums.Training.AssignmentType.PRIMARY_COACH
           and a.startDate <= :toDate
           and (a.endDate is null or a.endDate >= :fromDate)
@@ -69,7 +82,7 @@ public interface CourseStaffAssignmentRepository extends JpaRepository<CourseSta
               com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ACTIVE,
               com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ENDED
           )
-        order by a.courseSchedule.course.courseId, a.startDate desc, a.courseStaffAssignmentId
+        order by course.courseId, a.startDate desc, a.courseStaffAssignmentId
     """)
     List<CourseStaffAssignment> findEffectivePrimaryCoachAssignmentsForCourseIdsBetween(
             @Param("courseIds") Collection<UUID> courseIds,

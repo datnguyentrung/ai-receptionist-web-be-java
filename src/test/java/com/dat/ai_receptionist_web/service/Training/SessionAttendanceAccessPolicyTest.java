@@ -54,6 +54,53 @@ class SessionAttendanceAccessPolicyTest {
     }
 
     @Test
+    void nonActiveEnrollmentDeniesCreate() {
+        UUID courseId = UUID.randomUUID();
+        UUID scheduleId = UUID.randomUUID();
+        ClassSession session = session(courseId, scheduleId, LocalDate.of(2026, 3, 15), false, null);
+
+        for (StudentEnrollmentStatus status : new StudentEnrollmentStatus[]{
+                StudentEnrollmentStatus.PENDING_START,
+                StudentEnrollmentStatus.COMPLETED,
+                StudentEnrollmentStatus.EXPIRED,
+                StudentEnrollmentStatus.CANCELLED
+        }) {
+            StudentEnrollment enrollment = enrollment(
+                    courseId, scheduleId, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
+            enrollment.setStatus(status);
+
+            assertThatThrownBy(() -> policy.requireCanCreate(session, enrollment, null))
+                    .isInstanceOf(ApiException.class)
+                    .extracting("errorCode")
+                    .isEqualTo(TrainingErrorCode.ENROLLMENT_NOT_ACTIVE);
+        }
+    }
+
+    @Test
+    void nonAttendableSessionStatusDeniesCreate() {
+        UUID courseId = UUID.randomUUID();
+        UUID scheduleId = UUID.randomUUID();
+        StudentEnrollment enrollment = enrollment(
+                courseId, scheduleId, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
+
+        for (SessionStatus status : new SessionStatus[]{
+                SessionStatus.COMPLETED,
+                SessionStatus.TERMINATED,
+                SessionStatus.CANCELLED,
+                SessionStatus.POSTPONED
+        }) {
+            ClassSession session = session(
+                    courseId, scheduleId, LocalDate.of(2026, 3, 15), false, null);
+            session.setStatus(status);
+
+            assertThatThrownBy(() -> policy.requireCanCreate(session, enrollment, null))
+                    .isInstanceOf(ApiException.class)
+                    .extracting("errorCode")
+                    .isEqualTo(TrainingErrorCode.CLASS_SESSION_IMMUTABLE);
+        }
+    }
+
+    @Test
     void closedAttendanceDeniesUnlessReopened() {
         UUID courseId = UUID.randomUUID();
         UUID scheduleId = UUID.randomUUID();

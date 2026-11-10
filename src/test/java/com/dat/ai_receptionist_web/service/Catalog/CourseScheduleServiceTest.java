@@ -15,6 +15,7 @@ import com.dat.ai_receptionist_web.repository.Training.ClassSessionRepository;
 import com.dat.ai_receptionist_web.repository.Training.CourseStaffAssignmentRepository;
 import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentScheduleRepository;
 import com.dat.ai_receptionist_web.service.Training.CourseStaffAssignmentService;
+import com.dat.ai_receptionist_web.service.Training.CourseScheduleLearningProgressService;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
@@ -43,7 +44,8 @@ class CourseScheduleServiceTest {
                 assignmentService,
                 mock(ClassSessionRepository.class),
                 mock(CourseStaffAssignmentRepository.class),
-                mock(StudentEnrollmentScheduleRepository.class)
+                mock(StudentEnrollmentScheduleRepository.class),
+                mock(CourseScheduleLearningProgressService.class)
         );
         UUID courseId = UUID.randomUUID();
         Course course = Course.builder().courseId(courseId).build();
@@ -149,7 +151,8 @@ class CourseScheduleServiceTest {
         CourseScheduleService service = new CourseScheduleService(
                 repository, mock(CourseRepository.class), classSchedules, mock(CourseScheduleMapper.class),
                 assignmentService, mock(ClassSessionRepository.class),
-                mock(CourseStaffAssignmentRepository.class), mock(StudentEnrollmentScheduleRepository.class));
+                mock(CourseStaffAssignmentRepository.class), mock(StudentEnrollmentScheduleRepository.class),
+                mock(CourseScheduleLearningProgressService.class));
         UUID id = UUID.randomUUID();
         CourseSchedule schedule = CourseSchedule.builder().courseScheduleId(id).status(ScheduleStatus.ACTIVE).build();
         when(repository.findDetailedById(id)).thenReturn(Optional.of(schedule));
@@ -172,7 +175,8 @@ class CourseScheduleServiceTest {
         CourseScheduleService service = new CourseScheduleService(
                 repository, mock(CourseRepository.class), classSchedules, mock(CourseScheduleMapper.class),
                 assignmentService, mock(ClassSessionRepository.class),
-                mock(CourseStaffAssignmentRepository.class), mock(StudentEnrollmentScheduleRepository.class));
+                mock(CourseStaffAssignmentRepository.class), mock(StudentEnrollmentScheduleRepository.class),
+                mock(CourseScheduleLearningProgressService.class));
         UUID id = UUID.randomUUID();
         CourseSchedule schedule = CourseSchedule.builder()
                 .courseScheduleId(id)
@@ -205,7 +209,8 @@ class CourseScheduleServiceTest {
                 mock(CourseStaffAssignmentService.class),
                 sessions,
                 assignments,
-                enrollments
+                enrollments,
+                mock(CourseScheduleLearningProgressService.class)
         );
     }
 

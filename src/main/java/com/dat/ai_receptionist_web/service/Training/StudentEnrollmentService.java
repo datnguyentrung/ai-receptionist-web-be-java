@@ -46,6 +46,7 @@ public class StudentEnrollmentService {
     private final PersonCodePolicy personCodePolicy;
     private final CurrentAccessContextResolver currentAccessContextResolver;
     private final StudentEnrollmentAccessPolicy accessPolicy;
+    private final CourseScheduleLearningProgressService courseScheduleLearningProgressService;
 
     @Transactional(readOnly = true)
     public PageResponse<StudentEnrollmentDTO.SimpleResponse> list(
@@ -79,9 +80,18 @@ public class StudentEnrollmentService {
                 enrollments.getContent().stream()
                         .map(com.dat.ai_receptionist_web.domain.Training.StudentEnrollment::getStudentEnrollmentId)
                         .toList());
-        return PageResponse.of(enrollments, enrollment -> mapper.toSimpleResponse(
-                enrollment,
-                schedulesByEnrollmentId.getOrDefault(enrollment.getStudentEnrollmentId(), List.of())));
+        Map<UUID, com.dat.ai_receptionist_web.dto.Training.ClassSessionDTO.LearningProgress> progressByScheduleId =
+                courseScheduleLearningProgressService.getByCourseScheduleIds(
+                schedulesByEnrollmentId.values().stream()
+                        .flatMap(List::stream)
+                        .map(com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO.SimpleResponse::courseScheduleId)
+                        .toList());
+        Map<UUID, List<com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO.SimpleResponse>>
+                schedulesWithLearningProgressByEnrollmentId =
+                withLearningProgress(schedulesByEnrollmentId, progressByScheduleId);
+        return PageResponse.of(enrollments, enrollment -> mapper.toSimpleResponse(enrollment,
+                schedulesWithLearningProgressByEnrollmentId.getOrDefault(
+                        enrollment.getStudentEnrollmentId(), List.of())));
     }
 
     @Transactional(readOnly = true)
@@ -206,5 +216,20 @@ public class StudentEnrollmentService {
                         Collectors.mapping(
                                 link -> courseScheduleMapper.toSimpleResponse(link.getCourseSchedule()),
                                 Collectors.toList())));
+    }
+
+    private Map<UUID, List<com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO.SimpleResponse>>
+    withLearningProgress(
+            Map<UUID, List<com.dat.ai_receptionist_web.dto.Catalog.CourseScheduleDTO.SimpleResponse>> schedulesByEnrollmentId,
+            Map<UUID, com.dat.ai_receptionist_web.dto.Training.ClassSessionDTO.LearningProgress> progressByScheduleId
+    ) {
+        return schedulesByEnrollmentId.entrySet().stream().collect(Collectors.toMap(
+                Map.Entry::getKey,
+                entry -> entry.getValue().stream()
+                        .map(schedule -> courseScheduleMapper.withLearningProgress(
+                                schedule, progressByScheduleId.get(schedule.courseScheduleId())))
+                        .toList(),
+                (left, right) -> left,
+                LinkedHashMap::new));
     }
 }

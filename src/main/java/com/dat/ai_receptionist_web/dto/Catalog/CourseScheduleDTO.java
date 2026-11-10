@@ -1,5 +1,6 @@
 package com.dat.ai_receptionist_web.dto.Catalog;
 
+import com.dat.ai_receptionist_web.dto.Training.ClassSessionDTO;
 import com.dat.ai_receptionist_web.dto.Training.CourseStaffAssignmentDTO;
 import com.dat.ai_receptionist_web.enums.Core.ScheduleStatus;
 import jakarta.validation.constraints.NotNull;
@@ -9,26 +10,43 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 public final class CourseScheduleDTO {
-    private CourseScheduleDTO() {}
+    private CourseScheduleDTO() {
+    }
 
     public record CreateRequest(
-            @NotNull UUID courseId,
-            @NotNull UUID classScheduleId,
-            @NotNull LocalDate startDate,
+            @NotNull
+            UUID courseId,
+            @NotNull
+            UUID classScheduleId,
+            @NotNull
+            LocalDate startDate,
             LocalDate endDate,
-            @NotNull ScheduleStatus status) {}
+            @NotNull
+            ScheduleStatus status
+    ) {
+    }
 
     public record UpdateRequest(
-            @NotNull UUID classScheduleId,
-            @NotNull LocalDate startDate,
+            @NotNull
+            UUID classScheduleId,
+            @NotNull
+            LocalDate startDate,
             LocalDate endDate,
-            @NotNull ScheduleStatus status) {}
+            @NotNull
+            ScheduleStatus status
+    ) {
+    }
 
     public record UpsertRequest(
-            @NotNull UUID classScheduleId,
-            @NotNull LocalDate startDate,
+            @NotNull
+            UUID classScheduleId,
+            @NotNull
+            LocalDate startDate,
             LocalDate endDate,
-            @NotNull ScheduleStatus status) {}
+            @NotNull
+            ScheduleStatus status
+    ) {
+    }
 
     public record Response(
             UUID courseScheduleId,
@@ -39,13 +57,23 @@ public final class CourseScheduleDTO {
             LocalDate endDate,
             ScheduleStatus status,
             LocalDateTime createdAt,
-            LocalDateTime updatedAt) {}
+            LocalDateTime updatedAt
+    ) {
+    }
 
     public record SimpleResponse(
             UUID courseScheduleId,
-            UUID courseId,
+            CourseDTO.BriefResponse course,
             ClassScheduleDTO.SimpleResponse classSchedule,
             LocalDate startDate,
             LocalDate endDate,
-            ScheduleStatus status) {}
+            ScheduleStatus status,
+            ClassSessionDTO.LearningProgress learningProgress
+    ) {
+        public SimpleResponse(UUID courseScheduleId, CourseDTO.BriefResponse course,
+                              ClassScheduleDTO.SimpleResponse classSchedule, LocalDate startDate,
+                              LocalDate endDate, ScheduleStatus status) {
+            this(courseScheduleId, course, classSchedule, startDate, endDate, status, null);
+        }
+    }
 }

@@ -21,6 +21,18 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
         where e.studentEnrollmentId = :id
     """)
     Optional<StudentEnrollment> findDetailedByIdForUpdate(@Param("id") UUID id);
+
+    @Query("""
+        select distinct e
+        from StudentEnrollment e
+        join fetch e.studentPerson studentPerson
+        left join fetch studentPerson.position
+        left join fetch e.schedules link
+        left join fetch link.courseSchedule courseSchedule
+        where e.studentEnrollmentId = :id
+    """)
+    Optional<StudentEnrollment> findDetailedForAttendanceById(@Param("id") UUID id);
+
     @Query("""
         select count(distinct e) from StudentEnrollment e
         join e.schedules link

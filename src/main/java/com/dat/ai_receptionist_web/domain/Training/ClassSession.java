@@ -23,7 +23,8 @@ import java.util.UUID;
         @Index(name = "idx_class_session_lifecycle", columnList = "status,session_date,start_time"),
         @Index(name = "idx_class_session_closure", columnList = "status,is_attendance_closed,session_date"),
         @Index(name = "idx_class_session_course_session_date", columnList = "course_id,session_date"),
-        @Index(name = "idx_class_session_course_status", columnList = "course_id,status")
+        @Index(name = "idx_class_session_course_status", columnList = "course_id,status"),
+        @Index(name = "idx_class_session_schedule_date", columnList = "course_schedule_id,session_date")
 })
 public class ClassSession {
     @Id

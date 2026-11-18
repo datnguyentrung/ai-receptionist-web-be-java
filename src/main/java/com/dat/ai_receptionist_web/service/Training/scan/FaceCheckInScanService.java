@@ -22,9 +22,11 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
@@ -39,7 +41,9 @@ import java.time.ZoneId;
 import java.util.Base64;
 import java.util.EnumSet;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -64,6 +68,7 @@ public class FaceCheckInScanService {
     private final AttendanceCommandService attendanceCommandService;
     private final FaceCheckInEventStream eventStream;
     private final FaceCheckInExpiryRegistry expiryRegistry;
+    private final PlatformTransactionManager transactionManager;
     private final ObjectMapper objectMapper;
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -177,8 +182,9 @@ public class FaceCheckInScanService {
             throw new ApiException(TrainingErrorCode.FACE_CHECK_IN_DEVICE_MISMATCH);
         }
         long timeoutMillis = Math.max(1_000L,
-                Duration.between(Instant.now(), scan.getExpiresAt().plusSeconds(5)).toMillis());
+                Duration.between(Instant.now(), scan.getExpiresAt().plusSeconds(1)).toMillis());
         SseEmitter emitter = eventStream.subscribe(requestId, timeoutMillis);
+        emitter.onTimeout(() -> expireOnSseTimeout(requestId, emitter));
         List<FaceCheckInEvent> replay =
                 eventRepository.findByRequestIdAndEventIdGreaterThanOrderByEventId(requestId, lastEventId);
         try {
@@ -197,18 +203,42 @@ public class FaceCheckInScanService {
     @Scheduled(fixedDelay = 1_000L)
     @Transactional
     public void expireOverdue() {
+        Instant now = Instant.now();
+        Map<UUID, FaceCheckInScan> dueScans = new LinkedHashMap<>();
         for (UUID requestId : expiryRegistry.pollDue()) {
-            FaceCheckInScan scan = scanRepository.findByIdForUpdate(requestId).orElse(null);
-            if (scan == null || scan.getStage().isTerminal()) continue;
-            if (scan.getExpiresAt().isAfter(Instant.now())) {
-                afterCommit(() -> expiryRegistry.track(scan.getRequestId(), scan.getExpiresAt()));
-                continue;
-            }
-            FaceCheckInResponse.ErrorSummary error = new FaceCheckInResponse.ErrorSummary(
-                    TrainingErrorCode.FACE_CHECK_IN_EXPIRED.code(),
-                    TrainingErrorCode.FACE_CHECK_IN_EXPIRED.title(),
-                    TrainingErrorCode.FACE_CHECK_IN_EXPIRED.defaultDetail());
-            advance(scan, FaceCheckInStage.EXPIRED, null, error);
+            scanRepository.findByIdForUpdate(requestId)
+                    .ifPresent(scan -> dueScans.put(scan.getRequestId(), scan));
+        }
+        for (FaceCheckInScan scan : scanRepository.findOverdueForUpdate(now, TERMINAL_STAGES)) {
+            dueScans.putIfAbsent(scan.getRequestId(), scan);
+        }
+        for (FaceCheckInScan scan : dueScans.values()) {
+            expireIfOverdue(scan, now);
+        }
+    }
+
+    private void expireIfOverdue(FaceCheckInScan scan, Instant now) {
+        if (scan.getStage().isTerminal()) return;
+        if (scan.getExpiresAt().isAfter(now)) {
+            afterCommit(() -> expiryRegistry.track(scan.getRequestId(), scan.getExpiresAt()));
+            return;
+        }
+        FaceCheckInResponse.ErrorSummary error = new FaceCheckInResponse.ErrorSummary(
+                TrainingErrorCode.FACE_CHECK_IN_EXPIRED.code(),
+                TrainingErrorCode.FACE_CHECK_IN_EXPIRED.title(),
+                TrainingErrorCode.FACE_CHECK_IN_EXPIRED.defaultDetail());
+        attendanceCommandService.expireIfPresent(scan.getRequestId(), error);
+        advance(scan, FaceCheckInStage.EXPIRED, null, error);
+    }
+
+    private void expireOnSseTimeout(UUID requestId, SseEmitter emitter) {
+        try {
+            new TransactionTemplate(transactionManager).executeWithoutResult(status ->
+                    scanRepository.findByIdForUpdate(requestId)
+                            .ifPresent(scan -> expireIfOverdue(scan, Instant.now())));
+        } finally {
+            // Without an explicit completion Spring turns this into an AsyncRequestTimeoutException (HTTP 500).
+            emitter.complete();
         }
     }
 

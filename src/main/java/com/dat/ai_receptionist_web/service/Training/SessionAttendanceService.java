@@ -49,6 +49,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -79,6 +80,7 @@ public class SessionAttendanceService {
     private final SessionAttendanceAccessPolicy accessPolicy;
     private final AttendanceCommandService attendanceCommandService;
     private final ObjectMapper objectMapper;
+    private final AttendanceNotificationService attendanceNotificationService;
 
     @Transactional(readOnly = true)
     public PageResponse<SessionAttendanceDTO.SimpleResponse> list(
@@ -148,6 +150,7 @@ public class SessionAttendanceService {
         entity.setEvaluationStatus(request.evaluationStatus());
         entity.setNote(request.note());
         SessionAttendance saved = repository.save(entity);
+        attendanceNotificationService.notifyAttendanceRecorded(saved);
         return new CreatedAttendance(saved, context);
     }
 
@@ -158,6 +161,8 @@ public class SessionAttendanceService {
         accessPolicy.requireCanUpdate(entity);
         mapper.updateEntity(request, entity);
         SessionAttendance saved = repository.save(entity);
+        attendanceNotificationService.notifyAttendanceRecorded(saved);
+        attendanceNotificationService.notifyEvaluationUpdated(saved);
         return mapper.toResponse(saved, allowedActions(saved, context));
     }
 
@@ -171,6 +176,8 @@ public class SessionAttendanceService {
             throw new ApiException(TrainingErrorCode.SESSION_ATTENDANCE_NOT_FOUND);
         }
         var byId = entities.stream().collect(Collectors.toMap(SessionAttendance::getSessionAttendanceId, item -> item));
+        Set<UUID> attendanceChangedIds = new HashSet<>();
+        Set<UUID> evaluationChangedIds = new HashSet<>();
         for (SessionAttendanceDTO.BatchUpdateItem item : request.records()) {
             SessionAttendance entity = byId.get(item.sessionAttendanceId());
             accessPolicy.requireCanUpdate(entity);
@@ -179,14 +186,23 @@ public class SessionAttendanceService {
             }
             if (item.attendanceStatus() != null) {
                 entity.setAttendanceStatus(item.attendanceStatus());
+                attendanceChangedIds.add(entity.getSessionAttendanceId());
             }
             if (item.evaluationStatus() != null) {
                 entity.setEvaluationStatus(item.evaluationStatus());
+                evaluationChangedIds.add(entity.getSessionAttendanceId());
             }
             if (item.note() != null) {
                 entity.setNote(item.note());
+                evaluationChangedIds.add(entity.getSessionAttendanceId());
             }
         }
+        entities.stream()
+                .filter(entity -> attendanceChangedIds.contains(entity.getSessionAttendanceId()))
+                .forEach(attendanceNotificationService::notifyAttendanceRecorded);
+        entities.stream()
+                .filter(entity -> evaluationChangedIds.contains(entity.getSessionAttendanceId()))
+                .forEach(attendanceNotificationService::notifyEvaluationUpdated);
         return repository.saveAll(entities).stream()
                 .map(this::toResponseForCurrentAccess)
                 .toList();
@@ -203,6 +219,7 @@ public class SessionAttendanceService {
             entity.setCheckInTime(LocalDateTime.now());
         }
         SessionAttendance saved = repository.save(entity);
+        attendanceNotificationService.notifyAttendanceRecorded(saved);
         return toResponseForCurrentAccess(saved);
     }
 
@@ -221,6 +238,7 @@ public class SessionAttendanceService {
             entity.setNote(request.note());
         }
         SessionAttendance saved = repository.saveAndFlush(entity);
+        attendanceNotificationService.notifyEvaluationUpdated(saved);
         return new SessionAttendanceDTO.EvaluationUpdateResult(
                 saved.getSessionAttendanceId(),
                 saved.getClassSession().getClassSessionId(),
@@ -303,18 +321,32 @@ public class SessionAttendanceService {
     @Transactional
     public SessionAttendanceDTO.Response quickCheckIn(SessionAttendanceDTO.QuickCheckInRequest request) {
         if (request.studentEnrollmentId() != null) {
+            boolean alreadyCheckedIn = repository
+                    .findByClassSession_ClassSessionIdAndStudentEnrollment_StudentEnrollmentId(
+                            request.classSessionId(), request.studentEnrollmentId())
+                    .isPresent();
             SessionAttendance attendance = checkInResolvedStudent(
                     request.classSessionId(),
                     request.studentEnrollmentId(),
                     LocalDateTime.now()
             );
+            if (!alreadyCheckedIn) {
+                attendanceNotificationService.notifyAttendanceRecorded(attendance);
+            }
             return toResponseForCurrentAccess(attendance);
         }
+        boolean alreadyCheckedIn = repository
+                .findByClassSession_ClassSessionIdAndCourseStaffAssignment_CourseStaffAssignmentId(
+                        request.classSessionId(), request.courseStaffAssignmentId())
+                .isPresent();
         SessionAttendance attendance = checkInResolvedStaff(
                 request.classSessionId(),
                 request.courseStaffAssignmentId(),
                 LocalDateTime.now()
         );
+        if (!alreadyCheckedIn) {
+            attendanceNotificationService.notifyAttendanceRecorded(attendance);
+        }
         return toResponseForCurrentAccess(attendance);
     }
 

@@ -61,7 +61,8 @@ class SessionAttendanceServiceTest {
             currentAccessContextResolver,
             accessPolicy,
             mock(AttendanceCommandService.class),
-            new ObjectMapper()
+            new ObjectMapper(),
+            mock(AttendanceNotificationService.class)
     );
 
     @BeforeEach

@@ -26,6 +26,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -90,10 +91,10 @@ class FaceCheckInScanServiceTest {
     }
 
     @Test
-    void idleSchedulerNeverQueriesTheDatabase() {
+    void idleSchedulerChecksTheDurableStoreForMissedExpiryTokens() {
         service.expireOverdue();
 
-        verify(scans, never()).findByIdForUpdate(any());
+        verify(scans).findOverdueForUpdate(any(), any());
     }
 
     @Test
@@ -121,6 +122,31 @@ class FaceCheckInScanServiceTest {
         assertThat(scan.getStage()).isEqualTo(FaceCheckInStage.EXPIRED);
         verify(scans).findByIdForUpdate(requestId);
         verify(events).saveAndFlush(any());
+    }
+
+    @Test
+    void overdueScanIsExpiredWhenItsLocalExpiryTokenWasMissed() {
+        UUID requestId = UUID.randomUUID();
+        FaceCheckInScan scan = FaceCheckInScan.builder()
+                .requestId(requestId)
+                .deviceId("kiosk-01")
+                .stage(FaceCheckInStage.MATCH_FOUND)
+                .expiresAt(Instant.now().minusSeconds(1))
+                .createdAt(Instant.now().minusSeconds(31))
+                .updatedAt(Instant.now().minusSeconds(31))
+                .build();
+        when(scans.findOverdueForUpdate(any(), any())).thenReturn(List.of(scan));
+        when(events.saveAndFlush(any())).thenAnswer(invocation -> {
+            FaceCheckInEvent value = invocation.getArgument(0);
+            return FaceCheckInEvent.builder().eventId(1L).requestId(requestId)
+                    .stage(value.getStage()).occurredAt(value.getOccurredAt()).build();
+        });
+
+        service.expireOverdue();
+
+        assertThat(scan.getStage()).isEqualTo(FaceCheckInStage.EXPIRED);
+        verify(events).saveAndFlush(any());
+        verify(commands).expireIfPresent(eq(requestId), any());
     }
 
     @Test

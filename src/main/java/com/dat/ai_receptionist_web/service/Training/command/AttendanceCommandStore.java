@@ -38,16 +38,17 @@ public class AttendanceCommandStore {
     }
 
     @Transactional
-    public void markProcessing(UUID requestId) {
+    public boolean markProcessing(UUID requestId) {
         AttendanceCommand command = getEntity(requestId);
         if (command.getStatus() == AttendanceCommandStatus.SUCCEEDED
                 || command.getStatus() == AttendanceCommandStatus.REJECTED
                 || command.getStatus() == AttendanceCommandStatus.FAILED
                 || command.getStatus() == AttendanceCommandStatus.EXPIRED) {
-            return;
+            return false;
         }
         command.setStatus(AttendanceCommandStatus.PROCESSING);
         command.setUpdatedAt(LocalDateTime.now());
+        return true;
     }
 
     @Transactional
@@ -104,6 +105,25 @@ public class AttendanceCommandStore {
         command.setErrorDetail(error == null ? null : error.detail());
         command.setUpdatedAt(now);
         command.setCompletedAt(now);
+    }
+
+    @Transactional
+    public void markExpiredIfPresent(UUID requestId, FaceCheckInResponse.ErrorSummary error) {
+        repository.findById(requestId).ifPresent(command -> {
+            if (command.getStatus() == AttendanceCommandStatus.SUCCEEDED
+                    || command.getStatus() == AttendanceCommandStatus.REJECTED
+                    || command.getStatus() == AttendanceCommandStatus.FAILED
+                    || command.getStatus() == AttendanceCommandStatus.EXPIRED) {
+                return;
+            }
+            LocalDateTime now = LocalDateTime.now();
+            command.setStatus(AttendanceCommandStatus.EXPIRED);
+            command.setErrorCode(error == null ? null : error.code());
+            command.setErrorTitle(error == null ? null : error.title());
+            command.setErrorDetail(error == null ? null : error.detail());
+            command.setUpdatedAt(now);
+            command.setCompletedAt(now);
+        });
     }
 
     @Transactional(readOnly = true)

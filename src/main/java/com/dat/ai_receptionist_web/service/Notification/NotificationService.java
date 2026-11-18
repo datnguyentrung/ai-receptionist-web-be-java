@@ -15,12 +15,14 @@ import com.dat.ai_receptionist_web.service.Notification.NotificationRecipientEli
 import com.dat.ai_receptionist_web.service.Notification.NotificationRecipientEligibilityPolicy.ResolvedRecipientTarget;
 import com.dat.ai_receptionist_web.service.Notification.NotificationRecipientEligibilityPolicy.TargetSource;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
@@ -81,8 +83,13 @@ public class NotificationService {
                         EligibilityResult.ALLOW))
                 .toList();
         recipientService.saveAll(recipients);
-        afterCommitExecutor.afterCommit(() ->
-                deliveryService.deliver(notification.getNotificationId()));
+        log.info("[NOTIFICATION_TRACE] Persisted notification id={} type={} recipients={} referenceType={} referenceId={}",
+                notification.getNotificationId(), notification.getNotificationType(), recipients.size(),
+                notification.getReferenceType(), notification.getReferenceId());
+        afterCommitExecutor.afterCommit(() -> {
+            log.info("[NOTIFICATION_TRACE] Starting delivery notificationId={}", notification.getNotificationId());
+            deliveryService.deliver(notification.getNotificationId());
+        });
         return notificationMapper.toResponse(notification.getNotificationId(), recipients.size());
     }
 

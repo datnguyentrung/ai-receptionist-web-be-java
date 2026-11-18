@@ -121,7 +121,7 @@ public final class SessionAttendanceSpecification {
             assignedCourse.select(cb.literal(1));
             assignedCourse.where(
                     cb.equal(assignment.get("staffPerson").get("personId"), context.activePersonId()),
-                    cb.equal(assignment.get("course").get("courseId"),
+                    cb.equal(assignment.get("courseSchedule").get("course").get("courseId"),
                             session.get("course").get("courseId")),
                     cb.lessThanOrEqualTo(assignment.get("startDate"), session.get("sessionDate")),
                     cb.or(

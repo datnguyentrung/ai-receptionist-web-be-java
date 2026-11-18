@@ -37,6 +37,49 @@ class DeviceServiceTest {
     @InjectMocks DeviceService service;
 
     @Test
+    void firstGatewayHeartbeatActivatesProvisionedGateway() {
+        UUID gatewayId = UUID.randomUUID();
+        ManagedDevice gateway = device(gatewayId, "fog-gateway", "FOG_GATEWAY", "PROVISIONED");
+        when(devices.findByDeviceCode("fog-gateway")).thenReturn(Optional.of(gateway));
+        when(encoder.matches("secret", "credential-hash")).thenReturn(true);
+        when(events.findOpenAlerts(Set.of(gatewayId), "DEVICE_OFFLINE")).thenReturn(List.of());
+        when(devices.findByFogGatewayId(gatewayId)).thenReturn(List.of());
+
+        DeviceDTO.FogSyncResponse response = service.sync(
+                "fog-gateway", "secret", new DeviceDTO.FogSyncRequest(30L, List.of()));
+
+        assertThat(gateway.getLifecycleStatus()).isEqualTo("ACTIVE");
+        assertThat(gateway.getActivatedAt()).isNotNull();
+        assertThat(response.gatewayLifecycleStatus()).isEqualTo("ACTIVE");
+        assertThat(response.registryChanged()).isTrue();
+        verify(events).save(argThat(event -> "LIFECYCLE".equals(event.getEventKind())
+                && "ACTIVE".equals(event.getEventCode())));
+    }
+
+    @Test
+    void firstChildHeartbeatActivatesOnlyProvisionedDevice() {
+        UUID gatewayId = UUID.randomUUID();
+        UUID deviceId = UUID.randomUUID();
+        ManagedDevice gateway = device(gatewayId, "fog-gateway", "FOG_GATEWAY", "ACTIVE");
+        ManagedDevice device = device(deviceId, "esp32-first", "ESP32", "PROVISIONED");
+        device.setFogGatewayId(gatewayId);
+        when(devices.findByDeviceCode("fog-gateway")).thenReturn(Optional.of(gateway));
+        when(devices.findByDeviceCodeIn(Set.of("esp32-first"))).thenReturn(List.of(device));
+        when(devices.findById(gatewayId)).thenReturn(Optional.of(gateway));
+        when(encoder.matches("secret", "credential-hash")).thenReturn(true);
+        when(events.findOpenAlerts(Set.of(gatewayId, deviceId), "DEVICE_OFFLINE")).thenReturn(List.of());
+        when(devices.findByFogGatewayId(gatewayId)).thenReturn(List.of(device));
+
+        service.sync("fog-gateway", "secret", new DeviceDTO.FogSyncRequest(30L, List.of(
+                new DeviceDTO.Heartbeat("esp32-first", LocalDateTime.now(), null, "1.0.0", 1, "HEALTHY", null, null)
+        )));
+
+        assertThat(device.getLifecycleStatus()).isEqualTo("ACTIVE");
+        assertThat(device.getActivatedAt()).isNotNull();
+        assertThat(gateway.getRegistryVersion()).isEqualTo(31L);
+    }
+
+    @Test
     void syncLoadsHeartbeatDevicesAndAlertsInBatches() {
         UUID gatewayId = UUID.randomUUID();
         UUID firstDeviceId = UUID.randomUUID();

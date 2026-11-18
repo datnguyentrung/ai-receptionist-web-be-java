@@ -4,6 +4,7 @@ import com.dat.ai_receptionist_web.enums.Training.NotificationRecipientStatus;
 import com.dat.ai_receptionist_web.repository.Notification.NotificationRecipientRepository;
 import com.dat.ai_receptionist_web.service.Security.AuthSessionService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -11,6 +12,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class NotificationDeliveryService {
     private final NotificationRecipientRepository recipientRepository;
     private final AuthSessionService authSessionService;
@@ -31,6 +33,7 @@ public class NotificationDeliveryService {
                                 row.getRecipientUser().getUserId(), row.getNotification().getTitle(),
                                 row.getNotification().getBody(), row.getNotification().getPayload())).toList());
         if (deliveries == null) return;
+        log.info("[NOTIFICATION_TRACE] Delivering notificationId={} recipients={}", notificationId, deliveries.size());
         for (Delivery delivery : deliveries) {
             boolean sent = sender.send(authSessionService.fcmTokensForUser(delivery.userId()),
                     delivery.title(), delivery.body(), delivery.payload(),
@@ -41,6 +44,8 @@ public class NotificationDeliveryService {
                         ? NotificationRecipientStatus.SENT : NotificationRecipientStatus.FAILED);
                 if (sent) recipient.setDeliveredAt(LocalDateTime.now());
             });
+            log.info("[NOTIFICATION_TRACE] Delivery result notificationId={} recipientId={} sent={}",
+                    delivery.notificationId(), delivery.recipientId(), sent);
         }
     }
     private record Delivery(UUID recipientId, UUID notificationId, UUID contextPersonId,

@@ -38,6 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class FaceCheckInServiceTest {
@@ -52,6 +53,7 @@ class FaceCheckInServiceTest {
     private final AttendanceCommandService attendanceCommandService = mock(AttendanceCommandService.class);
     private final AttendanceCommandStore attendanceCommandStore = mock(AttendanceCommandStore.class);
     private final FaceCheckInScanService faceCheckInScanService = mock(FaceCheckInScanService.class);
+    private final AttendanceNotificationService attendanceNotificationService = mock(AttendanceNotificationService.class);
 
     private final FaceCheckInService service = new FaceCheckInService(
             faceIdentificationService,
@@ -64,7 +66,8 @@ class FaceCheckInServiceTest {
             faceImageUrlResolver,
             attendanceCommandService,
             attendanceCommandStore,
-            faceCheckInScanService
+            faceCheckInScanService,
+            attendanceNotificationService
     );
 
     @Test
@@ -131,6 +134,7 @@ class FaceCheckInServiceTest {
         assertThat(response.confidence()).isEqualTo(confidence);
         assertThat(response.action()).isEqualTo(FaceCheckInResponse.Action.STUDENT_CHECK_IN);
         assertThat(response.error()).isNull();
+        verify(attendanceNotificationService).notifyFaceCheckIn(attendance);
     }
 
     @Test
@@ -174,6 +178,11 @@ class FaceCheckInServiceTest {
         assertThat(response.confidence()).isEqualTo(confidence);
         assertThat(response.action()).isEqualTo(FaceCheckInResponse.Action.STAFF_TIMESHEET_CHECKED_IN);
         assertThat(response.error()).isNull();
+        verify(attendanceNotificationService).notifyFaceCheckIn(
+                person,
+                classSessionId,
+                timesheet.getCoachTimesheetId()
+        );
     }
 
     @Test

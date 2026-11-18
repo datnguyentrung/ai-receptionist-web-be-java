@@ -38,6 +38,7 @@ class AttendanceCommandWorkerTest {
         );
         when(executor.execute(requestId, message.type()))
                 .thenThrow(new IllegalStateException("transaction failed"));
+        when(store.markProcessing(requestId)).thenReturn(true);
 
         worker.handleSessionAttendance(message);
 
@@ -58,6 +59,7 @@ class AttendanceCommandWorkerTest {
         when(faceCheckInService.processQueuedCheckIn(
                 requestId, personId, message.confidence(), message.requestedAt()))
                 .thenThrow(new IllegalStateException("transaction failed"));
+        when(store.markProcessing(requestId)).thenReturn(true);
 
         worker.handleFaceCheckIn(message);
 
@@ -69,5 +71,18 @@ class AttendanceCommandWorkerTest {
                 eq(requestId), eq(FaceCheckInStage.FAILED), isNull(), eq(error.getValue()));
         assertThat(error.getValue().code())
                 .isEqualTo(GeneralErrorCode.INTERNAL_SERVER_ERROR.code());
+    }
+
+    @Test
+    void terminalFaceCheckInCommandIsIgnoredWithoutChangingAttendance() {
+        UUID requestId = UUID.randomUUID();
+        FaceCheckInCommandMessage message = new FaceCheckInCommandMessage(
+                requestId, UUID.randomUUID(), 0.91f, java.time.LocalDateTime.now());
+        when(store.markProcessing(requestId)).thenReturn(false);
+
+        worker.handleFaceCheckIn(message);
+
+        verifyNoInteractions(faceCheckInService, faceCheckInScanService);
+        verify(store, never()).markFailed(any(), any());
     }
 }

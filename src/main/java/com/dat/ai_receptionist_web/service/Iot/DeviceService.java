@@ -241,6 +241,12 @@ public class DeviceService {
         d.setLastHealth(h.health() == null ? "HEALTHY" : h.health());
         d.setLastErrorCode(h.errorCode());
         if (h.state() != null) d.setLastReportedState(h.state());
+        if ("PROVISIONED".equals(d.getLifecycleStatus())) {
+            d.setLifecycleStatus("ACTIVE");
+            d.setActivatedAt(LocalDateTime.now());
+            event(d, "LIFECYCLE", "ACTIVE", "INFO", null, "PROVISIONED -> ACTIVE after first heartbeat");
+            touchGateway(d);
+        }
     }
     private Map<UUID, String> pairedKioskCodes(List<ManagedDevice> registryDevices) {
         Set<UUID> kioskIds = new HashSet<>();

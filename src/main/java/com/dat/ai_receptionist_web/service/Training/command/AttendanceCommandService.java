@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.service.Training.command;
 
 import com.dat.ai_receptionist_web.domain.Training.command.AttendanceCommandType;
+import com.dat.ai_receptionist_web.dto.Training.FaceCheckInResponse;
 import com.dat.ai_receptionist_web.dto.Training.command.AttendanceCommandDTO;
 import com.dat.ai_receptionist_web.dto.Training.command.FaceCheckInCommandMessage;
 import com.dat.ai_receptionist_web.dto.Training.command.SessionAttendanceCommandMessage;
@@ -31,6 +32,10 @@ public class AttendanceCommandService {
 
     public AttendanceCommandDTO.Response get(UUID requestId) {
         return store.get(requestId);
+    }
+
+    public void expireIfPresent(UUID requestId, FaceCheckInResponse.ErrorSummary error) {
+        store.markExpiredIfPresent(requestId, error);
     }
 
     private AttendanceCommandDTO.Receipt receipt(UUID requestId, AttendanceCommandType type) {

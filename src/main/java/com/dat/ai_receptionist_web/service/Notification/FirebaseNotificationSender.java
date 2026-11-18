@@ -23,15 +23,31 @@ public class FirebaseNotificationSender {
      */
     public boolean send(Set<String> tokens, String title, String body, String payload,
                         UUID notificationRecipientId, UUID notificationId, UUID contextPersonId) {
-        if (tokens.isEmpty() || firebaseMessaging == null) return false;
+        if (tokens.isEmpty()) {
+            log.warn("[NOTIFICATION_TRACE] FCM skipped notificationId={} recipientId={} because no token is registered",
+                    notificationId, notificationRecipientId);
+            return false;
+        }
+        if (firebaseMessaging == null) {
+            log.error("[NOTIFICATION_TRACE] FCM skipped notificationId={} recipientId={} because Firebase is not configured",
+                    notificationId, notificationRecipientId);
+            return false;
+        }
         try {
             MulticastMessage.Builder message = MulticastMessage.builder().addAllTokens(tokens)
+                    .setNotification(Notification.builder()
+                            .setTitle(title)
+                            .setBody(body)
+                            .build())
                     .putData("title", title).putData("body", body)
                     .putData("notificationRecipientId", notificationRecipientId.toString())
                     .putData("notificationId", notificationId.toString());
             if (contextPersonId != null) message.putData("contextPersonId", contextPersonId.toString());
             if (payload != null) message.putData("payload", payload);
-            return firebaseMessaging.sendEachForMulticast(message.build()).getSuccessCount() > 0;
+            BatchResponse response = firebaseMessaging.sendEachForMulticast(message.build());
+            log.info("[NOTIFICATION_TRACE] FCM response notificationId={} recipientId={} successCount={} failureCount={}",
+                    notificationId, notificationRecipientId, response.getSuccessCount(), response.getFailureCount());
+            return response.getSuccessCount() > 0;
         } catch (FirebaseMessagingException exception) {
             log.error("FCM delivery failed for {} tokens", tokens.size(), exception);
             return false;

@@ -46,6 +46,7 @@ public class FaceCheckInService {
     private final AttendanceCommandService attendanceCommandService;
     private final AttendanceCommandStore attendanceCommandStore;
     private final FaceCheckInScanService faceCheckInScanService;
+    private final AttendanceNotificationService attendanceNotificationService;
     @Value("${app.face-check-in.expire-after:30s}")
     private Duration expireAfter;
 
@@ -121,6 +122,7 @@ public class FaceCheckInService {
                         error(TrainingErrorCode.FACE_CHECK_IN_ALREADY_CHECKED_IN)
                 );
             }
+            attendanceNotificationService.notifyFaceCheckIn(attendance);
             return attendanceResponse(
                     person,
                     attendance,
@@ -144,6 +146,13 @@ public class FaceCheckInService {
         FaceCheckInResponse.Action action = timesheet.getCheckOutTime() == null
                 ? FaceCheckInResponse.Action.STAFF_TIMESHEET_CHECKED_IN
                 : FaceCheckInResponse.Action.STAFF_TIMESHEET_CHECKED_OUT;
+        if (status == FaceCheckInResponse.Status.SUCCESS) {
+            attendanceNotificationService.notifyFaceCheckIn(
+                    person,
+                    candidate.classSessionId(),
+                    timesheet.getCoachTimesheetId()
+            );
+        }
         return coachResponse(person, timesheet, confidence, status, action, coachError(status, existingHadCheckOut));
     }
 

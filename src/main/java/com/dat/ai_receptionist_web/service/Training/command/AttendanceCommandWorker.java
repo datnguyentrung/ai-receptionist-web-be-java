@@ -31,7 +31,10 @@ public class AttendanceCommandWorker {
     public void handleFaceCheckIn(FaceCheckInCommandMessage message) {
         log.info("Processing face check-in command requestId={} personId={}",
                 message.requestId(), message.personId());
-        store.markProcessing(message.requestId());
+        if (!store.markProcessing(message.requestId())) {
+            log.info("Ignoring terminal face check-in command requestId={}", message.requestId());
+            return;
+        }
         try {
             FaceCheckInResponse result = faceCheckInService.processQueuedCheckIn(
                     message.requestId(),
@@ -83,7 +86,10 @@ public class AttendanceCommandWorker {
     public void handleSessionAttendance(SessionAttendanceCommandMessage message) {
         log.info("Processing session attendance command requestId={} type={}",
                 message.requestId(), message.type());
-        store.markProcessing(message.requestId());
+        if (!store.markProcessing(message.requestId())) {
+            log.info("Ignoring terminal session attendance command requestId={}", message.requestId());
+            return;
+        }
         try {
             Object result = sessionAttendanceCommandExecutor.execute(message.requestId(), message.type());
             store.markSucceeded(message.requestId(), result);

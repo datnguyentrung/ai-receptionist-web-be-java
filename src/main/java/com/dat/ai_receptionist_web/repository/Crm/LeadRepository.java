@@ -1,0 +1,9 @@
+package com.dat.ai_receptionist_web.repository.Crm;
+
+import com.dat.ai_receptionist_web.domain.Crm.Lead;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.UUID;
+
+public interface LeadRepository extends JpaRepository<Lead, UUID> {
+}

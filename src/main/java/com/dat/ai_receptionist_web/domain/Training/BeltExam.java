@@ -23,6 +23,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * Kỳ thi nâng đai của học viên và kết quả được ghi nhận.
+ */
 @Getter
 @Setter
 @Builder
@@ -54,6 +57,7 @@ import java.util.UUID;
 )
 public class BeltExam {
 
+    /** Mã định danh duy nhất của kỳ thi đai. */
     @Id
     @GeneratedValue
     @UuidGenerator
@@ -61,6 +65,7 @@ public class BeltExam {
     @Column(name = "belt_exam_id", nullable = false, updatable = false)
     private UUID beltExamId;
 
+    /** Học viên tham gia kỳ thi. */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
             name = "person_id",
@@ -69,35 +74,43 @@ public class BeltExam {
     )
     private Person person;
 
+    /** Cấp đai của học viên trước khi dự thi. */
     @Enumerated(EnumType.STRING)
     @Column(name = "from_belt", nullable = false, length = 20)
     private Belt fromBelt;
 
+    /** Cấp đai mà học viên hướng tới. */
     @Enumerated(EnumType.STRING)
     @Column(name = "target_belt", nullable = false, length = 20)
     private Belt targetBelt;
 
+    /** Năm tổ chức kỳ thi. */
     @Min(1)
     @Column(name = "year", nullable = false)
     private Integer year;
 
+    /** Quý tổ chức kỳ thi, nhận giá trị từ 1 đến 4. */
     @Min(1)
     @Max(4)
     @Column(name = "quarter", nullable = false)
     private Integer quarter;
 
+    /** Ngày thi thực tế của học viên. */
     @Column(name = "exam_date")
     private LocalDate examDate;
 
+    /** Kết quả hiện tại của kỳ thi. */
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "result", nullable = false, length = 20)
     private BeltExamResult result = BeltExamResult.PENDING;
 
+    /** Ghi chú của ban tổ chức hoặc người đánh giá. */
     @Size(max = 1000)
     @Column(name = "note", length = 1000)
     private String note;
 
+    /** Người dùng tạo bản ghi kỳ thi. */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
             name = "created_by_user_id",
@@ -106,14 +119,17 @@ public class BeltExam {
     )
     private User createdByUser;
 
+    /** Thời điểm bản ghi được tạo. */
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    /** Thời điểm bản ghi được cập nhật gần nhất. */
     @LastModifiedDate
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    /** Loại kỳ thi đai. */
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false, length = 20)
     private BeltExamType type;

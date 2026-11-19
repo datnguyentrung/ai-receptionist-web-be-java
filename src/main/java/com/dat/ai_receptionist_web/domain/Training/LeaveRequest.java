@@ -20,6 +20,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * Yêu cầu nghỉ học của học viên hoặc nghỉ làm của nhân viên.
+ */
 @Getter
 @Setter
 @Builder
@@ -80,6 +83,7 @@ import java.util.UUID;
 )
 public class LeaveRequest {
 
+    /** Mã định danh duy nhất của yêu cầu nghỉ. */
     @Id
     @GeneratedValue
     @UuidGenerator
@@ -87,6 +91,7 @@ public class LeaveRequest {
     @Column(name = "leave_request_id", nullable = false, updatable = false)
     private UUID leaveRequestId;
 
+    /** Cá nhân xin nghỉ học hoặc nghỉ làm. */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
             name = "person_id",
@@ -95,13 +100,16 @@ public class LeaveRequest {
     )
     private Person person;
 
+    /** Loại người gửi yêu cầu, dùng để xác định quy tắc xử lý. */
     @Enumerated(EnumType.STRING)
     @Column(name = "requester_type", nullable = false, length = 30)
     private RequesterType requesterType;
 
+    /** Ngày nghỉ của nhân viên hệ thống. */
     @Column(name = "leave_date")
     private LocalDate leaveDate;
 
+    /** Buổi học mà học viên xin nghỉ. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
             name = "leave_class_session_id",
@@ -109,6 +117,7 @@ public class LeaveRequest {
     )
     private ClassSession leaveClassSession;
 
+    /** Buổi học bù dành cho học viên. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
             name = "makeup_class_session_id",
@@ -116,16 +125,19 @@ public class LeaveRequest {
     )
     private ClassSession makeupClassSession;
 
+    /** Lý do và bối cảnh của yêu cầu nghỉ. */
     @NotBlank
     @Size(max = 1000)
     @Column(name = "leave_context", nullable = false, length = 1000)
     private String leaveContext;
 
+    /** Trạng thái phê duyệt hiện tại của yêu cầu nghỉ. */
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private LeaveRequestStatus status = LeaveRequestStatus.PENDING;
 
+    /** Người dùng tạo yêu cầu nghỉ. */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
             name = "created_by_user_id",
@@ -134,6 +146,7 @@ public class LeaveRequest {
     )
     private User createdByUser;
 
+    /** Người dùng phê duyệt hoặc từ chối yêu cầu nghỉ. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
             name = "reviewed_by_user_id",
@@ -141,17 +154,21 @@ public class LeaveRequest {
     )
     private User reviewedByUser;
 
+    /** Thời điểm yêu cầu nghỉ được phê duyệt hoặc từ chối. */
     @Column(name = "reviewed_at")
     private LocalDateTime reviewedAt;
 
+    /** Ghi chú của người duyệt yêu cầu nghỉ. */
     @Size(max = 1000)
     @Column(name = "review_note", length = 1000)
     private String reviewNote;
 
+    /** Thời điểm bản ghi được tạo. */
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    /** Thời điểm bản ghi được cập nhật gần nhất. */
     @LastModifiedDate
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;

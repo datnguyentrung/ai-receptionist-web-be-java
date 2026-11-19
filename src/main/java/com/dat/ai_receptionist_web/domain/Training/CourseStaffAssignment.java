@@ -15,6 +15,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * Phân công nhân sự phụ trách một lịch khóa học trong khoảng thời gian xác định.
+ */
 @Getter
 @Setter
 @Builder
@@ -33,41 +36,51 @@ import java.util.UUID;
                         columnList = "course_schedule_id,assignment_type,start_date,end_date,assignment_status")
         })
 public class CourseStaffAssignment {
+    /** Mã định danh duy nhất của phân công nhân sự. */
     @Id
     @GeneratedValue
     @UuidGenerator
     @Column(name = "course_staff_assignment_id", nullable = false, updatable = false)
     private UUID courseStaffAssignmentId;
 
+    /** Cá nhân được phân công phụ trách khóa học. */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "staff_person_id", nullable = false)
     private Person staffPerson;
 
+    /** Lịch khóa học được phân công nhân sự. */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "course_schedule_id", nullable = false)
     private CourseSchedule courseSchedule;
 
+    /** Vai trò của nhân sự trong khóa học. */
     @Enumerated(EnumType.STRING)
     @Column(name = "assignment_type", nullable = false, length = 30)
     private AssignmentType assignmentType;
 
+    /** Ngày bắt đầu hiệu lực của phân công. */
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
 
+    /** Ngày kết thúc hiệu lực của phân công. */
     @Column(name = "end_date")
     private LocalDate endDate;
 
+    /** Trạng thái hiện tại của phân công nhân sự. */
     @Enumerated(EnumType.STRING)
     @Column(name = "assignment_status", nullable = false, length = 20)
     private CourseStaffAssignmentStatus assignmentStatus;
 
+    /** Ghi chú bổ sung về phân công nhân sự. */
     @Column(name = "note", length = 500)
     private String note;
 
+    /** Thời điểm bản ghi được tạo. */
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    /** Thời điểm bản ghi được cập nhật gần nhất. */
     @LastModifiedDate
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;

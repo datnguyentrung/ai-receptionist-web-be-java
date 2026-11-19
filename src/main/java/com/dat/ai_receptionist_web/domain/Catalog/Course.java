@@ -15,6 +15,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Khóa học cung cấp thông tin về cấp độ, sức chứa và trạng thái mở đăng ký.
+ */
 @Getter
 @Setter
 @Builder
@@ -24,12 +27,14 @@ import java.util.UUID;
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "course", schema = "catalog")
 public class Course {
+    /** Mã định danh duy nhất của khóa học. */
     @Id
     @GeneratedValue
     @UuidGenerator
     @Column(name = "course_id", nullable = false, updatable = false)
     private UUID courseId;
 
+    /** Danh sách lịch hoạt động của khóa học. */
     @OneToMany(mappedBy = "course", fetch = FetchType.LAZY)
     private List<CourseSchedule> courseSchedules;
 
@@ -75,27 +80,34 @@ public class Course {
         throw new UnsupportedOperationException("Use COURSE_SCHEDULE");
     }
 
+    /** Tên khóa học. */
     @Column(name = "name", nullable = false, length = 255)
     private String name;
 
+    /** Cấp độ của khóa học. */
     @Enumerated(EnumType.STRING)
     @Column(name = "level", nullable = false, length = 20)
     private ScheduleLevel level;
 
+    /** Số lượng học viên tối đa của một lớp. */
     @Column(name = "capacity", nullable = false)
     private int capacity;
 
+    /** Trạng thái hiện tại của khóa học. */
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private CourseStatus status;
 
+    /** Ngày cuối cùng đã sinh buổi học từ lịch khóa học. */
     @Column(name = "class_session_generated_until")
     private LocalDate classSessionGeneratedUntil;
 
+    /** Thời điểm bản ghi được tạo. */
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    /** Thời điểm bản ghi được cập nhật gần nhất. */
     @LastModifiedDate
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;

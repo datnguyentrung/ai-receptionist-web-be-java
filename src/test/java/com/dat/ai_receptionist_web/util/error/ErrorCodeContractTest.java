@@ -42,6 +42,7 @@ class ErrorCodeContractTest {
                         GeneralErrorCode.values(),
                         CatalogErrorCode.values(),
                         CoreErrorCode.values(),
+                        CrmErrorCode.values(),
                         FinanceErrorCode.values(),
                         TrainingErrorCode.values(),
                         SkillErrorCode.values(),

@@ -15,6 +15,7 @@ import com.dat.ai_receptionist_web.service.Training.command.AttendanceCommandSer
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -40,8 +41,10 @@ class FaceCheckInScanServiceTest {
     private final AttendanceCommandService commands = mock(AttendanceCommandService.class);
     private final FaceCheckInEventStream stream = mock(FaceCheckInEventStream.class);
     private final FaceCheckInExpiryRegistry expiryRegistry = new FaceCheckInExpiryRegistry();
+    private final PlatformTransactionManager transactionManager = mock(PlatformTransactionManager.class);
     private final FaceCheckInScanService service = new FaceCheckInScanService(
-            scans, events, access, identification, commands, stream, expiryRegistry, new ObjectMapper());
+            scans, events, access, identification, commands, stream, expiryRegistry, transactionManager,
+            new ObjectMapper());
 
     @Test
     void registrationTicketIsBoundToRequestAndCanBeValidatedIdempotently() {
@@ -91,10 +94,11 @@ class FaceCheckInScanServiceTest {
     }
 
     @Test
-    void idleSchedulerChecksTheDurableStoreForMissedExpiryTokens() {
-        service.expireOverdue();
+    void idleLocalSchedulerDoesNotQueryTheDurableStore() {
+        service.expireDueScans();
 
-        verify(scans).findOverdueForUpdate(any(), any());
+        verify(scans, never()).findByIdForUpdate(any());
+        verify(scans, never()).findOverdueForUpdate(any(), any());
     }
 
     @Test
@@ -116,8 +120,8 @@ class FaceCheckInScanServiceTest {
                     .stage(value.getStage()).occurredAt(value.getOccurredAt()).build();
         });
 
-        service.expireOverdue();
-        service.expireOverdue();
+        service.expireDueScans();
+        service.expireDueScans();
 
         assertThat(scan.getStage()).isEqualTo(FaceCheckInStage.EXPIRED);
         verify(scans).findByIdForUpdate(requestId);
@@ -142,9 +146,36 @@ class FaceCheckInScanServiceTest {
                     .stage(value.getStage()).occurredAt(value.getOccurredAt()).build();
         });
 
-        service.expireOverdue();
+        service.reconcileOverdueScans();
 
         assertThat(scan.getStage()).isEqualTo(FaceCheckInStage.EXPIRED);
+        verify(events).saveAndFlush(any());
+        verify(commands).expireIfPresent(eq(requestId), any());
+    }
+
+    @Test
+    void terminalScanIsNotExpiredTwiceWhenBothSchedulersObserveIt() {
+        UUID requestId = UUID.randomUUID();
+        FaceCheckInScan scan = FaceCheckInScan.builder()
+                .requestId(requestId)
+                .deviceId("kiosk-01")
+                .stage(FaceCheckInStage.READY)
+                .expiresAt(Instant.now().minusSeconds(1))
+                .createdAt(Instant.now().minusSeconds(31))
+                .updatedAt(Instant.now().minusSeconds(31))
+                .build();
+        expiryRegistry.track(requestId, scan.getExpiresAt());
+        when(scans.findByIdForUpdate(requestId)).thenReturn(Optional.of(scan));
+        when(scans.findOverdueForUpdate(any(), any())).thenReturn(List.of(scan));
+        when(events.saveAndFlush(any())).thenAnswer(invocation -> {
+            FaceCheckInEvent value = invocation.getArgument(0);
+            return FaceCheckInEvent.builder().eventId(1L).requestId(requestId)
+                    .stage(value.getStage()).occurredAt(value.getOccurredAt()).build();
+        });
+
+        service.expireDueScans();
+        service.reconcileOverdueScans();
+
         verify(events).saveAndFlush(any());
         verify(commands).expireIfPresent(eq(requestId), any());
     }
@@ -164,7 +195,7 @@ class FaceCheckInScanServiceTest {
         });
 
         service.restoreOpenScanExpiries();
-        service.expireOverdue();
+        service.expireDueScans();
 
         verify(scans).findByStageNotIn(any());
         verify(scans).findByIdForUpdate(requestId);

@@ -41,9 +41,7 @@ import java.time.ZoneId;
 import java.util.Base64;
 import java.util.EnumSet;
 import java.util.HexFormat;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -200,19 +198,29 @@ public class FaceCheckInScanService {
         return emitter;
     }
 
-    @Scheduled(fixedDelay = 1_000L)
+    /**
+     * Processes only the scans this JVM has scheduled locally. An idle tick does
+     * not query the database.
+     */
+    @Scheduled(fixedDelayString = "${app.face-check-in.local-expiry-check-delay:1s}")
     @Transactional
-    public void expireOverdue() {
+    public void expireDueScans() {
         Instant now = Instant.now();
-        Map<UUID, FaceCheckInScan> dueScans = new LinkedHashMap<>();
         for (UUID requestId : expiryRegistry.pollDue()) {
             scanRepository.findByIdForUpdate(requestId)
-                    .ifPresent(scan -> dueScans.put(scan.getRequestId(), scan));
+                    .ifPresent(scan -> expireIfOverdue(scan, now));
         }
+    }
+
+    /**
+     * Durable safety net for scans missed by the local queue, including after a
+     * restart or when another application instance created the scan.
+     */
+    @Scheduled(fixedDelayString = "${app.face-check-in.durable-expiry-reconciliation-delay:30s}")
+    @Transactional
+    public void reconcileOverdueScans() {
+        Instant now = Instant.now();
         for (FaceCheckInScan scan : scanRepository.findOverdueForUpdate(now, TERMINAL_STAGES)) {
-            dueScans.putIfAbsent(scan.getRequestId(), scan);
-        }
-        for (FaceCheckInScan scan : dueScans.values()) {
             expireIfOverdue(scan, now);
         }
     }

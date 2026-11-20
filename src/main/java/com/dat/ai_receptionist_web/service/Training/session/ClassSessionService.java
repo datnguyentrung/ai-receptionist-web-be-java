@@ -24,6 +24,7 @@ import com.dat.ai_receptionist_web.service.Training.access.ClassSessionAccessPol
 import com.dat.ai_receptionist_web.service.Training.access.TrainingAccessScope;
 import com.dat.ai_receptionist_web.service.Training.scheduling.CourseScheduleResolver;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -42,6 +43,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ClassSessionService {
@@ -217,22 +219,33 @@ public class ClassSessionService {
     @Transactional(readOnly = true)
     public List<ClassSessionDTO.CalendarResponse> getCalendar(LocalDate fromDate,
                                                               LocalDate toDate) {
-        validateCalendarRange(fromDate, toDate);
+        validateCalendarRange(
+                fromDate,
+                toDate
+        );
         AccessContext context = currentAccessContextResolver.current();
+        log.info("Context.activePersonId: {}", context.activePersonId());
         TrainingAccessScope scope = accessPolicy.resolveReadScope(context);
+        log.info("Scope.unrestricted: {}", scope.unrestricted());
         List<ClassSession> sessions = repository.findCalendarSessions(
-                        fromDate,
-                        toDate,
-                        context.activePersonId(),
-                        scope.unrestricted());
+                fromDate,
+                toDate,
+                context.activePersonId(),
+                scope.unrestricted()
+        );
         Map<SessionPrimaryCoachKey, Person> primaryCoachBySessionKey =
-                getPrimaryCoachesForRange(sessions, fromDate, toDate);
+                getPrimaryCoachesForRange(
+                        sessions,
+                        fromDate,
+                        toDate
+                );
         return sessions.stream()
                 .sorted(Comparator.comparing(ClassSession::getSessionDate)
-                        .thenComparing(ClassSession::getStartTime))
+                                .thenComparing(ClassSession::getStartTime))
                 .map(session -> mapper.toCalendarResponse(
                         session,
-                        primaryCoachBySessionKey.get(SessionPrimaryCoachKey.of(session))))
+                        primaryCoachBySessionKey.get(SessionPrimaryCoachKey.of(session))
+                ))
                 .toList();
     }
 

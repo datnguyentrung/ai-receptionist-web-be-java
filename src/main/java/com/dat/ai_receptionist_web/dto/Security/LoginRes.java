@@ -33,6 +33,6 @@ public class LoginRes {
     }
 
     public record UserContextRes(UUID userPersonId, UUID personId, RelationshipType relationshipType,
-                                 String personCode, String displayName) {
+                                 String personCode, String displayName, Boolean gender) {
     }
 }

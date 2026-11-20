@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -241,7 +241,7 @@ public class ProjectionOutboxService {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean retry(ProjectionJob job, Duration delay, Throwable error, String instanceId) {
-        OffsetDateTime nextAttempt = OffsetDateTime.now().plus(delay);
+        LocalDateTime nextAttempt = LocalDateTime.now().plus(delay);
         String message = errorMessage(error);
         return jdbcTemplate.update("""
                 UPDATE infrastructure.projection_outbox

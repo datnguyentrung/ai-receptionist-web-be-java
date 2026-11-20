@@ -199,6 +199,19 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, UUID
                         com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus.ENDED
                     )
               )
+              or exists (
+                  select 1
+                  from StudentEnrollment enrollment
+                  join enrollment.studentPerson student
+                  join StudentEnrollmentSchedule enrollmentSchedule
+                    on enrollmentSchedule.studentEnrollment.studentEnrollmentId = enrollment.studentEnrollmentId
+                  where student.personId = :activePersonId
+                    and enrollment.status = com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus.ACTIVE
+                    and enrollmentSchedule.courseSchedule.courseScheduleId = c.courseSchedule.courseScheduleId
+                    and enrollmentSchedule.status = com.dat.ai_receptionist_web.enums.Training.EnrollmentScheduleStatus.ACTIVE
+                    and (enrollmentSchedule.effectiveFrom is null or enrollmentSchedule.effectiveFrom <= c.sessionDate)
+                    and (enrollmentSchedule.effectiveTo is null or enrollmentSchedule.effectiveTo >= c.sessionDate)
+              )
           )
         order by c.sessionDate asc, c.startTime asc
     """)

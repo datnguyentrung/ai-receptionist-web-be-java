@@ -57,7 +57,7 @@ spring:
     hibernate:
       ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:validate}
     database: PostgreSQL
-    show-sql: false
+    show-sql: true
     open-in-view: false
     repositories:
       enabled: true
@@ -112,7 +112,7 @@ logging:
 
     # 1.
     org.hibernate.SQL: OFF
-    org.hibernate.type.descriptor.sql.BasicBinder: OFF
+    org.hibernate.orm.jdbc.bind: OFF
 
     # 2.
     org.hibernate.stat: ERROR

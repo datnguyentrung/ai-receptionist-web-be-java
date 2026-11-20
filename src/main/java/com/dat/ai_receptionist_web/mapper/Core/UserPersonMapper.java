@@ -24,7 +24,8 @@ public interface UserPersonMapper {
                 entity.getPerson() == null ? null : entity.getPerson().getPersonId(),
                 entity.getRelationshipType(),
                 entity.getPerson() == null ? null : entity.getPerson().getPersonCode(),
-                entity.getPerson() == null ? null : entity.getPerson().getFullName()
+                entity.getPerson() == null ? null : entity.getPerson().getFullName(),
+                entity.getPerson() == null ? null : entity.getPerson().getGender()
         );
     }
 

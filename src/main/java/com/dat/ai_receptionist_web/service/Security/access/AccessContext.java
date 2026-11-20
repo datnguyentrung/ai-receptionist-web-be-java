@@ -23,6 +23,7 @@ public record AccessContext(
     }
 
     public boolean hasUnrestrictedRole() {
-        return hasRole(SystemRoleDefinition.SUPER_ADMIN.getCode()) || hasRole(SystemRoleDefinition.SYSTEM_ADMIN.getCode());
+        return hasRole(SystemRoleDefinition.SUPER_ADMIN.getCode()) ||
+                hasRole(SystemRoleDefinition.SYSTEM_ADMIN.getCode());
     }
 }

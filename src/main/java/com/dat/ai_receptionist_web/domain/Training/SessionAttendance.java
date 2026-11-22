@@ -1,5 +1,6 @@
 package com.dat.ai_receptionist_web.domain.Training;
 
+import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.enums.Training.AttendanceStatus;
 import com.dat.ai_receptionist_web.enums.Training.EvaluationStatus;
 import jakarta.persistence.*;
@@ -26,12 +27,15 @@ import java.util.UUID;
         @UniqueConstraint(name = "uk_session_attendance_session_enrollment",
                 columnNames = {"class_session_id", "student_enrollment_id"}),
         @UniqueConstraint(name = "uk_session_attendance_session_staff_assignment",
-                columnNames = {"class_session_id", "course_staff_assignment_id"})
+                columnNames = {"class_session_id", "course_staff_assignment_id"}),
+        @UniqueConstraint(name = "uk_session_attendance_session_person",
+                columnNames = {"class_session_id", "person_id"})
 }, indexes = {
         @Index(name = "idx_session_attendance_session", columnList = "class_session_id"),
         @Index(name = "idx_session_attendance_enrollment", columnList = "student_enrollment_id"),
         @Index(name = "idx_session_attendance_course_staff_assignment",
-                columnList = "course_staff_assignment_id")
+                columnList = "course_staff_assignment_id"),
+        @Index(name = "idx_session_attendance_person", columnList = "person_id")
 })
 public class SessionAttendance {
     /** Mã định danh duy nhất của bản ghi điểm danh. */
@@ -45,6 +49,11 @@ public class SessionAttendance {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "class_session_id", nullable = false)
     private ClassSession classSession;
+
+    /** Cá nhân thực tế được ghi nhận điểm danh trong buổi học. */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "person_id", nullable = false)
+    private Person person;
 
     /** Lượt đăng ký của học viên được điểm danh, nếu bản ghi dành cho học viên. */
     @ManyToOne(fetch = FetchType.LAZY)

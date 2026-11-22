@@ -220,26 +220,38 @@ public class PersonService {
 
     @Transactional
     public PersonDTO.FaceEmbeddingUpdateResponse updateFaceEmbedding(MultipartFile file, UUID personId) {
+        String operationId = UUID.randomUUID().toString();
+        long startedAt = System.nanoTime();
+        long validationStartedAt = System.nanoTime();
         Person person = find(personId);
         SupabaseStorageService.ValidatedImage image = supabaseStorageService.validateImage(file);
-        PythonBackendClient.FaceEmbeddingResponse response = requestFaceEmbedding(file);
+        long validationMs = elapsedMillis(validationStartedAt);
+        long pythonStartedAt = System.nanoTime();
+        PythonBackendClient.FaceEmbeddingResponse response = requestFaceEmbedding(file, operationId);
+        long pythonMs = elapsedMillis(pythonStartedAt);
         float[] embedding = toEmbeddingArray(response);
         String oldPath = person.getFaceImagePath();
         String uploadedPath = null;
         try {
+            long storageStartedAt = System.nanoTime();
             uploadedPath = supabaseStorageService.uploadPersonFaceImage(personId, image);
+            long storageMs = elapsedMillis(storageStartedAt);
             person.setFaceEmbedding(embedding);
             person.setFaceImagePath(uploadedPath);
+            long databaseStartedAt = System.nanoTime();
             Person savedPerson = personRepository.saveAndFlush(person);
+            long databaseMs = elapsedMillis(databaseStartedAt);
             registerStorageCompensation(savedPerson.getPersonId(), uploadedPath, oldPath);
+            long signedUrlStartedAt = System.nanoTime();
             String avatarUrl = supabaseStorageService.createSignedUrl(savedPerson.getFaceImagePath());
+            long signedUrlMs = elapsedMillis(signedUrlStartedAt);
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
                     avatarUrlCacheService.put(savedPerson.getPersonId(), avatarUrl);
                 }
             });
-            return new PersonDTO.FaceEmbeddingUpdateResponse(
+            PersonDTO.FaceEmbeddingUpdateResponse result = new PersonDTO.FaceEmbeddingUpdateResponse(
                     savedPerson.getPersonId(),
                     response.dimension(),
                     response.model(),
@@ -247,10 +259,16 @@ public class PersonService {
                     avatarUrl,
                     savedPerson.getUpdatedAt()
             );
+            log.info("FACE_EMBEDDING_UPDATE_COMPLETED operationId={} personId={} imageBytes={} timings={validationMs={},pythonMs={},storageMs={},databaseMs={},signedUrlMs={},totalMs={}}",
+                    operationId, personId, image.bytes().length, validationMs, pythonMs, storageMs,
+                    databaseMs, signedUrlMs, elapsedMillis(startedAt));
+            return result;
         } catch (RuntimeException exception) {
             if (uploadedPath != null) {
                 cleanupObjectAfterFailure(personId, uploadedPath, "immediate rollback");
             }
+            log.warn("FACE_EMBEDDING_UPDATE_FAILED operationId={} personId={} imageBytes={} totalMs={} error={}",
+                    operationId, personId, image.bytes().length, elapsedMillis(startedAt), exception.getClass().getSimpleName());
             throw exception;
         }
     }
@@ -284,11 +302,19 @@ public class PersonService {
     }
 
     private PythonBackendClient.FaceEmbeddingResponse requestFaceEmbedding(MultipartFile file) {
+        return requestFaceEmbedding(file, UUID.randomUUID().toString());
+    }
+
+    private PythonBackendClient.FaceEmbeddingResponse requestFaceEmbedding(MultipartFile file, String requestId) {
         try {
-            return pythonBackendClient.generateFaceEmbedding(file);
+            return pythonBackendClient.generateFaceEmbedding(file, requestId);
         } catch (PythonBackendClientException exception) {
             throw new ApiException(resolvePythonBackendErrorCode(exception));
         }
+    }
+
+    private static long elapsedMillis(long startedAtNanos) {
+        return (System.nanoTime() - startedAtNanos) / 1_000_000;
     }
 
     public NearestPersonMatch findNearestPersonByEmbedding(List<Float> embeddingVector) {

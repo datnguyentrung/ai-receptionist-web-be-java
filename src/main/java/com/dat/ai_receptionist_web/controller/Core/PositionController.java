@@ -43,6 +43,16 @@ public class PositionController {
         return service.update(id, request);
     }
 
+    @PostMapping("/{id}/persons")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).PERSON_UPDATE.getCode())")
+    public void assignPeople(
+            @PathVariable UUID id,
+            @Valid @RequestBody PositionDTO.AssignPeopleRequest request
+    ) {
+        service.assignPeople(id, request);
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAuthority(T(com.dat.ai_receptionist_web.enums.Security.PermissionDefinition).POSITION_DELETE.getCode())")

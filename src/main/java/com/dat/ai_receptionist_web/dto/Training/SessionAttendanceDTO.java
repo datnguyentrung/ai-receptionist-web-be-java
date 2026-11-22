@@ -21,6 +21,8 @@ public final class SessionAttendanceDTO {
     public record CreateRequest(
             @NotNull
             UUID classSessionId,
+            @NotNull
+            UUID personId,
             UUID studentEnrollmentId,
             UUID courseStaffAssignmentId,
             @NotNull
@@ -30,9 +32,9 @@ public final class SessionAttendanceDTO {
             EvaluationStatus evaluationStatus,
             String note
     ) {
-        @AssertTrue(message = "Exactly one attendance participant is required")
-        public boolean isExactlyOneParticipant() {
-            return (studentEnrollmentId != null) ^ (courseStaffAssignmentId != null);
+        @AssertTrue(message = "At most one enrollment or staff assignment may be linked")
+        public boolean hasAtMostOneLinkedParticipation() {
+            return studentEnrollmentId == null || courseStaffAssignmentId == null;
         }
     }
 
@@ -78,6 +80,8 @@ public final class SessionAttendanceDTO {
     public record ManualLogRequest(
             @NotNull
             UUID classSessionId,
+            @NotNull
+            UUID personId,
             UUID studentEnrollmentId,
             UUID courseStaffAssignmentId,
             LocalDateTime checkInTime,
@@ -86,9 +90,9 @@ public final class SessionAttendanceDTO {
             EvaluationStatus evaluationStatus,
             String note
     ) {
-        @AssertTrue(message = "Exactly one attendance participant is required")
-        public boolean isExactlyOneParticipant() {
-            return (studentEnrollmentId != null) ^ (courseStaffAssignmentId != null);
+        @AssertTrue(message = "At most one enrollment or staff assignment may be linked")
+        public boolean hasAtMostOneLinkedParticipation() {
+            return studentEnrollmentId == null || courseStaffAssignmentId == null;
         }
     }
 

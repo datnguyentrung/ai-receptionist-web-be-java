@@ -12,6 +12,7 @@ import com.dat.ai_receptionist_web.mapper.Core.UserPersonMapper;
 import com.dat.ai_receptionist_web.mapper.Security.AuthSessionMapper;
 import com.dat.ai_receptionist_web.repository.Core.UserPersonRepository;
 import com.dat.ai_receptionist_web.repository.Security.*;
+import com.dat.ai_receptionist_web.service.Core.SupabaseStorageService;
 import com.dat.ai_receptionist_web.util.RefreshTokenUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,6 +31,7 @@ public class AuthSessionService {
     private final UserPersonRepository userPersonRepository;
     private final AuthSessionMapper authSessionMapper;
     private final UserPersonMapper userPersonMapper;
+    private final SupabaseStorageService supabaseStorageService;
 
     @Value("${jwt.refresh-token-validity-in-seconds}")
     private long refreshTokenValidity;
@@ -194,7 +196,7 @@ public class AuthSessionService {
                 .orElseThrow(() -> new ApiException(SecurityErrorCode.PERSON_CONTEXT_NOT_OWNED));
         session.setActiveUserPerson(target);
         List<LoginRes.UserContextRes> available = contexts(userId);
-        return new ContextSwitchResult(userPersonMapper.toLoginContext(target), available);
+        return new ContextSwitchResult(toLoginContext(target), available);
     }
 
     /**
@@ -205,7 +207,14 @@ public class AuthSessionService {
     @Transactional(readOnly = true)
     public List<LoginRes.UserContextRes> contexts(UUID userId) {
         return userPersonRepository.findAllByUser_UserIdAndActiveTrue(userId).stream()
-                .map(userPersonMapper::toLoginContext).toList();
+                .map(this::toLoginContext).toList();
+    }
+
+    private LoginRes.UserContextRes toLoginContext(UserPerson userPerson) {
+        String faceImagePath = userPerson.getPerson() == null
+                ? null
+                : supabaseStorageService.getPublicUrl(userPerson.getPerson().getFaceImagePath());
+        return userPersonMapper.toLoginContext(userPerson, faceImagePath);
     }
 
     /**

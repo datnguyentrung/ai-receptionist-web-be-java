@@ -93,8 +93,11 @@ public class PythonBackendClient {
     }
 
     public FaceEmbeddingResponse generateFaceEmbedding(MultipartFile file) {
+        return generateFaceEmbedding(file, UUID.randomUUID().toString());
+    }
+
+    public FaceEmbeddingResponse generateFaceEmbedding(MultipartFile file, String requestId) {
         requireConfigured();
-        String requestId = UUID.randomUUID().toString();
         long startedAtNanos = System.nanoTime();
         String path = "/face-embeddings";
         try {

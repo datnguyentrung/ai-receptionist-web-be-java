@@ -5,6 +5,7 @@ import com.dat.ai_receptionist_web.domain.Training.ClassSession;
 import com.dat.ai_receptionist_web.domain.Training.CourseStaffAssignment;
 import com.dat.ai_receptionist_web.domain.Training.SessionAttendance;
 import com.dat.ai_receptionist_web.domain.Training.StudentEnrollment;
+import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.dto.Training.SessionAttendanceFilter;
 import com.dat.ai_receptionist_web.enums.Security.RelationshipType;
 import com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus;
@@ -34,6 +35,7 @@ public final class SessionAttendanceSpecification {
         return (root, query, cb) -> {
             Join<SessionAttendance, ClassSession> session = root.join("classSession", JoinType.INNER);
             Join<SessionAttendance, StudentEnrollment> enrollment = root.join("studentEnrollment", JoinType.LEFT);
+            Join<SessionAttendance, Person> person = root.join("person", JoinType.INNER);
             Join<SessionAttendance, CourseStaffAssignment> participantAssignment =
                     root.join("courseStaffAssignment", JoinType.LEFT);
 
@@ -47,11 +49,11 @@ public final class SessionAttendanceSpecification {
             List<Predicate> participantPredicates = new ArrayList<>(2);
             if (filter.studentPersonId() != null) {
                 participantPredicates.add(cb.equal(
-                        enrollment.get("studentPerson").get("personId"), filter.studentPersonId()));
+                        person.get("personId"), filter.studentPersonId()));
             }
             if (filter.staffPersonId() != null) {
                 participantPredicates.add(cb.equal(
-                        participantAssignment.get("staffPerson").get("personId"), filter.staffPersonId()));
+                        person.get("personId"), filter.staffPersonId()));
             }
             if (!participantPredicates.isEmpty()) {
                 predicates.add(cb.or(participantPredicates.toArray(Predicate[]::new)));
@@ -75,7 +77,7 @@ public final class SessionAttendanceSpecification {
             }
 
             predicates.add(accessPredicate(
-                    query, cb, session, enrollment, participantAssignment, context, scope));
+                    query, cb, session, enrollment, participantAssignment, person, context, scope));
             return cb.and(predicates.toArray(Predicate[]::new));
         };
     }
@@ -86,6 +88,7 @@ public final class SessionAttendanceSpecification {
             Join<SessionAttendance, ClassSession> session,
             Join<SessionAttendance, StudentEnrollment> enrollment,
             Join<SessionAttendance, CourseStaffAssignment> participantAssignment,
+            Join<SessionAttendance, Person> person,
             AccessContext context,
             TrainingAccessScope scope
     ) {
@@ -96,9 +99,7 @@ public final class SessionAttendanceSpecification {
         List<Predicate> allowed = new ArrayList<>();
         if (scope.self() && context.activePersonId() != null) {
             allowed.add(cb.equal(
-                    enrollment.get("studentPerson").get("personId"), context.activePersonId()));
-            allowed.add(cb.equal(
-                    participantAssignment.get("staffPerson").get("personId"), context.activePersonId()));
+                    person.get("personId"), context.activePersonId()));
         }
 
         if (scope.dependents() && context.userId() != null) {
@@ -108,7 +109,7 @@ public final class SessionAttendanceSpecification {
             dependent.where(
                     cb.equal(userPerson.get("user").get("userId"), context.userId()),
                     cb.equal(userPerson.get("person").get("personId"),
-                            enrollment.get("studentPerson").get("personId")),
+                            person.get("personId")),
                     cb.equal(userPerson.get("relationshipType"), RelationshipType.GUARDIAN),
                     cb.isTrue(userPerson.get("active"))
             );

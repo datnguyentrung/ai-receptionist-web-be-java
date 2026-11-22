@@ -12,6 +12,7 @@ import com.dat.ai_receptionist_web.repository.Training.CourseStaffAssignmentRepo
 import com.dat.ai_receptionist_web.repository.Training.SessionAttendanceQueryRepository.AttendanceStatsRow;
 import com.dat.ai_receptionist_web.repository.Training.SessionAttendanceRepository;
 import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentRepository;
+import com.dat.ai_receptionist_web.repository.Core.PersonRepository;
 import com.dat.ai_receptionist_web.service.Core.PersonCodePolicy;
 import com.dat.ai_receptionist_web.service.Security.access.AccessContext;
 import com.dat.ai_receptionist_web.service.Security.access.CurrentAccessContextResolver;
@@ -56,6 +57,7 @@ class SessionAttendanceServiceTest {
             mapper,
             mock(ClassSessionRepository.class),
             mock(StudentEnrollmentRepository.class),
+            mock(PersonRepository.class),
             mock(CourseStaffAssignmentRepository.class),
             mock(PersonCodePolicy.class),
             currentAccessContextResolver,

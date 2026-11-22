@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@Order(4)
+@Order(5)
 public class SystemUserSynchronizer implements ApplicationRunner {
     private final BootstrapUserProperties bootstrapUserProperties;
     private final UserRepository userRepository;

@@ -1,17 +1,21 @@
 package com.dat.ai_receptionist_web.service.Core;
 
 import com.dat.ai_receptionist_web.domain.Core.Position;
+import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.dto.Core.PositionDTO;
 import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.code.CoreErrorCode;
 import com.dat.ai_receptionist_web.mapper.Core.PositionMapper;
 import com.dat.ai_receptionist_web.repository.Core.PositionRepository;
+import com.dat.ai_receptionist_web.repository.Core.PersonRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -22,6 +26,7 @@ import java.util.stream.Collectors;
 public class PositionService {
     private final PositionRepository repository;
     private final PositionMapper mapper;
+    private final PersonRepository personRepository;
 
     @Transactional(readOnly = true)
     public PageResponse<PositionDTO.SimpleResponse> list(Pageable pageable) {
@@ -65,6 +70,18 @@ public class PositionService {
     public void delete(UUID id) {
         Position position = find(id);
         position.setActive(false);
+    }
+
+    @Transactional
+    public void assignPeople(UUID id, PositionDTO.AssignPeopleRequest request) {
+        Position position = find(id);
+        var personIds = new LinkedHashSet<>(request.personIds());
+        List<Person> people = personRepository.findAllById(personIds);
+        if (people.size() != personIds.size()) {
+            throw new ApiException(CoreErrorCode.PERSON_NOT_FOUND);
+        }
+        people.forEach(person -> person.setPosition(position));
+        personRepository.saveAll(people);
     }
 
     private Position find(UUID id) {

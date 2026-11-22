@@ -118,9 +118,7 @@ public class AttendanceNotificationService {
     }
 
     private Person participant(SessionAttendance attendance) {
-        return attendance.getStudentEnrollment() != null
-                ? attendance.getStudentEnrollment().getStudentPerson()
-                : attendance.getCourseStaffAssignment().getStaffPerson();
+        return attendance.getPerson();
     }
 
     private String payload(

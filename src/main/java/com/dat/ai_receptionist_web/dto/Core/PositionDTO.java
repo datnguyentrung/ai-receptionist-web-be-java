@@ -1,9 +1,11 @@
 package com.dat.ai_receptionist_web.dto.Core;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public final class PositionDTO {
@@ -23,6 +25,11 @@ public final class PositionDTO {
             @NotBlank String name,
             String description,
             @NotNull Boolean active
+    ) {
+    }
+
+    public record AssignPeopleRequest(
+            @NotEmpty List<@NotNull UUID> personIds
     ) {
     }
 

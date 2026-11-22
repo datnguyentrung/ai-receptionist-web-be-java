@@ -4,6 +4,7 @@ import com.dat.ai_receptionist_web.domain.Training.ClassSession;
 import com.dat.ai_receptionist_web.domain.Training.CourseStaffAssignment;
 import com.dat.ai_receptionist_web.domain.Training.SessionAttendance;
 import com.dat.ai_receptionist_web.domain.Training.StudentEnrollment;
+import com.dat.ai_receptionist_web.enums.Training.AttendanceStatus;
 import com.dat.ai_receptionist_web.enums.Training.AssignmentType;
 import com.dat.ai_receptionist_web.enums.Security.RelationshipType;
 import com.dat.ai_receptionist_web.enums.Training.SessionStatus;
@@ -38,7 +39,19 @@ public class SessionAttendanceAccessPolicy {
             StudentEnrollment enrollment,
             CourseStaffAssignment participantAssignment
     ) {
-        if ((enrollment == null) == (participantAssignment == null)) {
+        requireCanCreate(session, enrollment, participantAssignment, null);
+    }
+
+    public void requireCanCreate(
+            ClassSession session,
+            StudentEnrollment enrollment,
+            CourseStaffAssignment participantAssignment,
+            AttendanceStatus attendanceStatus
+    ) {
+        if (enrollment != null && participantAssignment != null) {
+            throw new ApiException(TrainingErrorCode.SESSION_ATTENDANCE_PARTICIPANT_INVALID);
+        }
+        if (enrollment == null && participantAssignment == null && attendanceStatus != AttendanceStatus.MAKEUP) {
             throw new ApiException(TrainingErrorCode.SESSION_ATTENDANCE_PARTICIPANT_INVALID);
         }
         if (enrollment != null && enrollment.getStatus() != StudentEnrollmentStatus.ACTIVE) {
@@ -47,12 +60,12 @@ public class SessionAttendanceAccessPolicy {
         if (session.getStatus() != SessionStatus.SCHEDULED && session.getStatus() != SessionStatus.ACTIVE) {
             throw new ApiException(TrainingErrorCode.CLASS_SESSION_IMMUTABLE);
         }
-        requireParticipantEffective(session, enrollment, participantAssignment);
+        requireLinkedParticipationEffective(session, enrollment, participantAssignment);
         requireAttendanceEditable(session);
     }
 
     public void requireCanUpdate(SessionAttendance attendance) {
-        requireParticipantEffective(
+        requireLinkedParticipationEffective(
                 attendance.getClassSession(),
                 attendance.getStudentEnrollment(),
                 attendance.getCourseStaffAssignment()
@@ -79,16 +92,19 @@ public class SessionAttendanceAccessPolicy {
         }
     }
 
-    private void requireParticipantEffective(
+    private void requireLinkedParticipationEffective(
             ClassSession session,
             StudentEnrollment enrollment,
             CourseStaffAssignment participantAssignment
     ) {
-        if ((enrollment == null) == (participantAssignment == null)) {
+        if (enrollment != null && participantAssignment != null) {
             throw new ApiException(TrainingErrorCode.SESSION_ATTENDANCE_PARTICIPANT_INVALID);
         }
         if (enrollment != null) {
             requireCourseAndEnrollmentEffective(session, enrollment);
+            return;
+        }
+        if (participantAssignment == null) {
             return;
         }
         UUIDs.requireEqual(

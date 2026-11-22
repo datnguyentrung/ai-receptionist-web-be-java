@@ -15,7 +15,7 @@ public interface UserPersonMapper {
 
     UserPersonDTO.SimpleResponse toSimpleResponse(UserPerson entity);
 
-    default LoginRes.UserContextRes toLoginContext(UserPerson entity) {
+    default LoginRes.UserContextRes toLoginContext(UserPerson entity, String faceImagePath) {
         if (entity == null) {
             return null;
         }
@@ -25,7 +25,8 @@ public interface UserPersonMapper {
                 entity.getRelationshipType(),
                 entity.getPerson() == null ? null : entity.getPerson().getPersonCode(),
                 entity.getPerson() == null ? null : entity.getPerson().getFullName(),
-                entity.getPerson() == null ? null : entity.getPerson().getGender()
+                entity.getPerson() == null ? null : entity.getPerson().getGender(),
+                faceImagePath
         );
     }
 

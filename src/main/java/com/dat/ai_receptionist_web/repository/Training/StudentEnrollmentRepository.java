@@ -34,6 +34,28 @@ public interface StudentEnrollmentRepository extends JpaRepository<StudentEnroll
     Optional<StudentEnrollment> findDetailedForAttendanceById(@Param("id") UUID id);
 
     @Query("""
+        select distinct e
+        from StudentEnrollment e
+        join fetch e.studentPerson studentPerson
+        left join fetch studentPerson.position
+        join e.schedules link
+        join link.courseSchedule courseSchedule
+        where e.studentPerson.personId = :personId
+          and courseSchedule.courseScheduleId = :courseScheduleId
+          and e.status in (com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus.ACTIVE,
+                           com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus.PENDING_START)
+          and e.startDate <= :sessionDate
+          and e.endDate >= :sessionDate
+          and (link.effectiveFrom is null or link.effectiveFrom <= :sessionDate)
+          and (link.effectiveTo is null or link.effectiveTo >= :sessionDate)
+    """)
+    Optional<StudentEnrollment> findDetailedForAttendanceByPersonAndCourseSchedule(
+            @Param("personId") UUID personId,
+            @Param("courseScheduleId") UUID courseScheduleId,
+            @Param("sessionDate") LocalDate sessionDate
+    );
+
+    @Query("""
         select count(distinct e) from StudentEnrollment e
         join e.schedules link
         where link.courseSchedule.course.courseId = :courseId

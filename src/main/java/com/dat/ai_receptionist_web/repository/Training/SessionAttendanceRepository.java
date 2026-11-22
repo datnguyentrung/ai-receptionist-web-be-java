@@ -35,6 +35,10 @@ public interface SessionAttendanceRepository extends
             UUID classSessionId,
             UUID courseStaffAssignmentId);
 
+    boolean existsByClassSession_ClassSessionIdAndPerson_PersonId(
+            UUID classSessionId,
+            UUID personId);
+
     Optional<SessionAttendance> findByClassSession_ClassSessionIdAndStudentEnrollment_StudentEnrollmentId(
             UUID classSessionId,
             UUID studentEnrollmentId);
@@ -50,6 +54,7 @@ public interface SessionAttendanceRepository extends
         from SessionAttendance a
         join fetch a.classSession session
         join fetch session.courseSchedule sessionSchedule
+        join fetch a.person person
         left join fetch a.studentEnrollment enrollment
         left join fetch enrollment.schedules enrollmentScheduleLink
         left join fetch enrollmentScheduleLink.courseSchedule enrollmentSchedule
@@ -144,6 +149,7 @@ public interface SessionAttendanceRepository extends
     @NonNull
     @EntityGraph(attributePaths = {
             "classSession.courseSchedule.classSchedule.branch",
+            "person",
             "studentEnrollment.studentPerson",
             "studentEnrollment.schedules.courseSchedule.classSchedule.branch",
             "studentEnrollment.coursePurchase",
@@ -161,6 +167,7 @@ public interface SessionAttendanceRepository extends
                 from SessionAttendance a
                 join fetch a.classSession cs
                 left join fetch cs.course
+                join fetch a.person participant
                 left join fetch cs.courseSchedule sessionCourseSchedule
                 left join fetch sessionCourseSchedule.classSchedule sessionClassSchedule
                 left join fetch sessionClassSchedule.branch
@@ -181,15 +188,14 @@ public interface SessionAttendanceRepository extends
                 where a.sessionAttendanceId = :id
                   and (
                       :unrestricted = true
-                      or (:self = true and e.studentPerson.personId = :activePersonId)
-                      or (:self = true and participantAssignment.staffPerson.personId = :activePersonId)
+                      or (:self = true and participant.personId = :activePersonId)
                       or (
                           :dependents = true
                           and exists (
                               select 1
                               from UserPerson up
                               where up.user.userId = :userId
-                                and up.person.personId = e.studentPerson.personId
+                                and up.person.personId = participant.personId
                                 and up.relationshipType = com.dat.ai_receptionist_web.enums.Security.RelationshipType.GUARDIAN
                                 and up.active = true
                           )

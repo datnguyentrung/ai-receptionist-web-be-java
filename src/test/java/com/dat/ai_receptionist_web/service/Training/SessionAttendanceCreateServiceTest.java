@@ -19,6 +19,7 @@ import com.dat.ai_receptionist_web.repository.Training.ClassSessionRepository;
 import com.dat.ai_receptionist_web.repository.Training.CourseStaffAssignmentRepository;
 import com.dat.ai_receptionist_web.repository.Training.SessionAttendanceRepository;
 import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentRepository;
+import com.dat.ai_receptionist_web.repository.Core.PersonRepository;
 import com.dat.ai_receptionist_web.service.Core.PersonCodePolicy;
 import com.dat.ai_receptionist_web.service.Security.access.AccessContext;
 import com.dat.ai_receptionist_web.service.Security.access.CurrentAccessContextResolver;
@@ -45,6 +46,7 @@ class SessionAttendanceCreateServiceTest {
     private final SessionAttendanceMapper mapper = mock(SessionAttendanceMapper.class);
     private final ClassSessionRepository classSessionRepository = mock(ClassSessionRepository.class);
     private final StudentEnrollmentRepository studentEnrollmentRepository = mock(StudentEnrollmentRepository.class);
+    private final PersonRepository personRepository = mock(PersonRepository.class);
     private final CourseStaffAssignmentRepository courseStaffAssignmentRepository =
             mock(CourseStaffAssignmentRepository.class);
     private final PersonCodePolicy personCodePolicy = mock(PersonCodePolicy.class);
@@ -56,6 +58,7 @@ class SessionAttendanceCreateServiceTest {
             mapper,
             classSessionRepository,
             studentEnrollmentRepository,
+            personRepository,
             courseStaffAssignmentRepository,
             personCodePolicy,
             currentAccessContextResolver,
@@ -116,6 +119,7 @@ class SessionAttendanceCreateServiceTest {
         when(classSessionRepository.findDetailedById(classSessionId)).thenReturn(Optional.of(session));
         when(studentEnrollmentRepository.findDetailedForAttendanceById(enrollmentId))
                 .thenReturn(Optional.of(enrollment));
+        when(personRepository.findById(studentPersonId)).thenReturn(Optional.of(student));
         when(repository.save(any(SessionAttendance.class))).thenAnswer(invocation -> {
             SessionAttendance saved = invocation.getArgument(0);
             saved.setSessionAttendanceId(attendanceId);
@@ -126,6 +130,7 @@ class SessionAttendanceCreateServiceTest {
         SessionAttendanceDTO.BriefResponse response = service.create(
                 new SessionAttendanceDTO.CreateRequest(
                         classSessionId,
+                        studentPersonId,
                         enrollmentId,
                         null,
                         checkInTime,
@@ -197,6 +202,7 @@ class SessionAttendanceCreateServiceTest {
         when(classSessionRepository.findDetailedById(classSessionId)).thenReturn(Optional.of(session));
         when(courseStaffAssignmentRepository.findDetailedForAttendanceById(assignmentId))
                 .thenReturn(Optional.of(assignment));
+        when(personRepository.findById(staffPersonId)).thenReturn(Optional.of(staff));
         when(repository.save(any(SessionAttendance.class))).thenAnswer(invocation -> {
             SessionAttendance saved = invocation.getArgument(0);
             saved.setSessionAttendanceId(attendanceId);
@@ -206,6 +212,7 @@ class SessionAttendanceCreateServiceTest {
         SessionAttendanceDTO.BriefResponse response = service.create(
                 new SessionAttendanceDTO.CreateRequest(
                         classSessionId,
+                        staffPersonId,
                         null,
                         assignmentId,
                         LocalDateTime.of(sessionDate, LocalTime.of(18, 5)),

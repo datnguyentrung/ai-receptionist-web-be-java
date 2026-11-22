@@ -28,11 +28,23 @@ public class LoginRes {
         private boolean requiresContextSelection;
     }
 
-    public record UserLogin(UUID userId, String phoneNumber, UserStatus status,
-                            Set<String> roles, Set<String> permissions) {
+    public record UserLogin(
+            UUID userId,
+            String phoneNumber,
+            UserStatus status,
+            Set<String> roles,
+            Set<String> permissions
+    ) {
     }
 
-    public record UserContextRes(UUID userPersonId, UUID personId, RelationshipType relationshipType,
-                                 String personCode, String displayName, Boolean gender) {
+    public record UserContextRes(
+            UUID userPersonId,
+            UUID personId,
+            RelationshipType relationshipType,
+            String personCode,
+            String displayName,
+            Boolean gender,
+            String faceImagePath
+    ) {
     }
 }

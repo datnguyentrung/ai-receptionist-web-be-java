@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.service.Training;
 
 import com.dat.ai_receptionist_web.domain.Catalog.Course;
+import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.domain.Training.ClassSession;
 import com.dat.ai_receptionist_web.domain.Training.CourseStaffAssignment;
 import com.dat.ai_receptionist_web.domain.Training.SessionAttendance;
@@ -17,6 +18,7 @@ import com.dat.ai_receptionist_web.enums.Training.EvaluationStatus;
 import com.dat.ai_receptionist_web.enums.Security.PermissionDefinition;
 import com.dat.ai_receptionist_web.enums.Training.AssignmentType;
 import com.dat.ai_receptionist_web.error.ApiException;
+import com.dat.ai_receptionist_web.error.code.CoreErrorCode;
 import com.dat.ai_receptionist_web.error.code.GeneralErrorCode;
 import com.dat.ai_receptionist_web.error.code.TrainingErrorCode;
 import com.dat.ai_receptionist_web.mapper.Training.SessionAttendanceMapper;
@@ -25,6 +27,7 @@ import com.dat.ai_receptionist_web.repository.Training.CourseStaffAssignmentRepo
 import com.dat.ai_receptionist_web.repository.Training.SessionAttendanceRepository;
 import com.dat.ai_receptionist_web.repository.Training.SessionAttendanceQueryRepository.AttendanceStatsRow;
 import com.dat.ai_receptionist_web.repository.Training.StudentEnrollmentRepository;
+import com.dat.ai_receptionist_web.repository.Core.PersonRepository;
 import com.dat.ai_receptionist_web.service.Core.PersonCodePolicy;
 import com.dat.ai_receptionist_web.service.Security.access.AccessContext;
 import com.dat.ai_receptionist_web.service.Security.access.CurrentAccessContextResolver;
@@ -74,6 +77,7 @@ public class SessionAttendanceService {
     private final SessionAttendanceMapper mapper;
     private final ClassSessionRepository classSessionRepository;
     private final StudentEnrollmentRepository studentEnrollmentRepository;
+    private final PersonRepository personRepository;
     private final CourseStaffAssignmentRepository courseStaffAssignmentRepository;
     private final PersonCodePolicy personCodePolicy;
     private final CurrentAccessContextResolver currentAccessContextResolver;
@@ -130,19 +134,34 @@ public class SessionAttendanceService {
         AccessContext context = currentAccessContextResolver.current();
         ClassSession session = classSessionRepository.findDetailedById(request.classSessionId())
                 .orElseThrow(() -> new ApiException(TrainingErrorCode.CLASS_SESSION_NOT_FOUND));
-        StudentEnrollment enrollment = resolveEnrollment(request.studentEnrollmentId());
+        Person person = resolvePerson(request.personId());
+        StudentEnrollment enrollment = resolveEnrollment(
+                request.studentEnrollmentId(),
+                person,
+                session,
+                request.courseStaffAssignmentId(),
+                request.attendanceStatus()
+        );
         CourseStaffAssignment participantAssignment = resolveParticipantAssignment(request.courseStaffAssignmentId());
 
-        if (enrollment != null) {
-            personCodePolicy.requireStudent(enrollment.getStudentPerson());
+        requireLinkedParticipationMatchesPerson(person, enrollment, participantAssignment);
+
+        if (enrollment != null || participantAssignment == null) {
+            personCodePolicy.requireStudent(person);
         }
         if (participantAssignment != null) {
             personCodePolicy.requireSystemEmployee(participantAssignment.getStaffPerson());
         }
-        accessPolicy.requireCanCreate(session, enrollment, participantAssignment);
+        accessPolicy.requireCanCreate(
+                session,
+                enrollment,
+                participantAssignment,
+                request.attendanceStatus()
+        );
 
         SessionAttendance entity = new SessionAttendance();
         entity.setClassSession(session);
+        entity.setPerson(person);
         entity.setStudentEnrollment(enrollment);
         entity.setCourseStaffAssignment(participantAssignment);
         entity.setCheckInTime(request.checkInTime());
@@ -274,6 +293,7 @@ public class SessionAttendanceService {
                     accessPolicy.requireCanCreate(session, enrollment, null);
                     SessionAttendance entity = new SessionAttendance();
                     entity.setClassSession(session);
+                    entity.setPerson(enrollment.getStudentPerson());
                     entity.setStudentEnrollment(enrollment);
                     entity.setAttendanceStatus(AttendanceStatus.ABSENT);
                     entity.setEvaluationStatus(EvaluationStatus.PENDING);
@@ -304,6 +324,7 @@ public class SessionAttendanceService {
     public SessionAttendanceDTO.Response createManual(SessionAttendanceDTO.ManualLogRequest request) {
         SessionAttendanceDTO.CreateRequest createRequest = new SessionAttendanceDTO.CreateRequest(
                 request.classSessionId(),
+                request.personId(),
                 request.studentEnrollmentId(),
                 request.courseStaffAssignmentId(),
                 request.checkInTime() == null ? LocalDateTime.now() : request.checkInTime(),
@@ -419,10 +440,29 @@ public class SessionAttendanceService {
                 .orElseThrow(() -> new ApiException(TrainingErrorCode.SESSION_ATTENDANCE_NOT_FOUND));
     }
 
-    private StudentEnrollment resolveEnrollment(UUID studentEnrollmentId) {
-        if (studentEnrollmentId == null) {
-            return null;
+    private StudentEnrollment resolveEnrollment(
+            UUID studentEnrollmentId,
+            Person person,
+            ClassSession session,
+            UUID courseStaffAssignmentId,
+            AttendanceStatus attendanceStatus
+    ) {
+        if (studentEnrollmentId == null && courseStaffAssignmentId == null) {
+            if (attendanceStatus == AttendanceStatus.MAKEUP) {
+                return null;
+            }
+            // A request without either participant link is treated as a student
+            // attendance and resolved from the person and the session schedule.
+            // Staff attendance still supplies courseStaffAssignmentId and must
+            // remain enrollment-free.
+            return studentEnrollmentRepository
+                    .findDetailedForAttendanceByPersonAndCourseSchedule(
+                            person.getPersonId(),
+                            session.getCourseSchedule().getCourseScheduleId(),
+                            session.getSessionDate())
+                    .orElseThrow(() -> new ApiException(TrainingErrorCode.STUDENT_ENROLLMENT_NOT_FOUND));
         }
+        if (studentEnrollmentId == null) return null;
         return studentEnrollmentRepository.findDetailedForAttendanceById(studentEnrollmentId)
                 .orElseThrow(() -> new ApiException(TrainingErrorCode.STUDENT_ENROLLMENT_NOT_FOUND));
     }
@@ -439,6 +479,27 @@ public class SessionAttendanceService {
         return assignment;
     }
 
+    private Person resolvePerson(UUID personId) {
+        return personRepository.findById(personId)
+                .orElseThrow(() -> new ApiException(CoreErrorCode.PERSON_NOT_FOUND));
+    }
+
+    private void requireLinkedParticipationMatchesPerson(
+            Person person,
+            StudentEnrollment enrollment,
+            CourseStaffAssignment participantAssignment
+    ) {
+        if (enrollment != null && participantAssignment != null) {
+            throw new ApiException(TrainingErrorCode.SESSION_ATTENDANCE_PARTICIPANT_INVALID);
+        }
+        Person linkedPerson = enrollment != null
+                ? enrollment.getStudentPerson()
+                : participantAssignment == null ? null : participantAssignment.getStaffPerson();
+        if (linkedPerson != null && !linkedPerson.getPersonId().equals(person.getPersonId())) {
+            throw new ApiException(TrainingErrorCode.SESSION_ATTENDANCE_PARTICIPANT_INVALID);
+        }
+    }
+
     private SessionAttendance createResolvedStudentAttendance(UUID classSessionId, UUID studentEnrollmentId,
                                                               LocalDateTime checkInTime) {
         ClassSession session = classSessionRepository.findById(classSessionId)
@@ -448,6 +509,7 @@ public class SessionAttendanceService {
         personCodePolicy.requireStudent(enrollment.getStudentPerson());
         accessPolicy.requireCanCreate(session, enrollment, null);
         SessionAttendance entity = baseResolvedAttendance(session, checkInTime);
+        entity.setPerson(enrollment.getStudentPerson());
         entity.setStudentEnrollment(enrollment);
         return saveResolvedAttendance(entity, () -> repository
                 .findByClassSession_ClassSessionIdAndStudentEnrollment_StudentEnrollmentId(classSessionId, studentEnrollmentId)
@@ -537,9 +599,7 @@ public class SessionAttendanceService {
         Course course = session.getCourse();
         StudentEnrollment enrollment = entity.getStudentEnrollment();
         CourseStaffAssignment assignment = entity.getCourseStaffAssignment();
-        var participant = enrollment != null
-                ? enrollment.getStudentPerson()
-                : assignment.getStaffPerson();
+        var participant = entity.getPerson();
         return new SessionAttendanceDTO.BriefResponse(
                 entity.getSessionAttendanceId(),
                 new SessionAttendanceDTO.ClassSessionBrief(
@@ -579,6 +639,7 @@ public class SessionAttendanceService {
         CourseStaffAssignment assignment = resolveParticipantAssignment(courseStaffAssignmentId);
         accessPolicy.requireCanCreate(session, null, assignment);
         SessionAttendance entity = baseResolvedAttendance(session, checkInTime);
+        entity.setPerson(assignment.getStaffPerson());
         entity.setCourseStaffAssignment(assignment);
         return saveResolvedAttendance(entity, () -> repository
                 .findByClassSession_ClassSessionIdAndCourseStaffAssignment_CourseStaffAssignmentId(

@@ -1,14 +1,17 @@
 package com.dat.ai_receptionist_web.service.Core;
 
+import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.domain.Core.Position;
 import com.dat.ai_receptionist_web.dto.Core.PositionDTO;
 import com.dat.ai_receptionist_web.mapper.Core.PositionMapper;
+import com.dat.ai_receptionist_web.repository.Core.PersonRepository;
 import com.dat.ai_receptionist_web.repository.Core.PositionRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,7 +37,7 @@ class PositionServiceTest {
         when(mapper.toSimpleResponse(coach, 3L)).thenReturn(coachResponse);
         when(mapper.toSimpleResponse(guardian, 0L)).thenReturn(guardianResponse);
 
-        PositionService service = new PositionService(repository, mapper);
+        PositionService service = new PositionService(repository, mapper, mock(PersonRepository.class));
 
         var result = service.list(pageable);
 
@@ -57,9 +60,30 @@ class PositionServiceTest {
         when(repository.countPersonsByPositionId(position.getPositionId())).thenReturn(5L);
         when(mapper.toResponse(position, 5L)).thenReturn(response);
 
-        PositionService service = new PositionService(repository, mapper);
+        PositionService service = new PositionService(repository, mapper, mock(PersonRepository.class));
 
         assertThat(service.get(position.getPositionId())).isEqualTo(response);
+    }
+
+    @Test
+    void assignsPeopleToPositionInOneBatch() {
+        PositionRepository repository = mock(PositionRepository.class);
+        PersonRepository personRepository = mock(PersonRepository.class);
+        Position position = position("COACH");
+        Person first = Person.builder().personId(UUID.randomUUID()).build();
+        Person second = Person.builder().personId(UUID.randomUUID()).build();
+        List<UUID> personIds = List.of(first.getPersonId(), second.getPersonId());
+        when(repository.findById(position.getPositionId())).thenReturn(Optional.of(position));
+        when(personRepository.findAllById(argThat(ids ->
+                ids.containsAll(personIds) && ids.size() == personIds.size())))
+                .thenReturn(List.of(first, second));
+
+        new PositionService(repository, mock(PositionMapper.class), personRepository)
+                .assignPeople(position.getPositionId(), new PositionDTO.AssignPeopleRequest(personIds));
+
+        assertThat(first.getPosition()).isEqualTo(position);
+        assertThat(second.getPosition()).isEqualTo(position);
+        verify(personRepository).saveAll(List.of(first, second));
     }
 
     private static Position position(String code) {

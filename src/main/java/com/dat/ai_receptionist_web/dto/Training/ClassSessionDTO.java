@@ -111,6 +111,7 @@ public final class ClassSessionDTO {
 
     public record EvaluationStudent(
             EvaluationStudentEnrollment studentEnrollment,
+            PersonDTO.SimpleResponse studentPerson,
             EvaluationAttendance attendance,
             boolean recorded
     ) {

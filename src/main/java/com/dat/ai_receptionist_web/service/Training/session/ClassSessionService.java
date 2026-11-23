@@ -32,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.time.LocalDate;
@@ -86,14 +87,22 @@ public class ClassSessionService {
     public ClassSessionDTO.EvaluationResponse getEvaluation(UUID id) {
         AccessContext context = currentAccessContextResolver.current();
         ClassSession session = findAccessible(id, context, accessPolicy.resolveReadScope(context));
-        List<ClassSessionDTO.EvaluationStudent> students =
-                sessionAttendanceRepository.findClassSessionEvaluationRows(
-                                session.getClassSessionId(),
-                                session.getCourse().getCourseId(),
-                                session.getSessionDate())
-                        .stream()
-                        .map(this::toEvaluationStudent)
-                        .toList();
+        List<ClassSessionDTO.EvaluationStudent> students = new ArrayList<>();
+        students.addAll(sessionAttendanceRepository.findClassSessionEvaluationRows(
+                        session.getClassSessionId(),
+                        session.getCourse().getCourseId(),
+                        session.getSessionDate())
+                .stream()
+                .map(this::toEvaluationStudent)
+                .toList());
+        students.addAll(sessionAttendanceRepository.findMakeupClassSessionEvaluationRows(
+                        session.getClassSessionId())
+                .stream()
+                .map(this::toMakeupEvaluationStudent)
+                .toList());
+        students.sort(Comparator.comparing(
+                student -> student.studentPerson().fullName(),
+                String.CASE_INSENSITIVE_ORDER));
         return new ClassSessionDTO.EvaluationResponse(
                 mapper.toSimpleResponse(session, null),
                 students
@@ -266,20 +275,21 @@ public class ClassSessionService {
     private ClassSessionDTO.EvaluationStudent toEvaluationStudent(
             SessionAttendanceRepository.ClassSessionEvaluationRow row
     ) {
+        var studentPerson = new com.dat.ai_receptionist_web.dto.Core.PersonDTO.SimpleResponse(
+                row.getStudentPersonId(),
+                row.getStudentFullName(),
+                row.getStudentGender(),
+                row.getStudentBirthDate(),
+                row.getStudentPersonCode(),
+                row.getStudentCurrentBelt(),
+                row.getStudentStatus(),
+                row.getStudentFaceImagePath(),
+                null
+        );
         ClassSessionDTO.EvaluationStudentEnrollment enrollment =
                 new ClassSessionDTO.EvaluationStudentEnrollment(
                         row.getStudentEnrollmentId(),
-                        new com.dat.ai_receptionist_web.dto.Core.PersonDTO.SimpleResponse(
-                                row.getStudentPersonId(),
-                                row.getStudentFullName(),
-                                row.getStudentGender(),
-                                row.getStudentBirthDate(),
-                                row.getStudentPersonCode(),
-                                row.getStudentCurrentBelt(),
-                                row.getStudentStatus(),
-                                row.getStudentFaceImagePath(),
-                                null
-                        ),
+                        studentPerson,
                         row.getCoursePurchaseId(),
                         row.getEnrollmentStartDate(),
                         row.getEnrollmentEndDate(),
@@ -296,8 +306,37 @@ public class ClassSessionService {
         );
         return new ClassSessionDTO.EvaluationStudent(
                 enrollment,
+                studentPerson,
                 attendance,
                 row.getSessionAttendanceId() != null
+        );
+    }
+
+    private ClassSessionDTO.EvaluationStudent toMakeupEvaluationStudent(
+            SessionAttendanceRepository.MakeupClassSessionEvaluationRow row
+    ) {
+        var studentPerson = new com.dat.ai_receptionist_web.dto.Core.PersonDTO.SimpleResponse(
+                row.getStudentPersonId(),
+                row.getStudentFullName(),
+                row.getStudentGender(),
+                row.getStudentBirthDate(),
+                row.getStudentPersonCode(),
+                row.getStudentCurrentBelt(),
+                row.getStudentStatus(),
+                row.getStudentFaceImagePath(),
+                null
+        );
+        return new ClassSessionDTO.EvaluationStudent(
+                null,
+                studentPerson,
+                new ClassSessionDTO.EvaluationAttendance(
+                        row.getSessionAttendanceId(),
+                        row.getCheckInTime(),
+                        row.getAttendanceStatus(),
+                        row.getEvaluationStatus(),
+                        row.getAttendanceNote()
+                ),
+                true
         );
     }
 

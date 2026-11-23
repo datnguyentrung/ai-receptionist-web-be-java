@@ -107,6 +107,32 @@ public interface SessionAttendanceRepository extends
             @Param("sessionDate") LocalDate sessionDate
     );
 
+    @Query("""
+                select a.sessionAttendanceId as sessionAttendanceId,
+                       person.personId as studentPersonId,
+                       person.fullName as studentFullName,
+                       person.gender as studentGender,
+                       person.birthDate as studentBirthDate,
+                       person.personCode as studentPersonCode,
+                       person.currentBelt as studentCurrentBelt,
+                       person.status as studentStatus,
+                       person.faceImagePath as studentFaceImagePath,
+                       a.checkInTime as checkInTime,
+                       a.attendanceStatus as attendanceStatus,
+                       a.evaluationStatus as evaluationStatus,
+                       a.note as attendanceNote
+                from SessionAttendance a
+                join a.person person
+                where a.classSession.classSessionId = :classSessionId
+                  and a.studentEnrollment is null
+                  and a.courseStaffAssignment is null
+                  and a.attendanceStatus = com.dat.ai_receptionist_web.enums.Training.AttendanceStatus.MAKEUP
+                order by lower(person.fullName) asc, a.sessionAttendanceId asc
+            """)
+    List<MakeupClassSessionEvaluationRow> findMakeupClassSessionEvaluationRows(
+            @Param("classSessionId") UUID classSessionId
+    );
+
     interface ClassSessionEvaluationRow {
         UUID getStudentEnrollmentId();
 
@@ -135,6 +161,34 @@ public interface SessionAttendanceRepository extends
         StudentEnrollmentStatus getEnrollmentStatus();
 
         UUID getSessionAttendanceId();
+
+        LocalDateTime getCheckInTime();
+
+        AttendanceStatus getAttendanceStatus();
+
+        EvaluationStatus getEvaluationStatus();
+
+        String getAttendanceNote();
+    }
+
+    interface MakeupClassSessionEvaluationRow {
+        UUID getSessionAttendanceId();
+
+        UUID getStudentPersonId();
+
+        String getStudentFullName();
+
+        Boolean getStudentGender();
+
+        LocalDate getStudentBirthDate();
+
+        String getStudentPersonCode();
+
+        Belt getStudentCurrentBelt();
+
+        PersonStatus getStudentStatus();
+
+        String getStudentFaceImagePath();
 
         LocalDateTime getCheckInTime();
 

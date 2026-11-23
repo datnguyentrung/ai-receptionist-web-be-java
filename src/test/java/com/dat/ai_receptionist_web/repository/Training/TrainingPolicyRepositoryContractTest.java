@@ -263,6 +263,24 @@ class TrainingPolicyRepositoryContractTest {
     }
 
     @Test
+    void classSessionEvaluationIncludesEnrollmentFreeMakeupAttendance() throws Exception {
+        Query makeupQuery = SessionAttendanceRepository.class
+                .getMethod("findMakeupClassSessionEvaluationRows", UUID.class)
+                .getAnnotation(Query.class);
+
+        assertThat(makeupQuery).isNotNull();
+        assertThat(makeupQuery.value())
+                .contains(
+                        "from SessionAttendance a",
+                        "join a.person person",
+                        "a.classSession.classSessionId = :classSessionId",
+                        "a.studentEnrollment is null",
+                        "a.courseStaffAssignment is null",
+                        "AttendanceStatus.MAKEUP")
+                .doesNotContain("from StudentEnrollment");
+    }
+
+    @Test
     void classSessionCalendarQueryUsesDateRangeSortAndFetchesCourse() throws Exception {
         Query calendarQuery = ClassSessionRepository.class
                 .getMethod("findCalendarSessions", LocalDate.class, LocalDate.class, UUID.class, boolean.class)

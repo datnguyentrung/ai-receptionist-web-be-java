@@ -153,6 +153,7 @@ public class SessionAttendanceService {
             personCodePolicy.requireSystemEmployee(participantAssignment.getStaffPerson());
         }
         accessPolicy.requireCanCreate(
+                context,
                 session,
                 enrollment,
                 participantAssignment,
@@ -249,7 +250,7 @@ public class SessionAttendanceService {
     ) {
         SessionAttendance entity = repository.findEvaluationUpdateById(id)
                 .orElseThrow(() -> new ApiException(TrainingErrorCode.SESSION_ATTENDANCE_NOT_FOUND));
-        accessPolicy.requireCanUpdate(entity);
+        accessPolicy.requireCanUpdateEvaluation(entity);
         if (request.evaluationStatus() != null) {
             entity.setEvaluationStatus(request.evaluationStatus());
         }
@@ -257,7 +258,7 @@ public class SessionAttendanceService {
             entity.setNote(request.note());
         }
         SessionAttendance saved = repository.saveAndFlush(entity);
-        attendanceNotificationService.notifyEvaluationUpdated(saved);
+//        attendanceNotificationService.notifyEvaluationUpdated(saved);
         return new SessionAttendanceDTO.EvaluationUpdateResult(
                 saved.getSessionAttendanceId(),
                 saved.getClassSession().getClassSessionId(),

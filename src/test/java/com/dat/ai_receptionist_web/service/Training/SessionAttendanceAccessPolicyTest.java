@@ -6,14 +6,17 @@ import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.domain.Finance.CoursePurchase;
 import com.dat.ai_receptionist_web.domain.Training.ClassSession;
 import com.dat.ai_receptionist_web.domain.Training.CourseStaffAssignment;
+import com.dat.ai_receptionist_web.domain.Training.SessionAttendance;
 import com.dat.ai_receptionist_web.domain.Training.StudentEnrollment;
 import com.dat.ai_receptionist_web.domain.Training.StudentEnrollmentSchedule;
 import com.dat.ai_receptionist_web.enums.Training.AssignmentType;
 import com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus;
 import com.dat.ai_receptionist_web.enums.Training.SessionStatus;
 import com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus;
+import com.dat.ai_receptionist_web.enums.Security.PermissionDefinition;
 import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.code.TrainingErrorCode;
+import com.dat.ai_receptionist_web.service.Security.access.AccessContext;
 import com.dat.ai_receptionist_web.service.Training.access.SessionAttendanceAccessPolicy;
 import org.junit.jupiter.api.Test;
 
@@ -21,6 +24,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -120,6 +124,55 @@ class SessionAttendanceAccessPolicyTest {
                 enrollment,
                 null
         )).doesNotThrowAnyException();
+    }
+
+    @Test
+    void deletePermissionAllowsBackfillingClosedCompletedSession() {
+        UUID courseId = UUID.randomUUID();
+        UUID scheduleId = UUID.randomUUID();
+        StudentEnrollment enrollment = enrollment(courseId, scheduleId, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
+        ClassSession session = session(courseId, scheduleId, LocalDate.of(2026, 3, 15), true, null);
+        session.setStatus(SessionStatus.COMPLETED);
+        AccessContext context = new AccessContext(
+                UUID.randomUUID(), null, null, null, Set.of(),
+                Set.of(PermissionDefinition.SESSION_ATTENDANCE_DELETE.getCode())
+        );
+
+        assertThatCode(() -> policy.requireCanCreate(context, session, enrollment, null, null))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void deletePermissionDoesNotAllowBackfillingCancelledSession() {
+        UUID courseId = UUID.randomUUID();
+        UUID scheduleId = UUID.randomUUID();
+        StudentEnrollment enrollment = enrollment(courseId, scheduleId, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
+        ClassSession session = session(courseId, scheduleId, LocalDate.of(2026, 3, 15), true, null);
+        session.setStatus(SessionStatus.CANCELLED);
+        AccessContext context = new AccessContext(
+                UUID.randomUUID(), null, null, null, Set.of(),
+                Set.of(PermissionDefinition.SESSION_ATTENDANCE_DELETE.getCode())
+        );
+
+        assertThatThrownBy(() -> policy.requireCanCreate(context, session, enrollment, null, null))
+                .isInstanceOf(ApiException.class)
+                .extracting("errorCode")
+                .isEqualTo(TrainingErrorCode.CLASS_SESSION_IMMUTABLE);
+    }
+
+    @Test
+    void closedAttendanceStillAllowsEvaluationUpdate() {
+        UUID courseId = UUID.randomUUID();
+        UUID scheduleId = UUID.randomUUID();
+        StudentEnrollment enrollment = enrollment(courseId, scheduleId, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
+        ClassSession session = session(courseId, scheduleId, LocalDate.of(2026, 3, 15), true, null);
+        SessionAttendance attendance = SessionAttendance.builder()
+                .classSession(session)
+                .studentEnrollment(enrollment)
+                .build();
+
+        assertThatCode(() -> policy.requireCanUpdateEvaluation(attendance))
+                .doesNotThrowAnyException();
     }
 
     @Test

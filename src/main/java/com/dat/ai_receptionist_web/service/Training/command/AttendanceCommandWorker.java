@@ -94,6 +94,8 @@ public class AttendanceCommandWorker {
             Object result = sessionAttendanceCommandExecutor.execute(message.requestId(), message.type());
             store.markSucceeded(message.requestId(), result);
         } catch (ApiException exception) {
+            log.warn("Session attendance command rejected requestId={} type={} errorCode={}",
+                    message.requestId(), message.type(), exception.getErrorCode().code(), exception);
             store.markFailed(message.requestId(), new FaceCheckInResponse.ErrorSummary(
                     exception.getErrorCode().code(),
                     exception.getErrorCode().title(),

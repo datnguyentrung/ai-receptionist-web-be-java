@@ -153,6 +153,7 @@ public class ClassSessionLifecycleService {
                         .classSession(session)
                         .studentEnrollment(enrollment)
                         .attendanceStatus(AttendanceStatus.ABSENT)
+                        .person(enrollment.getStudentPerson())
                         .build())
                 .toList();
         List<SessionAttendance> missing = new ArrayList<>(missingEnrollmentAttendances.size());

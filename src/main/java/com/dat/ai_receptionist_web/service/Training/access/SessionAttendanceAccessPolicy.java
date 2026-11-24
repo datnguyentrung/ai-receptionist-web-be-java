@@ -6,6 +6,7 @@ import com.dat.ai_receptionist_web.domain.Training.SessionAttendance;
 import com.dat.ai_receptionist_web.domain.Training.StudentEnrollment;
 import com.dat.ai_receptionist_web.enums.Training.AttendanceStatus;
 import com.dat.ai_receptionist_web.enums.Training.AssignmentType;
+import com.dat.ai_receptionist_web.enums.Security.PermissionDefinition;
 import com.dat.ai_receptionist_web.enums.Security.RelationshipType;
 import com.dat.ai_receptionist_web.enums.Training.SessionStatus;
 import com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus;
@@ -39,10 +40,20 @@ public class SessionAttendanceAccessPolicy {
             StudentEnrollment enrollment,
             CourseStaffAssignment participantAssignment
     ) {
-        requireCanCreate(session, enrollment, participantAssignment, null);
+        requireCanCreate(null, session, enrollment, participantAssignment, null);
     }
 
     public void requireCanCreate(
+            ClassSession session,
+            StudentEnrollment enrollment,
+            CourseStaffAssignment participantAssignment,
+            AttendanceStatus attendanceStatus
+    ) {
+        requireCanCreate(null, session, enrollment, participantAssignment, attendanceStatus);
+    }
+
+    public void requireCanCreate(
+            AccessContext context,
             ClassSession session,
             StudentEnrollment enrollment,
             CourseStaffAssignment participantAssignment,
@@ -57,11 +68,16 @@ public class SessionAttendanceAccessPolicy {
         if (enrollment != null && enrollment.getStatus() != StudentEnrollmentStatus.ACTIVE) {
             throw new ApiException(TrainingErrorCode.ENROLLMENT_NOT_ACTIVE);
         }
-        if (session.getStatus() != SessionStatus.SCHEDULED && session.getStatus() != SessionStatus.ACTIVE) {
+        boolean canBackfillClosedSession = context != null
+                && context.hasPermission(PermissionDefinition.SESSION_ATTENDANCE_DELETE.getCode());
+        boolean sessionCanReceiveAttendance = session.getStatus() == SessionStatus.SCHEDULED
+                || session.getStatus() == SessionStatus.ACTIVE
+                || (canBackfillClosedSession && session.getStatus() == SessionStatus.COMPLETED);
+        if (!sessionCanReceiveAttendance) {
             throw new ApiException(TrainingErrorCode.CLASS_SESSION_IMMUTABLE);
         }
         requireLinkedParticipationEffective(session, enrollment, participantAssignment);
-        requireAttendanceEditable(session);
+        requireAttendanceEditable(session, canBackfillClosedSession);
     }
 
     public void requireCanUpdate(SessionAttendance attendance) {
@@ -70,7 +86,16 @@ public class SessionAttendanceAccessPolicy {
                 attendance.getStudentEnrollment(),
                 attendance.getCourseStaffAssignment()
         );
-        requireAttendanceEditable(attendance.getClassSession());
+        requireAttendanceEditable(attendance.getClassSession(), false);
+    }
+
+    public void requireCanUpdateEvaluation(SessionAttendance attendance) {
+        requireLinkedParticipationEffective(
+                attendance.getClassSession(),
+                attendance.getStudentEnrollment(),
+                attendance.getCourseStaffAssignment()
+        );
+        // Evaluation is recorded after the lesson, so closing attendance must not block it.
     }
 
     public void requireCanDelete(SessionAttendance attendance) {
@@ -121,9 +146,9 @@ public class SessionAttendanceAccessPolicy {
         }
     }
 
-    private void requireAttendanceEditable(ClassSession session) {
+    private void requireAttendanceEditable(ClassSession session, boolean canBackfillClosedSession) {
         LocalDateTime reopenedUntil = session.getAttendanceReopenedUntil();
-        if (session.isAttendanceClosed()
+        if (!canBackfillClosedSession && session.isAttendanceClosed()
                 && (reopenedUntil == null || !reopenedUntil.isAfter(LocalDateTime.now()))) {
             throw new ApiException(TrainingErrorCode.ATTENDANCE_CLOSED);
         }

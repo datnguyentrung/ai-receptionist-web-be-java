@@ -32,7 +32,9 @@ public class BranchService{
      */
     @Transactional(readOnly = true)
     public PageResponse<BranchDTO.SimpleResponse> list(Pageable pageable) {
-        return PageResponse.of(branchRepository.findAll(pageable), branchMapper::toSimpleResponse);
+        return PageResponse.of(
+                branchRepository.findAllByTenantId(com.dat.ai_receptionist_web.context.TenantContext.requireTenantId(), pageable),
+                branchMapper::toSimpleResponse);
     }
 
     /**

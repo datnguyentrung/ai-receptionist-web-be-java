@@ -82,7 +82,9 @@ public class SystemRolePermissionSynchronizer implements ApplicationRunner {
                 ));
 
         RolePermissionService.BulkSyncResult result =
-                rolePermissionService.replaceAll(desiredByRole);
+                com.dat.ai_receptionist_web.context.TenantContext.runWithTenant(
+                        com.dat.ai_receptionist_web.context.TenantContext.DEFAULT_TENANT_ID,
+                        () -> rolePermissionService.replaceAllInternal(desiredByRole));
 
         log.info(
                 "System role-permission sync completed: roles={}, added={}, removed={}",
@@ -103,6 +105,8 @@ public class SystemRolePermissionSynchronizer implements ApplicationRunner {
         Set<String> permissionCodes = allPermissionCodes();
         if (role == SystemRoleDefinition.SYSTEM_ADMIN) {
             permissionCodes.removeAll(getSystemAdminExcludedPermissions());
+        } else {
+            permissionCodes.removeAll(PermissionDefinition.TENANT_ADMIN_CODES);
         }
         return Collections.unmodifiableSet(permissionCodes);
     }

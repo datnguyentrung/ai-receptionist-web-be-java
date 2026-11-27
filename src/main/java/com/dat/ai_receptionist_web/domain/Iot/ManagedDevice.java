@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Iot;
 
-import jakarta.persistence.*;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
@@ -17,7 +18,7 @@ import java.util.UUID;
 @Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor
 @Entity @EntityListeners(AuditingEntityListener.class)
 @Table(name = "managed_device", schema = "iot")
-public class ManagedDevice {
+public class ManagedDevice extends TenantScopedEntity {
     /** Mã định danh duy nhất của thiết bị. */
     @Id @GeneratedValue @UuidGenerator @Column(name="device_id")
     private UUID deviceId;

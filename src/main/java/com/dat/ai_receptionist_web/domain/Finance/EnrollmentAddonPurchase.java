@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Finance;
 
-import com.dat.ai_receptionist_web.domain.Catalog.TrainingPlanAddon;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.domain.Catalog.TrainingPlanAddon;
 import com.dat.ai_receptionist_web.domain.Training.StudentEnrollment;
 import jakarta.persistence.*;
 import lombok.*;
@@ -24,7 +25,7 @@ import java.util.UUID;
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "enrollment_addon_purchase", schema = "finance", uniqueConstraints =
 @UniqueConstraint(name = "uk_enrollment_addon_purchase_transaction", columnNames = "wallet_transaction_id"))
-public class EnrollmentAddonPurchase {
+public class EnrollmentAddonPurchase extends TenantScopedEntity {
     /** Mã định danh duy nhất của giao dịch mua gói bổ sung. */
     @Id
     @GeneratedValue

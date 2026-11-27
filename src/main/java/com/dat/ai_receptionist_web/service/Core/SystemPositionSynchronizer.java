@@ -27,7 +27,9 @@ public class SystemPositionSynchronizer implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        boolean created = syncStudentPosition();
+        boolean created = com.dat.ai_receptionist_web.context.TenantContext.runWithTenant(
+                com.dat.ai_receptionist_web.context.TenantContext.DEFAULT_TENANT_ID,
+                this::syncStudentPosition);
         log.info("System position sync completed: studentCreated={}", created);
     }
 
@@ -35,6 +37,7 @@ public class SystemPositionSynchronizer implements ApplicationRunner {
         boolean created = positionRepository.findByCodeIgnoreCase(STUDENT_CODE).isEmpty();
         positionRepository.upsertSystemPosition(
                 STUDENT_POSITION_ID,
+                com.dat.ai_receptionist_web.context.TenantContext.requireTenantId(),
                 STUDENT_CODE,
                 STUDENT_NAME,
                 STUDENT_DESCRIPTION);

@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Catalog;
 
-import com.dat.ai_receptionist_web.enums.Catalog.AddonStatus;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.enums.Catalog.AddonStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
@@ -14,7 +15,7 @@ import java.util.UUID;
 @Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor
 @Entity
 @Table(name = "training_plan_addon", schema = "catalog")
-public class TrainingPlanAddon {
+public class TrainingPlanAddon extends TenantScopedEntity {
     /** Mã định danh duy nhất của gói bổ sung. */
     @Id @GeneratedValue @UuidGenerator
     @Column(name = "training_plan_addon_id", nullable = false, updatable = false)

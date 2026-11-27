@@ -1,5 +1,6 @@
 package com.dat.ai_receptionist_web.service.Security;
 
+import com.dat.ai_receptionist_web.context.TenantContext;
 import com.dat.ai_receptionist_web.domain.Security.Role;
 import com.dat.ai_receptionist_web.enums.Security.SystemRoleDefinition;
 import com.dat.ai_receptionist_web.repository.Security.RoleRepository;
@@ -33,9 +34,10 @@ public class SystemRoleSynchronizer implements ApplicationRunner {
     @Override
     @Transactional
     public void run(@NonNull ApplicationArguments args) {
-
+        java.util.UUID defaultTenantId = TenantContext.DEFAULT_TENANT_ID;
         Map<String, Role> existingRoles =
-                roleRepository.findAll().stream()
+                roleRepository.findAllByTenantId(defaultTenantId, org.springframework.data.domain.Pageable.unpaged())
+                        .stream()
                         .collect(Collectors.toMap(
                                 Role::getCode,
                                 Function.identity()
@@ -48,15 +50,16 @@ public class SystemRoleSynchronizer implements ApplicationRunner {
 
             Role role = existingRoles.get(definition.getCode());
 
-            // Role chÆ°a tá»“n táº¡i -> táº¡o má»›i
+            // Role chưa tồn tại -> tạo mới
             if (role == null) {
                 roleRepository.save(
-                        new Role(
-                                definition.getCode(),
-                                definition.getName(),
-                                definition.getDescription(),
-                                0L
-                        )
+                        Role.builder()
+                                .tenantId(defaultTenantId)
+                                .code(definition.getCode())
+                                .name(definition.getName())
+                                .description(definition.getDescription())
+                                .permissionVersion(0L)
+                                .build()
                 );
 
                 inserted++;

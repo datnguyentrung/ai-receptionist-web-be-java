@@ -135,6 +135,12 @@ rate-limit:
   # Enable only when the edge proxy overwrites X-Forwarded-For from untrusted clients.
   trust-forwarded-headers: ${RATE_LIMIT_TRUST_FORWARDED_HEADERS:false}
   policies:
+    - name: public-tenant-chat
+      path: /api/v1/public/tenants/*/ai/chat/stream
+      method: POST
+      limit: 20
+      window: 5m
+      subject: IP
     - name: password-reset-options
       path: /api/v1/auth/password-reset/options
       method: POST

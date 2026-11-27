@@ -29,6 +29,12 @@ public class AttendanceCommandWorker {
             errorHandler = "rabbitMQErrorHandler"
     )
     public void handleFaceCheckIn(FaceCheckInCommandMessage message) {
+        com.dat.ai_receptionist_web.context.TenantContext.runWithTenant(
+                java.util.Objects.requireNonNull(message.tenantId(), "Missing tenantId in FaceCheckInCommandMessage"),
+                () -> processFaceCheckIn(message));
+    }
+
+    private void processFaceCheckIn(FaceCheckInCommandMessage message) {
         log.info("Processing face check-in command requestId={} personId={}",
                 message.requestId(), message.personId());
         if (!store.markProcessing(message.requestId())) {
@@ -84,6 +90,12 @@ public class AttendanceCommandWorker {
             errorHandler = "rabbitMQErrorHandler"
     )
     public void handleSessionAttendance(SessionAttendanceCommandMessage message) {
+        com.dat.ai_receptionist_web.context.TenantContext.runWithTenant(
+                java.util.Objects.requireNonNull(message.tenantId(), "Missing tenantId in SessionAttendanceCommandMessage"),
+                () -> processSessionAttendance(message));
+    }
+
+    private void processSessionAttendance(SessionAttendanceCommandMessage message) {
         log.info("Processing session attendance command requestId={} type={}",
                 message.requestId(), message.type());
         if (!store.markProcessing(message.requestId())) {

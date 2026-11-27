@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Finance;
 
-import com.dat.ai_receptionist_web.domain.Core.Person;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.enums.Finance.WalletStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -25,7 +26,7 @@ import java.util.UUID;
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "wallet", schema = "finance", uniqueConstraints =
         @UniqueConstraint(name = "uk_wallet_person", columnNames = "person_id"))
-public class Wallet {
+public class Wallet extends TenantScopedEntity {
     /** Mã định danh duy nhất của ví. */
     @Id
     @GeneratedValue

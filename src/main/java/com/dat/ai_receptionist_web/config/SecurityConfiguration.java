@@ -82,6 +82,7 @@ public class SecurityConfiguration {
                                 "/api/v1/auth/logout", "/api/v1/auth/mobile/login",
                                 "/api/v1/auth/mobile/refresh", "/api/v1/auth/mobile/logout",
                                 "/api/v1/auth/password-reset/**").permitAll()
+                        .requestMatchers("/api/v1/public/tenants/*/ai/chat/stream").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))

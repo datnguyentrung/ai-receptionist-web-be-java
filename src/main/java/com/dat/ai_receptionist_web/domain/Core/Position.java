@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Core;
 
-import jakarta.persistence.*;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
 import org.springframework.data.annotation.CreatedDate;
@@ -22,7 +23,7 @@ import java.util.UUID;
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "position", schema = "core", uniqueConstraints =
         @UniqueConstraint(name = "uk_position_code", columnNames = "code"))
-public class Position {
+public class Position extends TenantScopedEntity {
     /** Mã định danh duy nhất của chức vụ. */
     @Id
     @GeneratedValue

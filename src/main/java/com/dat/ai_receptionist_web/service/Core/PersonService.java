@@ -90,10 +90,11 @@ public class PersonService {
      */
     @Transactional(readOnly = true)
     public Page<PersonDTO.Response> search(String query, Pageable pageable) {
+        UUID tenantId = com.dat.ai_receptionist_web.context.TenantContext.requireTenantId();
         Page<Person> people = query == null || query.isBlank()
-                ? personRepository.findAll(pageable)
-                : personRepository.findByFullNameContainingIgnoreCaseOrPersonCodeContainingIgnoreCase(
-                        query.trim(), query.trim(), pageable);
+                ? personRepository.findAllByTenantId(tenantId, pageable)
+                : personRepository.findByTenantIdAndFullNameContainingIgnoreCaseOrTenantIdAndPersonCodeContainingIgnoreCase(
+                        tenantId, query.trim(), tenantId, query.trim(), pageable);
         return people.map(personMapper::toResponse);
     }
 

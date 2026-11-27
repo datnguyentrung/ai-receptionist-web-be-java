@@ -62,6 +62,7 @@ public class FaceCheckInService {
                 .orElseThrow(() -> new ApiException(CoreErrorCode.PERSON_NOT_FOUND));
         UUID requestId = UUID.randomUUID();
         attendanceCommandService.enqueueFaceCheckIn(new FaceCheckInCommandMessage(
+                com.dat.ai_receptionist_web.context.TenantContext.requireTenantId(),
                 requestId,
                 person.getPersonId(),
                 identifiedPerson.confidence(),

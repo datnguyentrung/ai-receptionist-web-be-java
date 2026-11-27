@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Training;
 
-import com.dat.ai_receptionist_web.domain.Core.Person;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.domain.Finance.CoursePurchase;
 import com.dat.ai_receptionist_web.enums.Training.StudentEnrollmentStatus;
 import jakarta.persistence.*;
@@ -33,7 +34,7 @@ import java.util.Set;
                         columnList = "student_person_id,start_date,end_date"),
                 @Index(name = "idx_enrollment_status_period", columnList = "status,start_date,end_date")
         })
-public class StudentEnrollment {
+public class StudentEnrollment extends TenantScopedEntity {
     /** Mã định danh duy nhất của lượt đăng ký học. */
     @Id
     @GeneratedValue

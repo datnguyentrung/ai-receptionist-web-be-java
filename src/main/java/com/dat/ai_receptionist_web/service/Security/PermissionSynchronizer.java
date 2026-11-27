@@ -101,10 +101,8 @@ public class PermissionSynchronizer implements ApplicationRunner {
         int deleted = 0;
 
         if (!obsoleteCodes.isEmpty()) {
-            Set<String> affectedRoleCodes =
-                    rolePermissionRepository.findRoleCodesByPermissionCodeIn(obsoleteCodes);
+            rolePermissionRepository.incrementAffectedRoleVersionsByPermissionCodeIn(obsoleteCodes);
             rolePermissionRepository.deleteByPermissionCodeIn(obsoleteCodes);
-            affectedRoleCodes.forEach(roleRepository::incrementPermissionVersion);
             deleted = permissionRepository.deleteByCodes(obsoleteCodes);
         }
 

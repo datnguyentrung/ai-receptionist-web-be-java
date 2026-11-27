@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Skill;
 
-import com.dat.ai_receptionist_web.enums.Core.ScheduleLevel;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.enums.Core.ScheduleLevel;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -14,7 +15,7 @@ import lombok.*;
 @AllArgsConstructor
 @Entity
 @Table(name = "fitness", schema = "skill")
-public class Fitness {
+public class Fitness extends TenantScopedEntity {
     /** Mã định danh duy nhất của bài tập thể lực. */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Finance;
 
-import com.dat.ai_receptionist_web.domain.Security.User;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.domain.Security.User;
 import com.dat.ai_receptionist_web.enums.Finance.*;
 import jakarta.persistence.*;
 import lombok.*;
@@ -26,7 +27,7 @@ import java.util.UUID;
 @Table(name = "wallet_transaction", schema = "finance", uniqueConstraints =
         @UniqueConstraint(name = "uk_wallet_tx_type_reference", columnNames = {"type", "external_reference"}),
         indexes = @Index(name = "idx_wallet_tx_wallet_created", columnList = "wallet_id,created_at DESC"))
-public class WalletTransaction {
+public class WalletTransaction extends TenantScopedEntity {
     /** Mã định danh duy nhất của giao dịch ví. */
     @Id
     @GeneratedValue

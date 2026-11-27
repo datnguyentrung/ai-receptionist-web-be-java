@@ -44,4 +44,9 @@ public final class LoginReq {
     public static class SwitchContextReq {
         @NotNull private UUID userPersonId;
     }
+
+    @Data
+    public static class SelectTenantReq {
+        @NotNull private UUID tenantId;
+    }
 }

@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Training;
 
-import com.dat.ai_receptionist_web.domain.Catalog.CourseSchedule;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.domain.Catalog.CourseSchedule;
 import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.enums.Training.AssignmentType;
 import com.dat.ai_receptionist_web.enums.Training.CourseStaffAssignmentStatus;
@@ -35,7 +36,7 @@ import java.util.UUID;
                 @Index(name = "idx_course_staff_assignment_course_type_period",
                         columnList = "course_schedule_id,assignment_type,start_date,end_date,assignment_status")
         })
-public class CourseStaffAssignment {
+public class CourseStaffAssignment extends TenantScopedEntity {
     /** Mã định danh duy nhất của phân công nhân sự. */
     @Id
     @GeneratedValue

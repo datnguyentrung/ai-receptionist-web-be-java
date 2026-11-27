@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Crm;
 
-import com.dat.ai_receptionist_web.domain.Core.Branch;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.domain.Core.Branch;
 import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.domain.Training.ClassSession;
 import com.dat.ai_receptionist_web.enums.Crm.TrialRegistrationStatus;
@@ -30,7 +31,7 @@ import java.util.UUID;
         @Index(name = "idx_crm_trial_registration_class_session", columnList = "class_session_id"),
         @Index(name = "idx_crm_trial_registration_coach_person", columnList = "coach_person_id")
 })
-public class TrialRegistration {
+public class TrialRegistration extends TenantScopedEntity {
     /**
      * Mã định danh duy nhất của lượt đăng ký học thử.
      */

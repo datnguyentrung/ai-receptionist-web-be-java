@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Notification;
 
-import com.dat.ai_receptionist_web.enums.Training.NotificationType;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.enums.Training.NotificationType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
@@ -21,7 +22,7 @@ import java.util.UUID;
 @Entity
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "notification", schema = "notification")
-public class Notification {
+public class Notification extends TenantScopedEntity {
     /** Mã định danh duy nhất của thông báo. */
     @Id
     @GeneratedValue

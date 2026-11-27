@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Finance;
 
-import com.dat.ai_receptionist_web.domain.Catalog.TrainingPlan;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.domain.Catalog.TrainingPlan;
 import com.dat.ai_receptionist_web.domain.Core.Person;
 import jakarta.persistence.*;
 import lombok.*;
@@ -19,7 +20,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "course_purchase", schema = "finance", uniqueConstraints =
         @UniqueConstraint(name = "uk_course_purchase_debit_tx", columnNames = "debit_transaction_id"))
-public class CoursePurchase {
+public class CoursePurchase extends TenantScopedEntity {
     /** Mã định danh duy nhất của giao dịch mua gói đào tạo. */
     @Id
     @GeneratedValue

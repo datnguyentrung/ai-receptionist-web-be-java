@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Iot;
 
-import jakarta.persistence.*;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
@@ -13,7 +14,7 @@ import java.util.UUID;
  */
 @Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor
 @Entity @Table(name="device_event", schema="iot")
-public class DeviceEvent {
+public class DeviceEvent extends TenantScopedEntity {
     /** Mã định danh duy nhất của sự kiện thiết bị. */
     @Id @GeneratedValue @UuidGenerator @Column(name="device_event_id")
     private UUID deviceEventId;

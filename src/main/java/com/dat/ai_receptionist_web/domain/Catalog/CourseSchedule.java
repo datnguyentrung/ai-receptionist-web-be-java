@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Catalog;
 
-import com.dat.ai_receptionist_web.enums.Core.ScheduleStatus;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.enums.Core.ScheduleStatus;
 import com.dat.ai_receptionist_web.enums.Catalog.SessionType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -21,7 +22,7 @@ import java.util.UUID;
         @Index(name = "idx_course_schedule_course_period", columnList = "course_id,start_date,end_date,status"),
         @Index(name = "idx_course_schedule_class_schedule", columnList = "class_schedule_id")
 })
-public class CourseSchedule {
+public class CourseSchedule extends TenantScopedEntity {
     /** Mã định danh duy nhất của lịch khóa học. */
     @Id @GeneratedValue @UuidGenerator
     @Column(name = "course_schedule_id", nullable = false, updatable = false)

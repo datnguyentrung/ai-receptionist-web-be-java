@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Core;
 
-import com.dat.ai_receptionist_web.enums.Core.Belt;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.enums.Core.Belt;
 import com.dat.ai_receptionist_web.enums.Core.PersonStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
@@ -31,7 +32,7 @@ import java.util.UUID;
         @UniqueConstraint(name = "uk_person_national_code", columnNames = "national_code"),
         @UniqueConstraint(name = "uk_person_code", columnNames = "person_code")
 }, indexes = @Index(name = "idx_person_position", columnList = "position_id"))
-public class Person {
+public class Person extends TenantScopedEntity {
     /** Mã định danh duy nhất của cá nhân. */
     @Id
     @GeneratedValue

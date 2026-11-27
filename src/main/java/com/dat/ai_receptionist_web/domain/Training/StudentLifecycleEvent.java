@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Training;
 
-import com.dat.ai_receptionist_web.domain.Core.Person;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.domain.Security.User;
 import com.dat.ai_receptionist_web.enums.Training.EventStatus;
 import com.dat.ai_receptionist_web.enums.Training.EventType;
@@ -30,7 +31,7 @@ import org.hibernate.annotations.UuidGenerator;
                 )
         }
 )
-public class StudentLifecycleEvent {
+public class StudentLifecycleEvent extends TenantScopedEntity {
 
     @Id
     @UuidGenerator

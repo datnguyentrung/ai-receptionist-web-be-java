@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Catalog;
 
-import com.dat.ai_receptionist_web.enums.Catalog.TrainingPlanStatus;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.enums.Catalog.TrainingPlanStatus;
 import com.dat.ai_receptionist_web.enums.Core.ScheduleLevel;
 import jakarta.persistence.*;
 import lombok.*;
@@ -20,7 +21,7 @@ import java.util.UUID;
 @Entity
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "training_plan", schema = "catalog")
-public class TrainingPlan {
+public class TrainingPlan extends TenantScopedEntity {
     /** Mã định danh duy nhất của gói đào tạo. */
     @Id @GeneratedValue @UuidGenerator
     @Column(name = "training_plan_id", nullable = false, updatable = false)

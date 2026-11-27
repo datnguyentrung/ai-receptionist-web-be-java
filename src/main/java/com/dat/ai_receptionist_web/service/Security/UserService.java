@@ -118,13 +118,14 @@ public class UserService {
     }
 
     private UserDTO.Response toResponse(User user) {
+        UUID tenantId = com.dat.ai_receptionist_web.context.TenantContext.requireTenantId();
         List<PersonDTO.SimpleResponse> persons = userPersonRepository
-                .findAllByUser_UserIdAndActiveTrue(user.getUserId())
+                .findAllByTenantIdAndUser_UserIdAndActiveTrue(tenantId, user.getUserId())
                 .stream()
                 .map(userPerson -> personMapper.toSimpleResponse(userPerson.getPerson()))
                 .toList();
         List<RoleDTO.BriefResponse> roles = userRoleRepository
-                .findAllDetailedByUserId(user.getUserId())
+                .findAllDetailedByTenantIdAndUserId(tenantId, user.getUserId())
                 .stream()
                 .map(userRole -> roleMapper.toBriefResponse(userRole.getRole()))
                 .toList();

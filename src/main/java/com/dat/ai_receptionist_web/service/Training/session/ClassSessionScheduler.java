@@ -1,5 +1,6 @@
 package com.dat.ai_receptionist_web.service.Training.session;
 
+import com.dat.ai_receptionist_web.service.Core.TenantJobRunner;
 import com.dat.ai_receptionist_web.service.Training.scheduling.CourseSessionPlanningService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
@@ -9,41 +10,47 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Adapter @Scheduled không chứa nghiệp vụ: planning trước, sau đó activation,
- * closure rồi completion.
+ * Adapter @Scheduled không chứa nghiệp vụ: chạy độc lập theo từng tenant đang ACTIVE.
  */
 @Component
 @RequiredArgsConstructor
 @Order(10)
 public class ClassSessionScheduler implements ApplicationRunner {
+    private final TenantJobRunner tenantJobRunner;
     private final CourseSessionPlanningService planningService;
     private final ClassSessionLifecycleService lifecycleService;
 
     @Override
     public void run(ApplicationArguments args) {
-        planningService.maintainGenerationHorizon();
-        lifecycleService.activateSessions();
-        lifecycleService.closeDueSessions();
-        lifecycleService.completeSessions();
+        tenantJobRunner.runForAllActiveTenants("class-session-startup", tenantId -> {
+            planningService.maintainGenerationHorizon();
+            lifecycleService.activateSessions();
+            lifecycleService.closeDueSessions();
+            lifecycleService.completeSessions();
+        });
     }
 
     @Scheduled(cron = "0 0 2 * * *", zone = "Asia/Ho_Chi_Minh")
     public void maintainGenerationHorizon() {
-        planningService.maintainGenerationHorizon();
+        tenantJobRunner.runForAllActiveTenants("maintain-generation-horizon",
+                tenantId -> planningService.maintainGenerationHorizon());
     }
 
     @Scheduled(cron = "0 */5 * * * *", zone = "Asia/Ho_Chi_Minh")
     public void activateSessions() {
-        lifecycleService.activateSessions();
+        tenantJobRunner.runForAllActiveTenants("activate-sessions",
+                tenantId -> lifecycleService.activateSessions());
     }
 
     @Scheduled(cron = "40 */10 * * * *", zone = "Asia/Ho_Chi_Minh")
     public void closeAttendance() {
-        lifecycleService.closeDueSessions();
+        tenantJobRunner.runForAllActiveTenants("close-due-sessions",
+                tenantId -> lifecycleService.closeDueSessions());
     }
 
     @Scheduled(cron = "20 */10 * * * *", zone = "Asia/Ho_Chi_Minh")
     public void completeSessions() {
-        lifecycleService.completeSessions();
+        tenantJobRunner.runForAllActiveTenants("complete-sessions",
+                tenantId -> lifecycleService.completeSessions());
     }
 }

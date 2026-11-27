@@ -7,7 +7,7 @@ import java.io.Serializable;
 import java.util.UUID;
 
 /**
- * Liên kết giữa một tài khoản người dùng và một vai trò được gán.
+ * Liên kết giữa một tài khoản người dùng và một vai trò được gán trong phạm vi một Tenant.
  */
 @Getter
 @Setter
@@ -15,9 +15,9 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @Table(name = "user_role", schema = "security",
-        indexes = @Index(name = "idx_user_role_role", columnList = "role_id"))
+        indexes = @Index(name = "idx_user_role_role", columnList = "tenant_id,role_id"))
 public class UserRole {
-    /** Khóa tổng hợp gồm mã tài khoản và mã vai trò. */
+    /** Khóa tổng hợp gồm tenantId, mã tài khoản và mã vai trò. */
     @EmbeddedId
     private Key id;
 
@@ -27,15 +27,19 @@ public class UserRole {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    /** Vai trò được gán cho tài khoản. */
-    @MapsId("roleId")
+    /** Vai trò được gán cho tài khoản (cùng tenant). */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "role_id", nullable = false)
+    @JoinColumns({
+            @JoinColumn(name = "tenant_id", referencedColumnName = "tenant_id", insertable = false, updatable = false),
+            @JoinColumn(name = "role_id", referencedColumnName = "role_id", insertable = false, updatable = false)
+    })
     private Role role;
 
-    /**
-     * Khóa tổng hợp của liên kết tài khoản và vai trò.
-     */
+    public UserRole(Key id, User user) {
+        this.id = id;
+        this.user = user;
+    }
+
     @Getter
     @Setter
     @NoArgsConstructor
@@ -43,12 +47,13 @@ public class UserRole {
     @EqualsAndHashCode
     @Embeddable
     public static class Key implements Serializable {
-        /** Mã định danh tài khoản trong khóa tổng hợp. */
-        @Column(name = "user_id")
+        @Column(name = "tenant_id", nullable = false)
+        private UUID tenantId;
+
+        @Column(name = "user_id", nullable = false)
         private UUID userId;
 
-        /** Mã vai trò trong khóa tổng hợp. */
-        @Column(name = "role_id", length = 50)
+        @Column(name = "role_id", length = 50, nullable = false)
         private String roleId;
     }
 }

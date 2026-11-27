@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Training;
 
-import com.dat.ai_receptionist_web.domain.Core.Person;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.domain.Security.User;
 import com.dat.ai_receptionist_web.enums.Core.Belt;
 
@@ -55,7 +56,7 @@ import java.util.UUID;
                 )
                 """
 )
-public class BeltExam {
+public class BeltExam extends TenantScopedEntity {
 
     /** Mã định danh duy nhất của kỳ thi đai. */
     @Id

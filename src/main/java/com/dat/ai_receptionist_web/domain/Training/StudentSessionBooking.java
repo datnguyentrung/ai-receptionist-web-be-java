@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Training;
 
-import com.dat.ai_receptionist_web.domain.Catalog.TrainingPlanRequirement;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.domain.Catalog.TrainingPlanRequirement;
 import com.dat.ai_receptionist_web.domain.Finance.EnrollmentAddonPurchase;
 import com.dat.ai_receptionist_web.enums.Training.BookingSource;
 import com.dat.ai_receptionist_web.enums.Training.BookingStatus;
@@ -25,7 +26,7 @@ import java.util.UUID;
         @Index(name = "idx_student_session_booking_session_status", columnList = "class_session_id,status"),
         @Index(name = "idx_student_session_booking_enrollment_status", columnList = "student_enrollment_id,status")
 })
-public class StudentSessionBooking {
+public class StudentSessionBooking extends TenantScopedEntity {
     /** Mã định danh duy nhất của lượt đăng ký buổi học. */
     @Id
     @GeneratedValue

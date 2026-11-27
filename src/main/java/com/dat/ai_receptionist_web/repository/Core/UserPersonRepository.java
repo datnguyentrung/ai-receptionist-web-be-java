@@ -42,6 +42,9 @@ public interface UserPersonRepository extends JpaRepository<UserPerson, UUID> {
     @EntityGraph(attributePaths = "person")
     List<UserPerson> findAllByUser_UserIdAndActiveTrue(UUID userId);
 
+    @EntityGraph(attributePaths = "person")
+    List<UserPerson> findAllByTenantIdAndUser_UserIdAndActiveTrue(UUID tenantId, UUID userId);
+
     @EntityGraph(attributePaths = {"person", "person.position"})
     List<UserPerson> findAllDetailedByUser_UserIdAndActiveTrue(UUID userId);
 
@@ -56,6 +59,10 @@ public interface UserPersonRepository extends JpaRepository<UserPerson, UUID> {
 
     @EntityGraph(attributePaths = "person")
     Optional<UserPerson> findByUserPersonIdAndUser_UserIdAndActiveTrue(UUID userPersonId, UUID userId);
+
+    @EntityGraph(attributePaths = "person")
+    Optional<UserPerson> findByUserPersonIdAndTenantIdAndUser_UserIdAndActiveTrue(
+            UUID userPersonId, UUID tenantId, UUID userId);
 
     Optional<UserPerson> findByUser_UserIdAndPerson_PersonIdAndRelationshipType(
             UUID userId,

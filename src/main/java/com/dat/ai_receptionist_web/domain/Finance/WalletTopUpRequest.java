@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Finance;
 
-import com.dat.ai_receptionist_web.domain.Security.User;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.domain.Security.User;
 import com.dat.ai_receptionist_web.enums.Finance.WalletTopUpRequestMode;
 import com.dat.ai_receptionist_web.enums.Finance.WalletTopUpRequestStatus;
 import jakarta.persistence.*;
@@ -25,7 +26,7 @@ import java.util.UUID;
 @Entity
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "wallet_top_up_request", schema = "finance")
-public class WalletTopUpRequest {
+public class WalletTopUpRequest extends TenantScopedEntity {
     /** Mã định danh duy nhất của yêu cầu nạp tiền. */
     @Id
     @GeneratedValue

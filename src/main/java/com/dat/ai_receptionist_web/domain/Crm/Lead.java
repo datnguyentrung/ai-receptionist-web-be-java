@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Crm;
 
-import com.dat.ai_receptionist_web.domain.Core.Branch;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.domain.Core.Branch;
 import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.domain.Security.User;
 import com.dat.ai_receptionist_web.enums.Crm.LeadStatus;
@@ -32,7 +33,7 @@ import java.util.UUID;
                 columnList = "assigned_user_id,status,next_follow_up_at"),
         @Index(name = "idx_crm_lead_converted_person", columnList = "converted_person_id")
 })
-public class Lead {
+public class Lead extends TenantScopedEntity {
     /**
      * Mã định danh duy nhất của khách hàng tiềm năng.
      */

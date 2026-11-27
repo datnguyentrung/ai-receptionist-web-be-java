@@ -140,6 +140,7 @@ public class FaceCheckInScanService {
             advance(scan, FaceCheckInStage.MATCH_FOUND, null, null);
             LocalDateTime requestedAt = LocalDateTime.ofInstant(scan.getCreatedAt(), ZoneId.systemDefault());
             attendanceCommandService.enqueueFaceCheckIn(new FaceCheckInCommandMessage(
+                    com.dat.ai_receptionist_web.context.TenantContext.requireTenantId(),
                     requestId,
                     identified.personId(),
                     identified.confidence(),

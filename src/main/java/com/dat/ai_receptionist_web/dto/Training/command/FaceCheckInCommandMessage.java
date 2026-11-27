@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record FaceCheckInCommandMessage(
+        UUID tenantId,
         UUID requestId,
         UUID personId,
         float confidence,

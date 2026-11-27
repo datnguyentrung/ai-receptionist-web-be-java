@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Catalog;
 
-import com.dat.ai_receptionist_web.enums.Catalog.SessionType;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.enums.Catalog.SessionType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
@@ -14,7 +15,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "training_plan_requirement", schema = "catalog", uniqueConstraints =
         @UniqueConstraint(name = "uk_training_plan_requirement", columnNames = {"training_plan_id", "session_type"}))
-public class TrainingPlanRequirement {
+public class TrainingPlanRequirement extends TenantScopedEntity {
     /** Mã định danh duy nhất của yêu cầu gói đào tạo. */
     @Id @GeneratedValue @UuidGenerator
     @Column(name = "training_plan_requirement_id", nullable = false, updatable = false)

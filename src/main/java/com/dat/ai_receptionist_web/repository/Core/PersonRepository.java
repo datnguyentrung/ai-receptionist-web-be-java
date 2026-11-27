@@ -10,6 +10,9 @@ import org.springframework.data.repository.query.Param;
 import java.util.*;
 
 public interface PersonRepository extends JpaRepository<Person, UUID>, JpaSpecificationExecutor<Person> {
+    Page<Person> findAllByTenantId(UUID tenantId, Pageable pageable);
+    Page<Person> findByTenantIdAndFullNameContainingIgnoreCaseOrTenantIdAndPersonCodeContainingIgnoreCase(
+            UUID tenantId1, String fullName, UUID tenantId2, String personCode, Pageable pageable);
     boolean existsByNationalCode(String nationalCode);
     boolean existsByPersonCode(String personCode);
     Optional<Person> findByPersonCodeIgnoreCase(String personCode);

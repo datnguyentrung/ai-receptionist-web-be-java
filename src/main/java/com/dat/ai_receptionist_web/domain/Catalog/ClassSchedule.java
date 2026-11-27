@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Catalog;
 
-import com.dat.ai_receptionist_web.domain.Core.Branch;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.domain.Core.Branch;
 import com.dat.ai_receptionist_web.enums.Core.*;
 import jakarta.persistence.*;
 import lombok.*;
@@ -19,7 +20,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @Table(name = "class_schedule", schema = "catalog")
-public class ClassSchedule {
+public class ClassSchedule extends TenantScopedEntity {
     /** Mã định danh duy nhất của khung giờ học. */
     @Id
     @GeneratedValue

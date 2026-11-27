@@ -1,10 +1,14 @@
 package com.dat.ai_receptionist_web.domain.Security;
 
+import com.dat.ai_receptionist_web.context.TenantContext;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.io.Serializable;
+import java.util.UUID;
+
 /**
- * Vai trò dùng để gom nhóm các quyền được gán cho người dùng.
+ * Vai trò dùng để gom nhóm các quyền được gán cho người dùng trong phạm vi một Tenant.
  */
 @Getter
 @Setter
@@ -12,9 +16,14 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@IdClass(Role.Key.class)
 @Table(name = "role", schema = "security")
 public class Role {
-    /** Mã duy nhất và cũng là khóa chính của vai trò. */
+    @Id
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+
+    /** Mã duy nhất trong tenant và là thành phần khóa chính của vai trò. */
     @Id
     @Column(name = "role_id", nullable = false, length = 50)
     private String code;
@@ -31,4 +40,21 @@ public class Role {
     @Column(name = "permission_version", nullable = false)
     @Builder.Default
     private long permissionVersion = 1;
+
+    @PrePersist
+    protected void assignTenantOnPersist() {
+        if (this.tenantId == null) {
+            this.tenantId = TenantContext.requireTenantId();
+        }
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @EqualsAndHashCode
+    public static class Key implements Serializable {
+        private UUID tenantId;
+        private String code;
+    }
 }

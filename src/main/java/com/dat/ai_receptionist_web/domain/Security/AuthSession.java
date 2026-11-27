@@ -57,6 +57,10 @@ public class AuthSession {
     @Column(name = "fcm_token", length = 500)
     private String fcmToken;
 
+    /** Mã định danh tenant đang chọn trong phiên (null nếu đang ở trạng thái chờ chọn tenant). */
+    @Column(name = "tenant_id")
+    private UUID tenantId;
+
     /** Hồ sơ cá nhân đang được tài khoản lựa chọn trong phiên đăng nhập. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "active_user_person_id")

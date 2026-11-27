@@ -1,5 +1,6 @@
 package com.dat.ai_receptionist_web.service.Security;
 
+import com.dat.ai_receptionist_web.context.TenantContext;
 import com.dat.ai_receptionist_web.domain.Security.Permission;
 import com.dat.ai_receptionist_web.domain.Security.Role;
 import com.dat.ai_receptionist_web.domain.Security.RolePermission;
@@ -28,66 +29,65 @@ public class RolePermissionService {
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
     private final RolePermissionMapper rolePermissionMapper;
+    private final PlatformOwnerService platformOwnerService;
 
-    /**
-     * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
-     * Input: Nhận Pageable pageable từ caller hoặc request.
-     * Output: Trả về PageResponse<RolePermissionDTO.SimpleResponse> theo kết quả xử lý.
-     */
     @Transactional(readOnly = true)
     public PageResponse<RolePermissionDTO.SimpleResponse> list(Pageable pageable) {
-        return PageResponse.of(rolePermissionRepository.findAllDetailed(pageable), rolePermissionMapper::toSimpleResponse);
+        UUID tenantId = TenantContext.requireTenantId();
+        var page = platformOwnerService.isCurrentUserPlatformOwner()
+                ? rolePermissionRepository.findAllDetailedByTenantId(tenantId, pageable)
+                : rolePermissionRepository.findAllDetailedByTenantIdAndRoleCodeNot(
+                        tenantId, PlatformOwnerService.SYSTEM_ADMIN_ROLE_CODE, pageable);
+        return PageResponse.of(page, rolePermissionMapper::toSimpleResponse);
     }
 
-    /**
-     * Tác dụng: Lấy chi tiết một bản ghi theo khóa định danh.
-     * Input: Nhận String roleCode, Integer permissionId từ caller hoặc request.
-     * Output: Trả về RolePermissionDTO.ItemResponse theo kết quả xử lý.
-     */
     @Transactional(readOnly = true)
     public RolePermissionDTO.ItemResponse get(String roleCode, Integer permissionId) {
+        if (!platformOwnerService.isCurrentUserPlatformOwner()
+                && PlatformOwnerService.SYSTEM_ADMIN_ROLE_CODE.equalsIgnoreCase(roleCode)) {
+            throw new ApiException(SecurityErrorCode.ROLE_PERMISSION_NOT_FOUND);
+        }
         return rolePermissionMapper.toResponse(find(roleCode, permissionId));
     }
 
-    /**
-     * Tác dụng: Tạo mới bản ghi và trả về dữ liệu sau khi tạo.
-     * Input: Nhận RolePermissionDTO.CreateRequest request từ caller hoặc request.
-     * Output: Trả về RolePermissionDTO.ItemResponse theo kết quả xử lý.
-     */
     @Transactional
     @CacheEvict(value = "roleList", allEntries = true, cacheManager = "redisCacheManager")
     public RolePermissionDTO.ItemResponse create(RolePermissionDTO.CreateRequest request) {
-        Role role = roleRepository.findById(request.roleCode())
+        rejectSystemAdminPermissionMutation(request.roleCode());
+        UUID tenantId = TenantContext.requireTenantId();
+        Role role = roleRepository.findByTenantIdAndCode(tenantId, request.roleCode())
                 .orElseThrow(() -> new ApiException(SecurityErrorCode.ROLE_NOT_FOUND));
         Permission permission = permissionRepository.findById(request.permissionId())
                 .orElseThrow(() -> new ApiException(SecurityErrorCode.PERMISSION_NOT_FOUND));
+        if (PermissionDefinition.TENANT_ADMIN_CODES.contains(permission.getCode())) {
+            throw new ApiException(SecurityErrorCode.ACCESS_DENIED, "Tenant admin permissions are reserved for SYSTEM_ADMIN");
+        }
         RolePermission entity = new RolePermission(
-                new RolePermission.Key(role.getCode(), permission.getPermissionId()), role, permission);
+                new RolePermission.Key(tenantId, role.getCode(), permission.getPermissionId()), role, permission);
         RolePermission saved = rolePermissionRepository.save(entity);
-        roleRepository.incrementPermissionVersion(role.getCode());
+        roleRepository.incrementPermissionVersion(tenantId, role.getCode());
         return rolePermissionMapper.toResponse(saved);
     }
 
-    /**
-     * Tác dụng: Xóa hoặc vô hiệu hóa bản ghi theo định danh đầu vào.
-     * Input: Nhận String roleCode, Integer permissionId từ caller hoặc request.
-     * Output: Không trả về dữ liệu; cập nhật trạng thái hoặc ném lỗi khi xử lý thất bại.
-     */
     @Transactional
     @CacheEvict(value = "roleList", allEntries = true, cacheManager = "redisCacheManager")
     public void delete(String roleCode, Integer permissionId) {
+        rejectSystemAdminPermissionMutation(roleCode);
+        UUID tenantId = TenantContext.requireTenantId();
         rolePermissionRepository.delete(find(roleCode, permissionId));
-        roleRepository.incrementPermissionVersion(roleCode);
+        roleRepository.incrementPermissionVersion(tenantId, roleCode);
     }
 
-    /**
-     * Tác dụng: Thay thế tập dữ liệu hiện tại bằng tập dữ liệu mong muốn theo cơ chế diff.
-     * Input: Nhận String roleCode, Set<String> requestedCodes từ caller hoặc request.
-     * Output: Trả về RolePermissionDTO.Response theo kết quả xử lý.
-     */
     @Transactional
     @CacheEvict(value = "roleList", allEntries = true, cacheManager = "redisCacheManager")
     public RolePermissionDTO.Response replace(String roleCode, Set<String> requestedCodes) {
+        rejectSystemAdminPermissionMutation(roleCode);
+        if (requestedCodes != null && requestedCodes.stream()
+                .filter(Objects::nonNull)
+                .map(c -> c.trim().toUpperCase(Locale.ROOT))
+                .anyMatch(PermissionDefinition.TENANT_ADMIN_CODES::contains)) {
+            throw new ApiException(SecurityErrorCode.ACCESS_DENIED, "Tenant admin permissions are reserved for SYSTEM_ADMIN");
+        }
         SyncResult result = replaceInternal(roleCode, requestedCodes);
         return rolePermissionMapper.toResponse(
                 result.roleCode(),
@@ -96,21 +96,23 @@ public class RolePermissionService {
         );
     }
 
-    /**
-     * Tác dụng: Thay thế tập dữ liệu hiện tại bằng tập dữ liệu mong muốn theo cơ chế diff.
-     * Input: Nhận String roleCode, Set<String> requestedCodes từ caller hoặc request.
-     * Output: Trả về SyncResult theo kết quả xử lý.
-     */
+    private void rejectSystemAdminPermissionMutation(String roleCode) {
+        if (roleCode != null && PlatformOwnerService.SYSTEM_ADMIN_ROLE_CODE.equalsIgnoreCase(roleCode.trim())) {
+            throw new ApiException(SecurityErrorCode.ACCESS_DENIED, "SYSTEM_ADMIN permissions are system-managed");
+        }
+    }
+
     @Transactional
     @CacheEvict(value = "roleList", allEntries = true, cacheManager = "redisCacheManager")
     public SyncResult replaceInternal(String roleCode, Set<String> requestedCodes) {
+        UUID tenantId = TenantContext.requireTenantId();
         String normalizedRoleCode = normalizeRoleCode(roleCode);
         SortedSet<String> desired = normalizeAndValidate(requestedCodes);
-        Role existingRole = roleRepository.findById(normalizedRoleCode)
+        Role existingRole = roleRepository.findByTenantIdAndCode(tenantId, normalizedRoleCode)
                 .orElseThrow(() -> new ApiException(
                         SecurityErrorCode.ROLE_NOT_FOUND,
                         "Role not found: " + normalizedRoleCode));
-        SortedSet<String> current = rolePermissionRepository.findPermissionCodes(normalizedRoleCode);
+        SortedSet<String> current = rolePermissionRepository.findPermissionCodes(tenantId, normalizedRoleCode);
 
         Diff diff = diff(desired, current);
         if (!diff.changed()) {
@@ -123,18 +125,18 @@ public class RolePermissionService {
             );
         }
 
-        Role lockedRole = roleRepository.findByIdForUpdate(normalizedRoleCode)
+        Role lockedRole = roleRepository.findByTenantIdAndCodeForUpdate(tenantId, normalizedRoleCode)
                 .orElseThrow(() -> new ApiException(
                         SecurityErrorCode.ROLE_NOT_FOUND,
                         "Role not found: " + normalizedRoleCode));
-        SortedSet<String> currentAfterLock = rolePermissionRepository.findPermissionCodes(normalizedRoleCode);
+        SortedSet<String> currentAfterLock = rolePermissionRepository.findPermissionCodes(tenantId, normalizedRoleCode);
         Diff diffAfterLock = diff(desired, currentAfterLock);
 
-        applyDiff(normalizedRoleCode, lockedRole, diffAfterLock);
+        applyDiff(tenantId, normalizedRoleCode, lockedRole, diffAfterLock);
 
         long permissionVersion = lockedRole.getPermissionVersion();
         if (diffAfterLock.changed()) {
-            roleRepository.incrementPermissionVersion(normalizedRoleCode);
+            roleRepository.incrementPermissionVersion(tenantId, normalizedRoleCode);
             permissionVersion++;
             lockedRole.setPermissionVersion(permissionVersion);
         }
@@ -148,14 +150,28 @@ public class RolePermissionService {
         );
     }
 
-    /**
-     * Tác dụng: Thay thế tập dữ liệu hiện tại bằng tập dữ liệu mong muốn theo cơ chế diff.
-     * Input: Nhận Map<String, Set<String>> requestedCodesByRole từ caller hoặc request.
-     * Output: Trả về BulkSyncResult theo kết quả xử lý.
-     */
     @Transactional
     @CacheEvict(value = "roleList", allEntries = true, cacheManager = "redisCacheManager")
     public BulkSyncResult replaceAll(Map<String, Set<String>> requestedCodesByRole) {
+        if (requestedCodesByRole != null) {
+            requestedCodesByRole.keySet().forEach(this::rejectSystemAdminPermissionMutation);
+            boolean hasTenantPerm = requestedCodesByRole.values().stream()
+                    .filter(Objects::nonNull)
+                    .flatMap(Set::stream)
+                    .filter(Objects::nonNull)
+                    .map(c -> c.trim().toUpperCase(Locale.ROOT))
+                    .anyMatch(PermissionDefinition.TENANT_ADMIN_CODES::contains);
+            if (hasTenantPerm) {
+                throw new ApiException(SecurityErrorCode.ACCESS_DENIED, "Tenant admin permissions are reserved for SYSTEM_ADMIN");
+            }
+        }
+        return replaceAllInternal(requestedCodesByRole);
+    }
+
+    @Transactional
+    @CacheEvict(value = "roleList", allEntries = true, cacheManager = "redisCacheManager")
+    public BulkSyncResult replaceAllInternal(Map<String, Set<String>> requestedCodesByRole) {
+        UUID tenantId = TenantContext.requireTenantId();
         if (requestedCodesByRole == null) {
             throw new ApiException(SecurityErrorCode.ROLE_PERMISSIONS_REQUIRED);
         }
@@ -174,14 +190,14 @@ public class RolePermissionService {
             return new BulkSyncResult(0, 0);
         }
 
-        Map<String, SortedSet<String>> currentByRole = findCurrentPermissionsByRole(desiredByRole.keySet());
+        Map<String, SortedSet<String>> currentByRole = findCurrentPermissionsByRole(tenantId, desiredByRole.keySet());
         Map<String, Diff> changedDiffs = changedDiffs(desiredByRole, currentByRole);
         if (changedDiffs.isEmpty()) {
             return new BulkSyncResult(0, 0);
         }
 
         Map<String, Role> lockedRoles = changedDiffs.keySet().stream()
-                .map(code -> roleRepository.findByIdForUpdate(code)
+                .map(code -> roleRepository.findByTenantIdAndCodeForUpdate(tenantId, code)
                         .orElseThrow(() -> new ApiException(
                                 SecurityErrorCode.ROLE_NOT_FOUND,
                                 "Role not found: " + code)))
@@ -195,7 +211,7 @@ public class RolePermissionService {
                         (left, right) -> right,
                         TreeMap::new
                 ));
-        Map<String, SortedSet<String>> currentAfterLock = findCurrentPermissionsByRole(changedDiffs.keySet());
+        Map<String, SortedSet<String>> currentAfterLock = findCurrentPermissionsByRole(tenantId, changedDiffs.keySet());
         Map<String, Diff> diffsAfterLock = changedDiffs(affectedDesiredByRole, currentAfterLock);
 
         int added = 0;
@@ -203,9 +219,9 @@ public class RolePermissionService {
         for (Map.Entry<String, Diff> entry : diffsAfterLock.entrySet()) {
             String code = entry.getKey();
             Diff diff = entry.getValue();
-            applyDiff(code, lockedRoles.get(code), diff);
+            applyDiff(tenantId, code, lockedRoles.get(code), diff);
             if (diff.changed()) {
-                roleRepository.incrementPermissionVersion(code);
+                roleRepository.incrementPermissionVersion(tenantId, code);
                 added += diff.toAdd().size();
                 removed += diff.toRemove().size();
             }
@@ -214,36 +230,22 @@ public class RolePermissionService {
         return new BulkSyncResult(added, removed);
     }
 
-    /**
-     * Tác dụng: Tìm và trả về dữ liệu nội bộ theo điều kiện đầu vào.
-     * Input: Nhận String roleCode, Integer permissionId từ caller hoặc request.
-     * Output: Trả về RolePermission theo kết quả xử lý.
-     */
     private RolePermission find(String roleCode, Integer permissionId) {
-        return rolePermissionRepository.findById(new RolePermission.Key(roleCode, permissionId))
+        UUID tenantId = TenantContext.requireTenantId();
+        return rolePermissionRepository.findById(new RolePermission.Key(tenantId, roleCode, permissionId))
                 .orElseThrow(() -> new ApiException(SecurityErrorCode.ROLE_PERMISSION_NOT_FOUND));
     }
 
-    /**
-     * Tác dụng: Tìm và trả về dữ liệu nội bộ theo điều kiện đầu vào.
-     * Input: Nhận Set<String> roleCodes từ caller hoặc request.
-     * Output: Trả về SortedSet<String>> theo kết quả xử lý.
-     */
-    private Map<String, SortedSet<String>> findCurrentPermissionsByRole(Set<String> roleCodes) {
+    private Map<String, SortedSet<String>> findCurrentPermissionsByRole(UUID tenantId, Set<String> roleCodes) {
         Map<String, SortedSet<String>> currentByRole = new TreeMap<>();
         roleCodes.forEach(code -> currentByRole.put(code, new TreeSet<>()));
-        rolePermissionRepository.findPermissionCodeRowsByRoleCodeIn(roleCodes)
+        rolePermissionRepository.findPermissionCodeRowsByRoleCodeIn(tenantId, roleCodes)
                 .forEach(row -> currentByRole
                         .computeIfAbsent(row.getRoleCode(), ignored -> new TreeSet<>())
                         .add(row.getPermissionCode()));
         return currentByRole;
     }
 
-    /**
-     * Tác dụng: Thực hiện logic changedDiffs của lớp hiện tại.
-     * Input: Nhận Map<String, SortedSet<String>> desiredByRole, Map<String, SortedSet<String>> currentByRole từ caller hoặc request.
-     * Output: Trả về Diff> theo kết quả xử lý.
-     */
     private Map<String, Diff> changedDiffs(
             Map<String, SortedSet<String>> desiredByRole,
             Map<String, SortedSet<String>> currentByRole
@@ -258,11 +260,6 @@ public class RolePermissionService {
         return diffs;
     }
 
-    /**
-     * Tác dụng: Thực hiện logic diff của lớp hiện tại.
-     * Input: Nhận SortedSet<String> desired, SortedSet<String> current từ caller hoặc request.
-     * Output: Trả về Diff theo kết quả xử lý.
-     */
     private Diff diff(SortedSet<String> desired, SortedSet<String> current) {
         Set<String> toAdd = new TreeSet<>(desired);
         toAdd.removeAll(current);
@@ -273,14 +270,9 @@ public class RolePermissionService {
         return new Diff(toAdd, toRemove);
     }
 
-    /**
-     * Tác dụng: Thực hiện logic applyDiff của lớp hiện tại.
-     * Input: Nhận String roleCode, Role role, Diff diff từ caller hoặc request.
-     * Output: Không trả về dữ liệu; cập nhật trạng thái hoặc ném lỗi khi xử lý thất bại.
-     */
-    private void applyDiff(String roleCode, Role role, Diff diff) {
+    private void applyDiff(UUID tenantId, String roleCode, Role role, Diff diff) {
         if (!diff.toRemove().isEmpty()) {
-            rolePermissionRepository.deleteByRoleCodeAndPermissionCodeIn(roleCode, diff.toRemove());
+            rolePermissionRepository.deleteByTenantIdAndRoleCodeAndPermissionCodeIn(tenantId, roleCode, diff.toRemove());
         }
 
         if (!diff.toAdd().isEmpty()) {
@@ -291,7 +283,7 @@ public class RolePermissionService {
 
             List<RolePermission> rolePermissions = permissions.stream()
                     .map(permission -> new RolePermission(
-                            new RolePermission.Key(roleCode, permission.getPermissionId()),
+                            new RolePermission.Key(tenantId, roleCode, permission.getPermissionId()),
                             role,
                             permission
                     ))
@@ -300,11 +292,6 @@ public class RolePermissionService {
         }
     }
 
-    /**
-     * Tác dụng: Chuẩn hóa dữ liệu đầu vào về định dạng thống nhất để so sánh và lưu trữ.
-     * Input: Nhận String roleCode từ caller hoặc request.
-     * Output: Trả về String theo kết quả xử lý.
-     */
     private String normalizeRoleCode(String roleCode) {
         if (roleCode == null || roleCode.isBlank()) {
             throw new ApiException(SecurityErrorCode.ROLE_CODE_REQUIRED);
@@ -312,11 +299,6 @@ public class RolePermissionService {
         return roleCode.trim().toUpperCase(Locale.ROOT);
     }
 
-    /**
-     * Tác dụng: Chuẩn hóa dữ liệu đầu vào về định dạng thống nhất để so sánh và lưu trữ.
-     * Input: Nhận Set<String> requestedCodes từ caller hoặc request.
-     * Output: Trả về SortedSet<String> theo kết quả xử lý.
-     */
     private SortedSet<String> normalizeAndValidate(Set<String> requestedCodes) {
         if (requestedCodes == null) {
             throw new ApiException(SecurityErrorCode.PERMISSION_CODES_REQUIRED);
@@ -358,5 +340,3 @@ public class RolePermissionService {
         }
     }
 }
-
-

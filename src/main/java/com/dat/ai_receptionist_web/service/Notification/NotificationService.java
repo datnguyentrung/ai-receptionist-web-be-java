@@ -124,9 +124,10 @@ public class NotificationService {
         Map<TargetKey, ResolvedTarget> targets = new LinkedHashMap<>();
         safe(request.recipientUserIds()).forEach(userId -> addTarget(targets,
                 new ResolvedTarget(new ResolvedRecipientTarget(userId, null, TargetSource.DIRECT_USER, AudienceContext.ACCOUNT), null)));
+        java.util.UUID tenantId = com.dat.ai_receptionist_web.context.TenantContext.requireTenantId();
         safe(request.recipientRoleCodes()).stream()
                 .map(code -> code.trim().toUpperCase(Locale.ROOT))
-                .forEach(roleCode -> userRepository.findUserIdsByRoleCode(roleCode).forEach(userId -> addTarget(targets,
+                .forEach(roleCode -> userRepository.findUserIdsByRoleCode(tenantId, roleCode).forEach(userId -> addTarget(targets,
                         new ResolvedTarget(new ResolvedRecipientTarget(userId, null, TargetSource.ROLE, AudienceContext.ACCOUNT), null))));
         resolvePersonTargets(request, targets);
         return List.copyOf(targets.values());

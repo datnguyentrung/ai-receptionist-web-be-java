@@ -4,9 +4,10 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.io.Serializable;
+import java.util.UUID;
 
 /**
- * Liên kết giữa một vai trò và một quyền được cấp cho vai trò đó.
+ * Liên kết giữa một vai trò và một quyền được cấp cho vai trò đó trong phạm vi một Tenant.
  */
 @Getter
 @Setter
@@ -16,14 +17,16 @@ import java.io.Serializable;
 @Table(name = "role_permission", schema = "security",
         indexes = @Index(name = "idx_role_permission_permission", columnList = "permission_id"))
 public class RolePermission {
-    /** Khóa tổng hợp gồm mã vai trò và mã quyền. */
+    /** Khóa tổng hợp gồm tenantId, mã vai trò và mã quyền. */
     @EmbeddedId
     private Key id;
 
-    /** Vai trò được cấp quyền. */
-    @MapsId("roleId")
+    /** Vai trò được cấp quyền (cùng tenant). */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "role_id", nullable = false)
+    @JoinColumns({
+            @JoinColumn(name = "tenant_id", referencedColumnName = "tenant_id", insertable = false, updatable = false),
+            @JoinColumn(name = "role_id", referencedColumnName = "role_id", insertable = false, updatable = false)
+    })
     private Role role;
 
     /** Quyền được cấp cho vai trò. */
@@ -32,9 +35,11 @@ public class RolePermission {
     @JoinColumn(name = "permission_id", nullable = false)
     private Permission permission;
 
-    /**
-     * Khóa tổng hợp của liên kết vai trò và quyền.
-     */
+    public RolePermission(Key id, Permission permission) {
+        this.id = id;
+        this.permission = permission;
+    }
+
     @Getter
     @Setter
     @NoArgsConstructor
@@ -42,12 +47,13 @@ public class RolePermission {
     @EqualsAndHashCode
     @Embeddable
     public static class Key implements Serializable {
-        /** Mã của vai trò trong khóa tổng hợp. */
-        @Column(name = "role_id", length = 50)
+        @Column(name = "tenant_id", nullable = false)
+        private UUID tenantId;
+
+        @Column(name = "role_id", length = 50, nullable = false)
         private String roleId;
 
-        /** Mã định danh của quyền trong khóa tổng hợp. */
-        @Column(name = "permission_id")
+        @Column(name = "permission_id", nullable = false)
         private Integer permissionId;
     }
 }

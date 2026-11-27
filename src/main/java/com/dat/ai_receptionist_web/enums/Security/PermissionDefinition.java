@@ -146,7 +146,18 @@ public enum PermissionDefinition {
     DEVICE_READ("DEVICE_READ", "DEVICE", PermissionAction.READ, "Device Read"),
     DEVICE_CREATE("DEVICE_CREATE", "DEVICE", PermissionAction.CREATE, "Device Create"),
     DEVICE_UPDATE("DEVICE_UPDATE", "DEVICE", PermissionAction.UPDATE, "Device Update"),
-    DEVICE_DELETE("DEVICE_DELETE", "DEVICE", PermissionAction.DELETE, "Device Delete");
+    DEVICE_DELETE("DEVICE_DELETE", "DEVICE", PermissionAction.DELETE, "Device Delete"),
+    TENANT_READ("TENANT_READ", "TENANT", PermissionAction.READ, "Tenant Read"),
+    TENANT_CREATE("TENANT_CREATE", "TENANT", PermissionAction.CREATE, "Tenant Create"),
+    TENANT_UPDATE("TENANT_UPDATE", "TENANT", PermissionAction.UPDATE, "Tenant Update"),
+    KNOWLEDGE_READ("KNOWLEDGE_READ", "KNOWLEDGE", PermissionAction.READ, "Knowledge Read"),
+    KNOWLEDGE_WRITE("KNOWLEDGE_WRITE", "KNOWLEDGE", PermissionAction.CREATE, "Knowledge Write"),
+    KNOWLEDGE_REVIEW("KNOWLEDGE_REVIEW", "KNOWLEDGE", PermissionAction.UPDATE, "Knowledge Review"),
+    KNOWLEDGE_PUBLISH("KNOWLEDGE_PUBLISH", "KNOWLEDGE", PermissionAction.UPDATE, "Knowledge Publish");
+
+    public static final java.util.Set<String> TENANT_ADMIN_CODES = java.util.Set.of(
+            TENANT_READ.code, TENANT_CREATE.code, TENANT_UPDATE.code
+    );
 
     private final String code;
     private final String model;

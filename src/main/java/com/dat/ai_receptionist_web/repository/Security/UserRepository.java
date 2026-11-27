@@ -74,21 +74,32 @@ public interface UserRepository extends JpaRepository<User, UUID> {
                    r.permission_version AS permissionVersion,
                    p.code AS permissionCode
             FROM security.users u
-            LEFT JOIN security.user_role ur ON ur.user_id = u.user_id
-            LEFT JOIN security.role r ON r.role_id = ur.role_id
-            LEFT JOIN security.role_permission rp ON rp.role_id = r.role_id
+            LEFT JOIN core.tenant_membership tm
+                   ON tm.user_id = u.user_id
+                  AND tm.tenant_id = :tenantId
+                  AND tm.status = 'ACTIVE'
+            LEFT JOIN security.user_role ur
+                   ON ur.user_id = u.user_id
+                  AND ur.tenant_id = tm.tenant_id
+            LEFT JOIN security.role r
+                   ON r.tenant_id = ur.tenant_id
+                  AND r.role_id = ur.role_id
+            LEFT JOIN security.role_permission rp
+                   ON rp.tenant_id = r.tenant_id
+                  AND rp.role_id = r.role_id
             LEFT JOIN security.permission p ON p.permission_id = rp.permission_id
             WHERE u.user_id = :userId
             ORDER BY r.role_id, p.code
             """, nativeQuery = true)
-    List<AuthorizationRow> findAuthorizationRows(@Param("userId") UUID userId);
+    List<AuthorizationRow> findAuthorizationRows(@Param("userId") UUID userId, @Param("tenantId") UUID tenantId);
 
     @Query(value = """
             SELECT DISTINCT ur.user_id
             FROM security.user_role ur
-            WHERE ur.role_id = :roleCode
+            WHERE ur.tenant_id = :tenantId
+              AND ur.role_id = :roleCode
             """, nativeQuery = true)
-    List<UUID> findUserIdsByRoleCode(@Param("roleCode") String roleCode);
+    List<UUID> findUserIdsByRoleCode(@Param("tenantId") UUID tenantId, @Param("roleCode") String roleCode);
 
     interface AuthorizationRow {
         UUID getUserId();

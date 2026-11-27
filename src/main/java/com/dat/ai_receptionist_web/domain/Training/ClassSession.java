@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Training;
 
-import com.dat.ai_receptionist_web.domain.Catalog.Course;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.domain.Catalog.Course;
 import com.dat.ai_receptionist_web.domain.Catalog.CourseSchedule;
 import com.dat.ai_receptionist_web.enums.Training.SessionStatus;
 import jakarta.persistence.*;
@@ -29,7 +30,7 @@ import java.util.UUID;
         @Index(name = "idx_class_session_course_status", columnList = "course_id,status"),
         @Index(name = "idx_class_session_schedule_date", columnList = "course_schedule_id,session_date")
 })
-public class ClassSession {
+public class ClassSession extends TenantScopedEntity {
     /** Mã định danh duy nhất của buổi học. */
     @Id
     @GeneratedValue

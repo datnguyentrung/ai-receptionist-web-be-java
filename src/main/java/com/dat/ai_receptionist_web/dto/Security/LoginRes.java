@@ -1,5 +1,6 @@
 package com.dat.ai_receptionist_web.dto.Security;
 
+import com.dat.ai_receptionist_web.enums.Core.TenantStatus;
 import com.dat.ai_receptionist_web.enums.Security.RelationshipType;
 import com.dat.ai_receptionist_web.enums.Security.UserStatus;
 import lombok.*;
@@ -12,6 +13,9 @@ public class LoginRes {
     private String accessToken;
     private String idDevice;
     private UserLogin user;
+    private TenantRes activeTenant;
+    private List<TenantRes> availableTenants = List.of();
+    private boolean requiresTenantSelection;
     private UserContextRes activeContext;
     private List<UserContextRes> availableContexts = List.of();
     private boolean requiresContextSelection;
@@ -23,6 +27,9 @@ public class LoginRes {
         private String accessToken;
         private String refreshToken;
         private UserLogin user;
+        private TenantRes activeTenant;
+        private List<TenantRes> availableTenants;
+        private boolean requiresTenantSelection;
         private UserContextRes activeContext;
         private List<UserContextRes> availableContexts;
         private boolean requiresContextSelection;
@@ -34,6 +41,14 @@ public class LoginRes {
             UserStatus status,
             Set<String> roles,
             Set<String> permissions
+    ) {
+    }
+
+    public record TenantRes(
+            UUID tenantId,
+            String code,
+            String name,
+            TenantStatus status
     ) {
     }
 

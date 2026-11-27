@@ -1,5 +1,7 @@
 package com.dat.ai_receptionist_web.service.Security;
 
+import com.dat.ai_receptionist_web.enums.Core.TenantMembershipStatus;
+import com.dat.ai_receptionist_web.enums.Core.TenantStatus;
 import com.dat.ai_receptionist_web.enums.Security.PermissionDefinition;
 import com.dat.ai_receptionist_web.enums.Security.UserStatus;
 import com.dat.ai_receptionist_web.error.ApiException;
@@ -25,14 +27,9 @@ public class AuthorizationService {
     private final UserRepository userRepository;
     private final AuthSessionRepository authSessionRepository;
 
-    /**
-     * Tác dụng: Nạp dữ liệu cần thiết từ nguồn lưu trữ để phục vụ xử lý nghiệp vụ.
-     * Input: Nhận UUID userId từ caller hoặc request.
-     * Output: Trả về AuthorizationSnapshot theo kết quả xử lý.
-     */
     @Transactional(readOnly = true)
-    public AuthorizationSnapshot loadSnapshot(UUID userId) {
-        List<UserRepository.AuthorizationRow> rows = userRepository.findAuthorizationRows(userId);
+    public AuthorizationSnapshot loadSnapshot(UUID userId, UUID tenantId) {
+        List<UserRepository.AuthorizationRow> rows = userRepository.findAuthorizationRows(userId, tenantId);
         if (rows.isEmpty()) {
             throw new ApiException(SecurityErrorCode.USER_NOT_FOUND);
         }
@@ -41,13 +38,15 @@ public class AuthorizationService {
         SortedSet<String> roles = new TreeSet<>();
         SortedMap<String, Long> versions = new TreeMap<>();
         SortedSet<String> permissions = new TreeSet<>();
-        for (UserRepository.AuthorizationRow row : rows) {
-            if (row.getRoleCode() != null) {
-                roles.add(row.getRoleCode());
-                versions.put(row.getRoleCode(), row.getPermissionVersion());
-            }
-            if (row.getPermissionCode() != null && DEFINED_PERMISSIONS.contains(row.getPermissionCode())) {
-                permissions.add(row.getPermissionCode());
+        if (tenantId != null) {
+            for (UserRepository.AuthorizationRow row : rows) {
+                if (row.getRoleCode() != null) {
+                    roles.add(row.getRoleCode());
+                    versions.put(row.getRoleCode(), row.getPermissionVersion());
+                }
+                if (row.getPermissionCode() != null && DEFINED_PERMISSIONS.contains(row.getPermissionCode())) {
+                    permissions.add(row.getPermissionCode());
+                }
             }
         }
         return new AuthorizationSnapshot(
@@ -55,17 +54,13 @@ public class AuthorizationService {
                 head.getPhoneNumber(),
                 UserStatus.valueOf(head.getUserStatus()),
                 head.getAuthorizationVersion(),
+                tenantId,
                 Collections.unmodifiableSortedSet(roles),
                 Collections.unmodifiableSortedMap(versions),
                 Collections.unmodifiableSortedSet(permissions)
         );
     }
 
-    /**
-     * Tác dụng: Kiểm tra tính hợp lệ của dữ liệu đầu vào trước khi xử lý tiếp.
-     * Input: Nhận Jwt jwt từ caller hoặc request.
-     * Output: Không trả về dữ liệu; cập nhật trạng thái hoặc ném lỗi khi xử lý thất bại.
-     */
     @Transactional(readOnly = true)
     public void validateAccessToken(Jwt jwt) {
         UUID userId = UUID.fromString(jwt.getSubject());
@@ -86,33 +81,42 @@ public class AuthorizationService {
             throw new StaleAccessTokenException("User authorization version changed");
         }
 
-        Set<String> currentRoles = new TreeSet<>();
-        Map<String, Long> currentVersions = new TreeMap<>();
-        for (AuthSessionRepository.AccessStateRow row : rows) {
-            if (row.getRoleCode() != null) {
-                currentRoles.add(row.getRoleCode());
-                currentVersions.put(row.getRoleCode(), row.getPermissionVersion());
-            }
-        }
-        Set<String> tokenRoles = new TreeSet<>(Optional.ofNullable(jwt.getClaimAsStringList("roles")).orElse(List.of()));
-        if (!currentRoles.equals(tokenRoles) || !currentVersions.equals(versionClaim(jwt))) {
-            throw new StaleAccessTokenException("Role permission version changed");
+        UUID tokenTenantId = optionalUuid(jwt.getClaimAsString("tenantId"));
+        if (!Objects.equals(tokenTenantId, head.getTenantId())) {
+            throw new StaleAccessTokenException("Session tenant changed");
         }
 
-        UUID tokenContext = optionalUuid(jwt.getClaimAsString("activeUserPersonId"));
-        if (!Objects.equals(tokenContext, head.getActiveUserPersonId())) {
-            throw new StaleAccessTokenException("Active person context changed");
-        }
-        if (head.getActiveUserPersonId() != null && !head.getActiveUserPersonActive()) {
-            throw new StaleAccessTokenException("Active person context is disabled");
+        if (tokenTenantId != null) {
+            if (!TenantStatus.ACTIVE.name().equals(head.getTenantStatus())) {
+                throw new StaleAccessTokenException("Tenant is not active");
+            }
+            if (!TenantMembershipStatus.ACTIVE.name().equals(head.getMembershipStatus())) {
+                throw new StaleAccessTokenException("Tenant membership is not active");
+            }
+
+            Set<String> currentRoles = new TreeSet<>();
+            Map<String, Long> currentVersions = new TreeMap<>();
+            for (AuthSessionRepository.AccessStateRow row : rows) {
+                if (row.getRoleCode() != null) {
+                    currentRoles.add(row.getRoleCode());
+                    currentVersions.put(row.getRoleCode(), row.getPermissionVersion());
+                }
+            }
+            Set<String> tokenRoles = new TreeSet<>(Optional.ofNullable(jwt.getClaimAsStringList("roles")).orElse(List.of()));
+            if (!currentRoles.equals(tokenRoles) || !currentVersions.equals(versionClaim(jwt))) {
+                throw new StaleAccessTokenException("Role permission version changed");
+            }
+
+            UUID tokenContext = optionalUuid(jwt.getClaimAsString("activeUserPersonId"));
+            if (!Objects.equals(tokenContext, head.getActiveUserPersonId())) {
+                throw new StaleAccessTokenException("Active person context changed");
+            }
+            if (head.getActiveUserPersonId() != null && !head.getActiveUserPersonActive()) {
+                throw new StaleAccessTokenException("Active person context is disabled");
+            }
         }
     }
 
-    /**
-     * Tác dụng: Thực hiện logic numberClaim của lớp hiện tại.
-     * Input: Nhận Jwt jwt, String name từ caller hoặc request.
-     * Output: Trả về giá trị long biểu thị kết quả tính toán hoặc số lượng.
-     */
     private long numberClaim(Jwt jwt, String name) {
         Number value = jwt.getClaim(name);
         if (value == null) {
@@ -121,40 +125,27 @@ public class AuthorizationService {
         return value.longValue();
     }
 
-    /**
-     * Tác dụng: Thực hiện logic versionClaim của lớp hiện tại.
-     * Input: Nhận Jwt jwt từ caller hoặc request.
-     * Output: Trả về Long> theo kết quả xử lý.
-     */
     private Map<String, Long> versionClaim(Jwt jwt) {
-        Map<String, Object> raw = jwt.getClaim("rolePermissionVersions");
+        Map<String, Object> raw = jwt.getClaimAsMap("rolePermissionVersions");
         if (raw == null) {
-            throw new StaleAccessTokenException("Missing role permission versions");
+            return Map.of();
         }
         Map<String, Long> result = new TreeMap<>();
-        raw.forEach((key, value) -> result.put(key, ((Number) value).longValue()));
+        raw.forEach((key, value) -> {
+            if (value instanceof Number number) {
+                result.put(key, number.longValue());
+            }
+        });
         return result;
     }
 
-    /**
-     * Tác dụng: Thực hiện logic optionalUuid của lớp hiện tại.
-     * Input: Nhận String value từ caller hoặc request.
-     * Output: Trả về UUID theo kết quả xử lý.
-     */
-    private UUID optionalUuid(String value) {
-        return value == null ? null : UUID.fromString(value);
+    private UUID optionalUuid(String raw) {
+        return raw == null || raw.isBlank() ? null : UUID.fromString(raw);
     }
 
     public static class StaleAccessTokenException extends RuntimeException {
-        /**
-         * Tác dụng: Thực hiện logic StaleAccessTokenException của lớp hiện tại.
-         * Input: Nhận String message từ caller hoặc request.
-         * Output: Khởi tạo instance của lớp với các phụ thuộc đầu vào.
-         */
         public StaleAccessTokenException(String message) {
             super(message);
         }
     }
 }
-
-

@@ -1,5 +1,6 @@
 package com.dat.ai_receptionist_web.domain.Core;
 
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;
 import com.dat.ai_receptionist_web.domain.Security.User;
 import com.dat.ai_receptionist_web.enums.Security.RelationshipType;
 import jakarta.persistence.*;
@@ -30,7 +31,7 @@ import java.util.UUID;
                 @Index(name = "idx_user_person_user_relationship_person_active",
                         columnList = "user_id,relationship_type,person_id,active")
         })
-public class UserPerson {
+public class UserPerson extends TenantScopedEntity {
     /** Mã định danh duy nhất của liên kết tài khoản và cá nhân. */
     @Id
     @GeneratedValue

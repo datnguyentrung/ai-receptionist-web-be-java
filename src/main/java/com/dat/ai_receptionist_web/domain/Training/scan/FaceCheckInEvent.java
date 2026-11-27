@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Training.scan;
 
-import jakarta.persistence.Column;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -25,7 +26,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @Table(name = "face_check_in_event", schema = "training")
-public class FaceCheckInEvent {
+public class FaceCheckInEvent extends TenantScopedEntity {
     /** Mã định danh duy nhất của sự kiện điểm danh khuôn mặt. */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

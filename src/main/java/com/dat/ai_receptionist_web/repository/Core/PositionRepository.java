@@ -18,9 +18,9 @@ public interface PositionRepository extends JpaRepository<Position, UUID> {
 
     @Modifying
     @Query(value = """
-            insert into core.position (position_id, code, name, description, active, created_at, updated_at)
-            values (:positionId, :code, :name, :description, true, current_timestamp, current_timestamp)
-            on conflict (code) do update
+            insert into core.position (position_id, tenant_id, code, name, description, active, created_at, updated_at)
+            values (:positionId, :tenantId, :code, :name, :description, true, current_timestamp, current_timestamp)
+            on conflict (tenant_id, code) do update
             set name = excluded.name,
                 description = excluded.description,
                 active = true,
@@ -28,6 +28,7 @@ public interface PositionRepository extends JpaRepository<Position, UUID> {
             """, nativeQuery = true)
     void upsertSystemPosition(
             @Param("positionId") UUID positionId,
+            @Param("tenantId") UUID tenantId,
             @Param("code") String code,
             @Param("name") String name,
             @Param("description") String description

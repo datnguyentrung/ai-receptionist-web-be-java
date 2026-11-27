@@ -14,39 +14,69 @@ public interface UserRoleRepository extends JpaRepository<UserRole, UserRole.Key
             from UserRole ur
             join fetch ur.user
             join fetch ur.role
+            where ur.id.tenantId = :tenantId
             """,
             countQuery = """
             select count(ur)
             from UserRole ur
+            where ur.id.tenantId = :tenantId
             """)
-    Page<UserRole> findAllDetailed(Pageable pageable);
+    Page<UserRole> findAllDetailedByTenantId(@Param("tenantId") UUID tenantId, Pageable pageable);
 
-    List<UserRole> findAllById_UserId(UUID userId);
+    @Query(value = """
+            select ur
+            from UserRole ur
+            join fetch ur.user
+            join fetch ur.role
+            where ur.id.tenantId = :tenantId
+              and ur.id.roleId <> :excludedRoleCode
+            """,
+            countQuery = """
+            select count(ur)
+            from UserRole ur
+            where ur.id.tenantId = :tenantId
+              and ur.id.roleId <> :excludedRoleCode
+            """)
+    Page<UserRole> findAllDetailedByTenantIdAndRoleCodeNot(
+            @Param("tenantId") UUID tenantId,
+            @Param("excludedRoleCode") String excludedRoleCode,
+            Pageable pageable);
+
+    List<UserRole> findAllById_TenantIdAndId_UserId(UUID tenantId, UUID userId);
 
     @EntityGraph(attributePaths = "role")
     @Query("""
             select ur
             from UserRole ur
-            where ur.user.userId = :userId
+            where ur.id.tenantId = :tenantId
+              and ur.user.userId = :userId
             order by ur.role.code
             """)
-    List<UserRole> findAllDetailedByUserId(@Param("userId") UUID userId);
+    List<UserRole> findAllDetailedByTenantIdAndUserId(
+            @Param("tenantId") UUID tenantId,
+            @Param("userId") UUID userId);
 
-    @Query("select ur.role.code from UserRole ur where ur.id.userId = :userId order by ur.role.code")
-    SortedSet<String> findRoleCodes(@Param("userId") UUID userId);
+    @Query("select ur.role.code from UserRole ur where ur.id.tenantId = :tenantId and ur.id.userId = :userId order by ur.role.code")
+    SortedSet<String> findRoleCodes(@Param("tenantId") UUID tenantId, @Param("userId") UUID userId);
 
     @Query("""
             select ur.user.userId as userId, ur.role.code as roleCode
             from UserRole ur
-            where ur.user.userId in :userIds
+            where ur.id.tenantId = :tenantId
+              and ur.user.userId in :userIds
             order by ur.user.userId, ur.role.code
             """)
-    List<UserRoleRow> findAllByUserIdIn(@Param("userIds") Set<UUID> userIds);
+    List<UserRoleRow> findAllByTenantIdAndUserIdIn(
+            @Param("tenantId") UUID tenantId,
+            @Param("userIds") Set<UUID> userIds);
 
-    void deleteById_UserIdAndRole_CodeIn(
+    void deleteById_TenantIdAndId_UserIdAndId_RoleIdIn(
+            UUID tenantId,
             UUID userId,
             Set<String> roleCodes
     );
+
+    void deleteAllById_TenantIdAndId_UserId(UUID tenantId, UUID userId);
 
     interface UserRoleRow {
         UUID getUserId();

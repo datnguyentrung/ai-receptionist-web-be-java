@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Training;
 
-import com.dat.ai_receptionist_web.domain.Core.Person;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.domain.Core.Person;
 import com.dat.ai_receptionist_web.enums.Training.AttendanceStatus;
 import com.dat.ai_receptionist_web.enums.Training.EvaluationStatus;
 import jakarta.persistence.*;
@@ -37,7 +38,7 @@ import java.util.UUID;
                 columnList = "course_staff_assignment_id"),
         @Index(name = "idx_session_attendance_person", columnList = "person_id")
 })
-public class SessionAttendance {
+public class SessionAttendance extends TenantScopedEntity {
     /** Mã định danh duy nhất của bản ghi điểm danh. */
     @Id
     @GeneratedValue

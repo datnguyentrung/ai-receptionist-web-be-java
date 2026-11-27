@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Training;
 
-import com.dat.ai_receptionist_web.domain.Catalog.CourseSchedule;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.domain.Catalog.CourseSchedule;
 import com.dat.ai_receptionist_web.domain.Security.User;
 import com.dat.ai_receptionist_web.enums.Training.EnrollmentScheduleChangeRequestStatus;
 import jakarta.persistence.*;
@@ -17,7 +18,7 @@ import java.util.UUID;
 @Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor
 @Entity
 @Table(name = "enrollment_schedule_change_request", schema = "training")
-public class EnrollmentScheduleChangeRequest {
+public class EnrollmentScheduleChangeRequest extends TenantScopedEntity {
     /** Mã định danh duy nhất của yêu cầu đổi lịch. */
     @Id @GeneratedValue @UuidGenerator
     @Column(name = "enrollment_schedule_change_request_id", nullable = false, updatable = false)

@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Skill;
 
-import com.dat.ai_receptionist_web.domain.Core.Person;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.domain.Core.Person;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -21,7 +22,7 @@ import java.time.LocalDateTime;
 @Entity
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "fitness_record", schema = "skill")
-public class FitnessRecord {
+public class FitnessRecord extends TenantScopedEntity {
     /** Mã định danh duy nhất của bản ghi thể lực. */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

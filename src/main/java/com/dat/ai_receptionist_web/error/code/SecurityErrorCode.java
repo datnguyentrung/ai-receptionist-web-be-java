@@ -71,7 +71,19 @@ public enum SecurityErrorCode implements ErrorCode {
     PASSWORD_REUSE_NOT_ALLOWED("PASSWORD_REUSE_NOT_ALLOWED", HttpStatus.BAD_REQUEST,
             "Password reuse not allowed", "The new password must be different from the current password"),
     MISSING_AUTHENTICATED_USER("MISSING_AUTHENTICATED_USER", HttpStatus.FORBIDDEN,
-            "Missing authenticated user", "Missing authenticated user");
+            "Missing authenticated user", "Missing authenticated user"),
+    TENANT_NOT_FOUND("TENANT_NOT_FOUND", HttpStatus.NOT_FOUND,
+            "Tenant not found", "Tenant not found"),
+    TENANT_INACTIVE("TENANT_INACTIVE", HttpStatus.FORBIDDEN,
+            "Tenant inactive", "Tenant is not active"),
+    TENANT_MEMBERSHIP_REVOKED("TENANT_MEMBERSHIP_REVOKED", HttpStatus.FORBIDDEN,
+            "Tenant membership revoked", "User membership in this tenant is not active"),
+    TENANT_SELECTION_REQUIRED("TENANT_SELECTION_REQUIRED", HttpStatus.FORBIDDEN,
+            "Tenant selection required", "Please select a tenant before accessing business resources"),
+    TENANT_ACCESS_DENIED("TENANT_ACCESS_DENIED", HttpStatus.FORBIDDEN,
+            "Tenant access denied", "User does not have access to this tenant"),
+    TENANT_ALREADY_EXISTS("TENANT_ALREADY_EXISTS", HttpStatus.CONFLICT,
+            "Tenant already exists", "Tenant code already exists");
 
     private final String code;
     private final HttpStatus status;

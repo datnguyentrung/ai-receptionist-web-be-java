@@ -25,7 +25,17 @@ public class CorsConfig {
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
 
         // CÁC HEADER ĐƯỢC PHÉP GỬI LÊN (Chỉ gọi 1 lần và có chứa ngrok-skip-browser-warning)
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept", "x-no-retry", "ngrok-skip-browser-warning"));
+        configuration.setAllowedHeaders(Arrays.asList(
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "Cache-Control",
+                "X-Tenant-Id",
+                "X-User-Id",
+                "X-Request-ID",
+                "x-no-retry",
+                "ngrok-skip-browser-warning"
+        ));
 
         // Cho phép gửi cookie, JWT,...
         configuration.setAllowCredentials(true);

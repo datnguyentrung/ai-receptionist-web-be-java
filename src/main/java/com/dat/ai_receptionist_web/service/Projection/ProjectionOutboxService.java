@@ -19,12 +19,12 @@ import java.util.List;
 public class ProjectionOutboxService {
     private static final String UPSERT_SQL = """
             INSERT INTO infrastructure.projection_outbox (
-                projection_type, projection_key, aggregate_type, aggregate_key,
+                tenant_id, projection_type, projection_key, aggregate_type, aggregate_key,
                 year_value, quarter_value, schedule_level, payload,
                 revision, processed_revision, status, retry_count,
                 next_attempt_at, created_at, dirty_since, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?::jsonb, 1, 0, 'PENDING', 0, NOW(), NOW(), NOW(), NOW())
-            ON CONFLICT (projection_key) DO UPDATE SET
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, 1, 0, 'PENDING', 0, NOW(), NOW(), NOW(), NOW())
+            ON CONFLICT (tenant_id, projection_key) DO UPDATE SET
                 revision = infrastructure.projection_outbox.revision + 1,
                 projection_type = EXCLUDED.projection_type,
                 aggregate_type = EXCLUDED.aggregate_type,
@@ -123,8 +123,9 @@ public class ProjectionOutboxService {
      */
     private void markDirty(ProjectionType type, String projectionKey, String aggregateType, String aggregateKey,
                            Integer year, Integer quarter, ScheduleLevel scheduleLevel, String payload) {
+        java.util.UUID tenantId = com.dat.ai_receptionist_web.context.TenantContext.requireTenantId();
         jdbcTemplate.update(UPSERT_SQL,
-                type.name(), projectionKey, aggregateType, aggregateKey,
+                tenantId, type.name(), projectionKey, aggregateType, aggregateKey,
                 year, quarter, scheduleLevel == null ? null : scheduleLevel.name(), payload);
     }
 
@@ -136,7 +137,7 @@ public class ProjectionOutboxService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public List<ProjectionJob> claimReadyJobs(int batchSize, String instanceId) {
         List<ProjectionJob> jobs = jdbcTemplate.query("""
-                SELECT id, projection_type, projection_key, aggregate_key,
+                SELECT id, tenant_id, projection_type, projection_key, aggregate_key,
                        year_value, quarter_value, schedule_level, payload::text,
                        revision, retry_count
                 FROM infrastructure.projection_outbox
@@ -147,7 +148,8 @@ public class ProjectionOutboxService {
                 AND NOT EXISTS (
                     SELECT 1
                     FROM infrastructure.projection_scope_state scope_state
-                    WHERE scope_state.rebuilding = TRUE
+                    WHERE scope_state.tenant_id = infrastructure.projection_outbox.tenant_id
+                      AND scope_state.rebuilding = TRUE
                       AND scope_state.rebuild_started_at >= NOW() - INTERVAL '30 minutes'
                       AND (
                           (projection_type = 'LEADERBOARD_CONDUCT'
@@ -162,6 +164,7 @@ public class ProjectionOutboxService {
                 LIMIT ?
                 """, (rs, rowNum) -> new ProjectionJob(
                 rs.getLong("id"),
+                rs.getObject("tenant_id", java.util.UUID.class),
                 ProjectionType.valueOf(rs.getString("projection_type")),
                 rs.getString("projection_key"),
                 rs.getString("aggregate_key"),

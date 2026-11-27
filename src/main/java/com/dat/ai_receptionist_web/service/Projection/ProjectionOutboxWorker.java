@@ -34,7 +34,8 @@ public class ProjectionOutboxWorker {
     public void poll() {
         List<ProjectionJob> jobs = outboxService.claimReadyJobs(batchSize, instanceId);
         for (ProjectionJob job : jobs) {
-            processOne(job);
+            com.dat.ai_receptionist_web.context.TenantContext.runWithTenant(
+                    job.tenantId(), () -> processOne(job));
         }
     }
 

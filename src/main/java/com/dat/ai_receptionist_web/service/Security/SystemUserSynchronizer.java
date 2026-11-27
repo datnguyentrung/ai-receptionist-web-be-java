@@ -1,13 +1,17 @@
 package com.dat.ai_receptionist_web.service.Security;
 
 import com.dat.ai_receptionist_web.config.BootstrapUserProperties;
+import com.dat.ai_receptionist_web.context.TenantContext;
 import com.dat.ai_receptionist_web.domain.Core.Person;
+import com.dat.ai_receptionist_web.domain.Core.TenantMembership;
 import com.dat.ai_receptionist_web.domain.Core.UserPerson;
 import com.dat.ai_receptionist_web.domain.Security.User;
 import com.dat.ai_receptionist_web.enums.Core.Belt;
 import com.dat.ai_receptionist_web.enums.Core.PersonStatus;
+import com.dat.ai_receptionist_web.enums.Core.TenantMembershipStatus;
 import com.dat.ai_receptionist_web.enums.Security.RelationshipType;
 import com.dat.ai_receptionist_web.repository.Core.PersonRepository;
+import com.dat.ai_receptionist_web.repository.Core.TenantMembershipRepository;
 import com.dat.ai_receptionist_web.repository.Core.UserPersonRepository;
 import com.dat.ai_receptionist_web.repository.Security.UserRepository;
 import com.dat.ai_receptionist_web.util.PhoneNumberUtil;
@@ -34,18 +38,17 @@ public class SystemUserSynchronizer implements ApplicationRunner {
     private final UserRepository userRepository;
     private final PersonRepository personRepository;
     private final UserPersonRepository userPersonRepository;
+    private final TenantMembershipRepository tenantMembershipRepository;
     private final UserService userService;
     private final UserRoleService userRoleService;
 
-    /**
-     * Tác dụng: Chạy tác vụ khởi động hoặc đồng bộ dữ liệu theo ngữ cảnh của lớp.
-     * Input: Nhận ApplicationArguments args từ caller hoặc request.
-     * Output: Không trả về dữ liệu; cập nhật trạng thái hoặc ném lỗi khi xử lý thất bại.
-     */
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        SyncResult result = syncAll(bootstrapUserProperties.getUsers());
+        SyncResult result = TenantContext.runWithTenant(
+                TenantContext.DEFAULT_TENANT_ID,
+                () -> syncAll(bootstrapUserProperties.getUsers())
+        );
 
         log.info(
                 "System user sync completed: total={}, created={}, personsCreated={}, contextsCreated={}, contextsActivated={}, roleAssignments={}",
@@ -80,13 +83,28 @@ public class SystemUserSynchronizer implements ApplicationRunner {
 
         int usersCreated = 0;
         for (BootstrapDefinition definition : definitions) {
-            if (!usersByPhone.containsKey(definition.phoneNumber())) {
-                User user = userService.createLoginUserWithoutDuplicateCheck(
+            User user = usersByPhone.get(definition.phoneNumber());
+            if (user == null) {
+                user = userService.createLoginUserWithoutDuplicateCheck(
                         definition.phoneNumber(),
                         definition.password()
                 );
                 usersByPhone.put(definition.phoneNumber(), user);
                 usersCreated++;
+            }
+            if (!tenantMembershipRepository.existsByTenantIdAndUser_UserIdAndStatus(
+                    TenantContext.DEFAULT_TENANT_ID, user.getUserId(), TenantMembershipStatus.ACTIVE)) {
+                final User memberUser = user;
+                tenantMembershipRepository.findByTenantIdAndUser_UserId(
+                        TenantContext.DEFAULT_TENANT_ID, memberUser.getUserId())
+                        .ifPresentOrElse(
+                                existing -> existing.setStatus(TenantMembershipStatus.ACTIVE),
+                                () -> tenantMembershipRepository.save(TenantMembership.builder()
+                                        .tenantId(TenantContext.DEFAULT_TENANT_ID)
+                                        .user(memberUser)
+                                        .status(TenantMembershipStatus.ACTIVE)
+                                        .build())
+                        );
             }
         }
 

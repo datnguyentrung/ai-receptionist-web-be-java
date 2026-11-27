@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Training;
 
-import jakarta.persistence.*;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
 import org.springframework.data.annotation.CreatedDate;
@@ -25,7 +26,7 @@ import java.util.UUID;
         @UniqueConstraint(name = "uk_timesheet_assignment_session",
                 columnNames = {"course_staff_assignment_id", "class_session_id"}),
         indexes = @Index(name = "idx_coach_timesheet_class_session", columnList = "class_session_id"))
-public class CoachTimesheet {
+public class CoachTimesheet extends TenantScopedEntity {
     /** Mã định danh duy nhất của bản ghi chấm công. */
     @Id
     @GeneratedValue

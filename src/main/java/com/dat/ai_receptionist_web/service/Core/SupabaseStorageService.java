@@ -103,7 +103,7 @@ public class SupabaseStorageService {
 
     public String uploadPersonFaceImage(UUID personId, ValidatedImage image) {
         requireConfigured();
-        String objectPath = "persons/%s/%s.%s".formatted(personId, UUID.randomUUID(), image.extension());
+        String objectPath = tenantPrefix() + "persons/%s/%s.%s".formatted(personId, UUID.randomUUID(), image.extension());
         String bucket = properties.getStorage().getFaceImageBucket();
         try {
             client().post()
@@ -130,7 +130,7 @@ public class SupabaseStorageService {
     }
 
     public String uploadTopUpProof(UUID requestId, ValidatedImage image) {
-        String objectPath = "requests/%s/%s.%s".formatted(requestId, UUID.randomUUID(), image.extension());
+        String objectPath = tenantPrefix() + "requests/%s/%s.%s".formatted(requestId, UUID.randomUUID(), image.extension());
         return uploadPrivateImage(properties.getStorage().getTopUpProofBucket(), objectPath, image);
     }
 
@@ -225,6 +225,7 @@ public class SupabaseStorageService {
         if (!StringUtils.hasText(objectPath)) {
             return null;
         }
+        verifyTenantStorageAccess(objectPath);
         requireConfigured(bucket);
         try {
             SignedUrlResponse response = client().post()
@@ -374,6 +375,28 @@ public class SupabaseStorageService {
     }
 
     public record ValidatedImage(MediaType contentType, String extension, byte[] bytes) {
+    }
+
+    private String tenantPrefix() {
+        UUID tenantId = com.dat.ai_receptionist_web.context.TenantContext.getTenantIdOrNull();
+        return tenantId == null ? "" : "tenants/" + tenantId + "/";
+    }
+
+    private void verifyTenantStorageAccess(String objectPath) {
+        UUID currentTenant = com.dat.ai_receptionist_web.context.TenantContext.getTenantIdOrNull();
+        if (currentTenant == null) {
+            return;
+        }
+        if (objectPath.startsWith("tenants/")) {
+            String rest = objectPath.substring("tenants/".length());
+            int slash = rest.indexOf('/');
+            String pathTenant = slash > 0 ? rest.substring(0, slash) : rest;
+            if (!currentTenant.toString().equals(pathTenant)) {
+                throw new ApiException(com.dat.ai_receptionist_web.error.code.SecurityErrorCode.TENANT_ACCESS_DENIED);
+            }
+        } else if (!com.dat.ai_receptionist_web.context.TenantContext.DEFAULT_TENANT_ID.equals(currentTenant)) {
+            throw new ApiException(com.dat.ai_receptionist_web.error.code.SecurityErrorCode.TENANT_ACCESS_DENIED);
+        }
     }
 
     private record SignedUrlResponse(String signedURL) {

@@ -15,6 +15,8 @@ import java.util.*;
 @Service
 public class SecurityUtil {
     public static final MacAlgorithm JWT_ALGORITHM = MacAlgorithm.HS512;
+    public static final String SCOPE_FULL = "FULL";
+    public static final String SCOPE_TENANT_SELECTION = "TENANT_SELECTION";
 
     private final JwtEncoder jwtEncoder;
     private final long accessTokenExpiration;
@@ -28,6 +30,7 @@ public class SecurityUtil {
     public String createAccessToken(UUID authSessionId, AuthorizationSnapshot snapshot,
                                     UUID activeUserPersonId) {
         Instant now = Instant.now();
+        boolean hasTenant = snapshot.tenantId() != null;
         JwtClaimsSet.Builder claims = JwtClaimsSet.builder()
                 .issuedAt(now)
                 .expiresAt(now.plusSeconds(accessTokenExpiration))
@@ -35,10 +38,14 @@ public class SecurityUtil {
                 .claim("userId", snapshot.userId().toString())
                 .claim("authSessionId", authSessionId.toString())
                 .claim("authorizationVersion", snapshot.authorizationVersion())
-                .claim("roles", snapshot.roleCodes())
-                .claim("rolePermissionVersions", snapshot.rolePermissionVersions())
-                .claim("permissions", snapshot.permissionCodes());
-        if (activeUserPersonId != null) {
+                .claim("tokenScope", hasTenant ? SCOPE_FULL : SCOPE_TENANT_SELECTION)
+                .claim("roles", hasTenant ? snapshot.roleCodes() : Set.of())
+                .claim("rolePermissionVersions", hasTenant ? snapshot.rolePermissionVersions() : Map.of())
+                .claim("permissions", hasTenant ? snapshot.permissionCodes() : Set.of());
+        if (hasTenant) {
+            claims.claim("tenantId", snapshot.tenantId().toString());
+        }
+        if (hasTenant && activeUserPersonId != null) {
             claims.claim("activeUserPersonId", activeUserPersonId.toString());
         }
         return jwtEncoder.encode(JwtEncoderParameters.from(
@@ -51,6 +58,12 @@ public class SecurityUtil {
 
     public static Optional<UUID> getCurrentSessionId() {
         return getJwt().map(jwt -> jwt.getClaimAsString("authSessionId")).map(UUID::fromString);
+    }
+
+    public static Optional<UUID> getCurrentTenantId() {
+        return getJwt().map(jwt -> jwt.getClaimAsString("tenantId"))
+                .filter(Objects::nonNull)
+                .map(UUID::fromString);
     }
 
     public static Optional<UUID> getCurrentActiveUserPersonId() {

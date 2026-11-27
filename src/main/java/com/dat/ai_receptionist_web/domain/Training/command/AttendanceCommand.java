@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Training.command;
 
-import jakarta.persistence.Column;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -25,7 +26,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @Table(name = "attendance_command", schema = "training")
-public class AttendanceCommand {
+public class AttendanceCommand extends TenantScopedEntity {
     /** Mã yêu cầu dùng để định danh lệnh và bảo đảm xử lý idempotent. */
     @Id
     @Column(name = "request_id", nullable = false, updatable = false)

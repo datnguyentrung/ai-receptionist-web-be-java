@@ -1,5 +1,6 @@
 package com.dat.ai_receptionist_web.service.Security;
 
+import com.dat.ai_receptionist_web.context.TenantContext;
 import com.dat.ai_receptionist_web.domain.Security.Role;
 import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.dto.Security.RoleDTO;
@@ -21,22 +22,23 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class RoleService {
     private final RoleRepository roleRepository;
-
     private final RoleMapper roleMapper;
-
     private final RolePermissionService rolePermissionService;
+    private final PlatformOwnerService platformOwnerService;
 
-    /**
-     * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
-     * Input: Nhận Pageable pageable từ caller hoặc request.
-     * Output: Trả về PageResponse<RoleDTO.SimpleResponse> theo kết quả xử lý.
-     */
     @Transactional(readOnly = true)
-    @Cacheable(value = "roleList", key = "T(com.dat.ai_receptionist_web.util.CacheKeys).pageable(#pageable)", cacheManager = "redisCacheManager")
+    @Cacheable(
+            value = "roleList",
+            key = "T(com.dat.ai_receptionist_web.util.CacheKeys).pageable(#pageable) + ':' + (@platformOwnerService.isCurrentUserPlatformOwner() ? 'owner' : 'std')",
+            cacheManager = "redisCacheManager")
     public PageResponse<RoleDTO.SimpleResponse> list(Pageable pageable) {
-        var roles = roleRepository.findAll(pageable);
+        UUID tenantId = TenantContext.requireTenantId();
+        boolean isOwner = platformOwnerService.isCurrentUserPlatformOwner();
+        var roles = isOwner
+                ? roleRepository.findAllByTenantId(tenantId, pageable)
+                : roleRepository.findAllByTenantIdAndCodeNot(tenantId, PlatformOwnerService.SYSTEM_ADMIN_ROLE_CODE, pageable);
         Map<String, List<RoleRepository.RolePermissionRow>> permissionsByRole =
-                permissionRowsByRoleCode(roleCodes(roles.getContent()));
+                permissionRowsByRoleCode(tenantId, roleCodes(roles.getContent()));
 
         return PageResponse.of(roles, role -> roleMapper.toSimpleResponse(
                 role,
@@ -44,29 +46,30 @@ public class RoleService {
         ));
     }
 
-    /**
-     * Tác dụng: Lấy chi tiết một bản ghi theo khóa định danh.
-     * Input: Nhận String id từ caller hoặc request.
-     * Output: Trả về RoleDTO.Response theo kết quả xử lý.
-     */
     @Transactional(readOnly = true)
     public RoleDTO.Response get(String id) {
-        Role role = getRole(id);
+        if (!platformOwnerService.isCurrentUserPlatformOwner()
+                && PlatformOwnerService.SYSTEM_ADMIN_ROLE_CODE.equalsIgnoreCase(id)) {
+            throw new ApiException(SecurityErrorCode.ROLE_NOT_FOUND, "Role not found: " + id);
+        }
+        UUID tenantId = TenantContext.requireTenantId();
+        Role role = getRole(tenantId, id);
         return roleMapper.toResponse(
                 role,
-                permissionRowsByRoleCode(Set.of(role.getCode())).getOrDefault(role.getCode(), List.of())
+                permissionRowsByRoleCode(tenantId, Set.of(role.getCode())).getOrDefault(role.getCode(), List.of())
         );
     }
 
-    /**
-     * Tác dụng: Tạo mới bản ghi và trả về dữ liệu sau khi tạo.
-     * Input: Nhận RoleDTO.CreateRequest request từ caller hoặc request.
-     * Output: Trả về RoleDTO.Response theo kết quả xử lý.
-     */
     @Transactional
     @CacheEvict(value = "roleList", allEntries = true, cacheManager = "redisCacheManager")
     public RoleDTO.Response create(RoleDTO.CreateRequest request) {
+        rejectSystemAdminMutation(request.code());
+        UUID tenantId = TenantContext.requireTenantId();
+        if (roleRepository.existsByTenantIdAndCode(tenantId, request.code())) {
+            throw new ApiException(SecurityErrorCode.ROLE_ALREADY_EXISTS, "Role already exists: " + request.code());
+        }
         Role role = new Role();
+        role.setTenantId(tenantId);
         role.setCode(request.code());
         role.setName(request.name());
         role.setDescription(request.description());
@@ -74,83 +77,67 @@ public class RoleService {
         return roleMapper.toResponse(roleRepository.save(role), List.of());
     }
 
-    /**
-     * Tác dụng: Cập nhật bản ghi hiện có và trả về dữ liệu sau khi cập nhật.
-     * Input: Nhận String id, RoleDTO.UpdateRequest request từ caller hoặc request.
-     * Output: Trả về RoleDTO.Response theo kết quả xử lý.
-     */
     @Transactional
     @CacheEvict(value = "roleList", allEntries = true, cacheManager = "redisCacheManager")
     public RoleDTO.Response update(String id, RoleDTO.UpdateRequest request) {
-        Role role = getRole(id);
+        rejectSystemAdminMutation(id);
+        UUID tenantId = TenantContext.requireTenantId();
+        Role role = getRole(tenantId, id);
         roleMapper.updateEntity(request, role);
         Role saved = roleRepository.save(role);
         return roleMapper.toResponse(
                 saved,
-                permissionRowsByRoleCode(Set.of(saved.getCode())).getOrDefault(saved.getCode(), List.of())
+                permissionRowsByRoleCode(tenantId, Set.of(saved.getCode())).getOrDefault(saved.getCode(), List.of())
         );
     }
 
-    /**
-     * Tác dụng: Xóa hoặc vô hiệu hóa bản ghi theo định danh đầu vào.
-     * Input: Nhận String id từ caller hoặc request.
-     * Output: Không trả về dữ liệu; cập nhật trạng thái hoặc ném lỗi khi xử lý thất bại.
-     */
     @Transactional
     @CacheEvict(value = "roleList", allEntries = true, cacheManager = "redisCacheManager")
     public void delete(String id) {
+        rejectSystemAdminMutation(id);
         roleRepository.delete(getRole(id));
     }
 
-    /**
-     * Tác dụng: Thực hiện logic getRole của lớp hiện tại.
-     * Input: Nhận String code từ caller hoặc request.
-     * Output: Trả về Role theo kết quả xử lý.
-     */
+    private void rejectSystemAdminMutation(String code) {
+        if (code != null && PlatformOwnerService.SYSTEM_ADMIN_ROLE_CODE.equalsIgnoreCase(code.trim())) {
+            throw new ApiException(SecurityErrorCode.ACCESS_DENIED, "SYSTEM_ADMIN role is system-managed");
+        }
+    }
+
     public Role getRole(String code) {
-        return roleRepository.findById(code)
+        return getRole(TenantContext.requireTenantId(), code);
+    }
+
+    public Role getRole(UUID tenantId, String code) {
+        return roleRepository.findByTenantIdAndCode(tenantId, code)
                 .orElseThrow(() -> new ApiException(
                         SecurityErrorCode.ROLE_NOT_FOUND,
                         "Role not found: " + code));
     }
 
-    /**
-     * Tác dụng: Kiểm tra sự tồn tại của dữ liệu theo khóa đầu vào.
-     * Input: Nhận String code từ caller hoặc request.
-     * Output: Trả về true/false thể hiện kết quả kiểm tra hoặc xử lý.
-     */
     public boolean exists(String code) {
-        return roleRepository.existsById(code);
+        return roleRepository.existsByTenantIdAndCode(TenantContext.requireTenantId(), code);
     }
 
-    /**
-     * Tác dụng: Thực hiện logic createRole của lớp hiện tại.
-     * Input: Nhận RoleDTO.CreateRequest request từ caller hoặc request.
-     * Output: Trả về Role theo kết quả xử lý.
-     */
     @Transactional
     @CacheEvict(value = "roleList", allEntries = true, cacheManager = "redisCacheManager")
     public Role createRole(RoleDTO.CreateRequest request) {
+        UUID tenantId = TenantContext.requireTenantId();
         String code = request.code();
-        String name = request.name();
-        String description = request.description();
-        if (exists(code)) {
+        if (roleRepository.existsByTenantIdAndCode(tenantId, code)) {
             throw new ApiException(
                     SecurityErrorCode.ROLE_ALREADY_EXISTS,
                     "Role already exists: " + code);
         }
-        Role role = roleRepository.save(roleMapper.toEntity(request));
-
-        rolePermissionService.replace(role.getCode(), Set.of(description));
-
+        Role entity = roleMapper.toEntity(request);
+        entity.setTenantId(tenantId);
+        Role role = roleRepository.save(entity);
+        if (request.description() != null && !request.description().isBlank()) {
+            rolePermissionService.replace(role.getCode(), Set.of(request.description()));
+        }
         return roleRepository.save(role);
     }
 
-    /**
-     * Tác dụng: Thực hiện logic updateRole của lớp hiện tại.
-     * Input: Nhận String code, RoleDTO.UpdateRequest request từ caller hoặc request.
-     * Output: Trả về Role theo kết quả xử lý.
-     */
     @Transactional
     @CacheEvict(value = "roleList", allEntries = true, cacheManager = "redisCacheManager")
     public Role updateRole(String code, RoleDTO.UpdateRequest request) {
@@ -159,11 +146,6 @@ public class RoleService {
         return roleRepository.save(role);
     }
 
-    /**
-     * Tác dụng: Thực hiện logic deleteRole của lớp hiện tại.
-     * Input: Nhận String code từ caller hoặc request.
-     * Output: Không trả về dữ liệu; cập nhật trạng thái hoặc ném lỗi khi xử lý thất bại.
-     */
     @Transactional
     @CacheEvict(value = "roleList", allEntries = true, cacheManager = "redisCacheManager")
     public void deleteRole(String code) {
@@ -177,15 +159,14 @@ public class RoleService {
                 .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
-    private Map<String, List<RoleRepository.RolePermissionRow>> permissionRowsByRoleCode(Set<String> roleCodes) {
+    private Map<String, List<RoleRepository.RolePermissionRow>> permissionRowsByRoleCode(
+            UUID tenantId, Set<String> roleCodes) {
         if (roleCodes == null || roleCodes.isEmpty()) {
             return Map.of();
         }
 
         return roleMapper.groupPermissionRowsByRoleCode(
-                roleRepository.findPermissionsByRoleCodeIn(roleCodes)
+                roleRepository.findPermissionsByTenantIdAndRoleCodeIn(tenantId, roleCodes)
         );
     }
 }
-
-

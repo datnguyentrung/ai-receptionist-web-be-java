@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Core;
 
-import com.dat.ai_receptionist_web.enums.Core.BranchStatus;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.enums.Core.BranchStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -27,7 +28,7 @@ import java.time.LocalDateTime;
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "branch", schema = "core")
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class Branch {
+public class Branch extends TenantScopedEntity {
 
     /** Mã định danh duy nhất của chi nhánh. */
     @Id

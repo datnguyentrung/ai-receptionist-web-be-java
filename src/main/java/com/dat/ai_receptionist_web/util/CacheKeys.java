@@ -1,20 +1,28 @@
 package com.dat.ai_receptionist_web.util;
 
+import com.dat.ai_receptionist_web.context.TenantContext;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public final class CacheKeys {
     private CacheKeys() {
     }
 
+    public static String tenantPrefix() {
+        UUID tenantId = TenantContext.getTenantIdOrNull();
+        return tenantId != null ? "tenant:" + tenantId : "tenant:global";
+    }
+
     public static String pageable(Pageable pageable) {
         if (pageable == null || pageable.isUnpaged()) {
-            return "unpaged";
+            return "%s:unpaged".formatted(tenantPrefix());
         }
 
-        return "page:%d:size:%d:sort:%s".formatted(
+        return "%s:page:%d:size:%d:sort:%s".formatted(
+                tenantPrefix(),
                 pageable.getPageNumber(),
                 pageable.getPageSize(),
                 sort(pageable.getSort())

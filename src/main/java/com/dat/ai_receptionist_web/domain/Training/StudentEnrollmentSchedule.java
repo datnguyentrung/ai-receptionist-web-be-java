@@ -1,6 +1,7 @@
 package com.dat.ai_receptionist_web.domain.Training;
 
-import com.dat.ai_receptionist_web.domain.Catalog.CourseSchedule;
+
+import com.dat.ai_receptionist_web.domain.Base.TenantScopedEntity;import com.dat.ai_receptionist_web.domain.Catalog.CourseSchedule;
 import com.dat.ai_receptionist_web.domain.Catalog.TrainingPlanRequirement;
 import com.dat.ai_receptionist_web.enums.Training.EnrollmentScheduleStatus;
 import jakarta.persistence.*;
@@ -18,7 +19,7 @@ import java.time.LocalDate;
 @Table(name = "student_enrollment_schedule", schema = "training", uniqueConstraints =
         @UniqueConstraint(name = "uk_student_enrollment_schedule", columnNames = {"student_enrollment_id", "course_schedule_id", "effective_from"}),
         indexes = @Index(name = "idx_student_enrollment_schedule_course_schedule", columnList = "course_schedule_id"))
-public class StudentEnrollmentSchedule {
+public class StudentEnrollmentSchedule extends TenantScopedEntity {
     /** Mã định danh duy nhất của liên kết lịch đăng ký. */
     @Id @GeneratedValue @UuidGenerator
     @Column(name = "student_enrollment_schedule_id", nullable = false, updatable = false)

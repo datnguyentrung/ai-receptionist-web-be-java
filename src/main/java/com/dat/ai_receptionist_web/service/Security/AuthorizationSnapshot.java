@@ -11,10 +11,9 @@ public record AuthorizationSnapshot(
         String phoneNumber,
         UserStatus userStatus,
         long authorizationVersion,
+        UUID tenantId,
         Set<String> roleCodes,
         Map<String, Long> rolePermissionVersions,
         Set<String> permissionCodes
 ) {
 }
-
-

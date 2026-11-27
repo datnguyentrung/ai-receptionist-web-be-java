@@ -1,17 +1,26 @@
 package com.dat.ai_receptionist_web.service.Security;
 
+import com.dat.ai_receptionist_web.context.TenantContext;
+import com.dat.ai_receptionist_web.domain.Core.Tenant;
+import com.dat.ai_receptionist_web.domain.Core.TenantMembership;
 import com.dat.ai_receptionist_web.domain.Core.UserPerson;
-import com.dat.ai_receptionist_web.domain.Security.*;
+import com.dat.ai_receptionist_web.domain.Security.AuthSession;
+import com.dat.ai_receptionist_web.domain.Security.User;
 import com.dat.ai_receptionist_web.dto.PageResponse;
 import com.dat.ai_receptionist_web.dto.Security.AuthSessionDTO;
 import com.dat.ai_receptionist_web.dto.Security.LoginRes;
+import com.dat.ai_receptionist_web.enums.Core.TenantMembershipStatus;
+import com.dat.ai_receptionist_web.enums.Core.TenantStatus;
 import com.dat.ai_receptionist_web.error.ApiException;
 import com.dat.ai_receptionist_web.error.code.CoreErrorCode;
 import com.dat.ai_receptionist_web.error.code.SecurityErrorCode;
 import com.dat.ai_receptionist_web.mapper.Core.UserPersonMapper;
 import com.dat.ai_receptionist_web.mapper.Security.AuthSessionMapper;
+import com.dat.ai_receptionist_web.repository.Core.TenantMembershipRepository;
+import com.dat.ai_receptionist_web.repository.Core.TenantRepository;
 import com.dat.ai_receptionist_web.repository.Core.UserPersonRepository;
-import com.dat.ai_receptionist_web.repository.Security.*;
+import com.dat.ai_receptionist_web.repository.Security.AuthSessionRepository;
+import com.dat.ai_receptionist_web.repository.Security.UserRepository;
 import com.dat.ai_receptionist_web.service.Core.SupabaseStorageService;
 import com.dat.ai_receptionist_web.util.RefreshTokenUtil;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +38,8 @@ public class AuthSessionService {
     private final AuthSessionRepository sessionRepository;
     private final UserRepository userRepository;
     private final UserPersonRepository userPersonRepository;
+    private final TenantRepository tenantRepository;
+    private final TenantMembershipRepository tenantMembershipRepository;
     private final AuthSessionMapper authSessionMapper;
     private final UserPersonMapper userPersonMapper;
     private final SupabaseStorageService supabaseStorageService;
@@ -36,36 +47,22 @@ public class AuthSessionService {
     @Value("${jwt.refresh-token-validity-in-seconds}")
     private long refreshTokenValidity;
 
-    /**
-     * Tác dụng: Lấy danh sách bản ghi theo điều kiện phân trang.
-     * Input: Nhận Pageable pageable từ caller hoặc request.
-     * Output: Trả về PageResponse<AuthSessionDTO.SimpleResponse> theo kết quả xử lý.
-     */
     @Transactional(readOnly = true)
     public PageResponse<AuthSessionDTO.SimpleResponse> list(Pageable pageable) {
         return PageResponse.of(sessionRepository.findAllDetailed(pageable), authSessionMapper::toSimpleResponse);
     }
 
-    /**
-     * Tác dụng: Lấy chi tiết một bản ghi theo khóa định danh.
-     * Input: Nhận UUID id từ caller hoặc request.
-     * Output: Trả về AuthSessionDTO.Response theo kết quả xử lý.
-     */
     @Transactional(readOnly = true)
     public AuthSessionDTO.Response get(UUID id) {
         return authSessionMapper.toResponse(find(id));
     }
 
-    /**
-     * Tác dụng: Tạo mới bản ghi và trả về dữ liệu sau khi tạo.
-     * Input: Nhận AuthSessionDTO.CreateRequest request từ caller hoặc request.
-     * Output: Trả về AuthSessionDTO.Response theo kết quả xử lý.
-     */
     @Transactional
     public AuthSessionDTO.Response create(AuthSessionDTO.CreateRequest request) {
         AuthSession session = new AuthSession();
         session.setUser(userRepository.findById(request.userId())
                 .orElseThrow(() -> new ApiException(SecurityErrorCode.USER_NOT_FOUND)));
+        session.setTenantId(TenantContext.getTenantIdOrNull());
         session.setActiveUserPerson(request.activeUserPersonId() == null ? null
                 : userPersonRepository.findById(request.activeUserPersonId())
                 .orElseThrow(() -> new ApiException(CoreErrorCode.USER_PERSON_NOT_FOUND)));
@@ -80,11 +77,6 @@ public class AuthSessionService {
         return authSessionMapper.toResponse(sessionRepository.save(session));
     }
 
-    /**
-     * Tác dụng: Cập nhật bản ghi hiện có và trả về dữ liệu sau khi cập nhật.
-     * Input: Nhận UUID id, AuthSessionDTO.UpdateRequest request từ caller hoặc request.
-     * Output: Trả về AuthSessionDTO.Response theo kết quả xử lý.
-     */
     @Transactional
     public AuthSessionDTO.Response update(UUID id, AuthSessionDTO.UpdateRequest request) {
         AuthSession session = find(id);
@@ -97,31 +89,28 @@ public class AuthSessionService {
         return authSessionMapper.toResponse(sessionRepository.save(session));
     }
 
-    /**
-     * Tác dụng: Xóa hoặc vô hiệu hóa bản ghi theo định danh đầu vào.
-     * Input: Nhận UUID id từ caller hoặc request.
-     * Output: Không trả về dữ liệu; cập nhật trạng thái hoặc ném lỗi khi xử lý thất bại.
-     */
     @Transactional
     public void delete(UUID id) {
         revoke(find(id));
     }
 
-    /**
-     * Tác dụng: Tạo mới bản ghi và trả về dữ liệu sau khi tạo.
-     * Input: Nhận UUID userId, String rawRefreshToken, String deviceInfo, String platform, String fcmToken, UUID activeUserPersonId từ caller hoặc request.
-     * Output: Trả về AuthSession theo kết quả xử lý.
-     */
     @Transactional
-    public AuthSession create(UUID userId, String rawRefreshToken, String deviceInfo,
+    public AuthSession create(UUID userId, UUID tenantId, String rawRefreshToken, String deviceInfo,
                               String platform, String fcmToken, UUID activeUserPersonId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ApiException(SecurityErrorCode.USER_NOT_FOUND));
-        UserPerson active = activeUserPersonId == null ? null
-                : userPersonRepository.findByUserPersonIdAndUser_UserIdAndActiveTrue(activeUserPersonId, userId)
-                .orElseThrow(() -> new ApiException(SecurityErrorCode.PERSON_CONTEXT_NOT_OWNED));
+        UserPerson active = null;
+        if (activeUserPersonId != null) {
+            if (tenantId == null) {
+                throw new ApiException(SecurityErrorCode.TENANT_SELECTION_REQUIRED);
+            }
+            active = userPersonRepository
+                    .findByUserPersonIdAndTenantIdAndUser_UserIdAndActiveTrue(activeUserPersonId, tenantId, userId)
+                    .orElseThrow(() -> new ApiException(SecurityErrorCode.PERSON_CONTEXT_NOT_OWNED));
+        }
         return sessionRepository.save(AuthSession.builder()
                 .user(user)
+                .tenantId(tenantId)
                 .refreshTokenHash(RefreshTokenUtil.sha256(rawRefreshToken))
                 .deviceInfo(deviceInfo)
                 .platform(platform)
@@ -132,11 +121,6 @@ public class AuthSessionService {
                 .build());
     }
 
-    /**
-     * Tác dụng: Xoay vòng token hoặc trạng thái hiện tại sang giá trị mới an toàn hơn.
-     * Input: Nhận String rawCurrentToken, String rawNewToken từ caller hoặc request.
-     * Output: Trả về AuthSession theo kết quả xử lý.
-     */
     @Transactional
     public AuthSession rotate(String rawCurrentToken, String rawNewToken) {
         AuthSession session = sessionRepository
@@ -150,64 +134,104 @@ public class AuthSessionService {
         return session;
     }
 
-    /**
-     * Tác dụng: Thu hồi phiên hoặc quyền truy cập theo điều kiện đầu vào.
-     * Input: Nhận String rawToken từ caller hoặc request.
-     * Output: Không trả về dữ liệu; cập nhật trạng thái hoặc ném lỗi khi xử lý thất bại.
-     */
     @Transactional
     public void revokeByRawToken(String rawToken) {
         if (rawToken == null || rawToken.isBlank()) return;
         sessionRepository.findByRefreshTokenHash(RefreshTokenUtil.sha256(rawToken)).ifPresent(this::revoke);
     }
 
-    /**
-     * Tác dụng: Thu hồi phiên hoặc quyền truy cập theo điều kiện đầu vào.
-     * Input: Nhận UUID sessionId từ caller hoặc request.
-     * Output: Không trả về dữ liệu; cập nhật trạng thái hoặc ném lỗi khi xử lý thất bại.
-     */
     @Transactional
     public void revoke(UUID sessionId) {
         sessionRepository.findById(sessionId).ifPresent(this::revoke);
     }
 
-    /**
-     * Tác dụng: Thu hồi phiên hoặc quyền truy cập theo điều kiện đầu vào.
-     * Input: Nhận UUID userId từ caller hoặc request.
-     * Output: Không trả về dữ liệu; cập nhật trạng thái hoặc ném lỗi khi xử lý thất bại.
-     */
     @Transactional
     public void revokeAll(UUID userId) {
         sessionRepository.findAllByUser_UserIdAndRevokedFalse(userId).forEach(this::revoke);
     }
 
-    /**
-     * Tác dụng: Chuyển ngữ cảnh hoạt động của người dùng sau khi kiểm tra quyền sở hữu.
-     * Input: Nhận UUID userId, UUID sessionId, UUID userPersonId từ caller hoặc request.
-     * Output: Trả về ContextSwitchResult theo kết quả xử lý.
-     */
+    @Transactional
+    public TenantSwitchResult selectTenant(UUID userId, UUID sessionId, UUID targetTenantId) {
+        AuthSession session = sessionRepository.findById(sessionId)
+                .filter(value -> value.getUser().getUserId().equals(userId)
+                        && !value.isRevoked()
+                        && value.getExpiresAt().isAfter(LocalDateTime.now()))
+                .orElseThrow(() -> new ApiException(SecurityErrorCode.SESSION_NOT_ACTIVE));
+
+        Tenant tenant = tenantRepository.findById(targetTenantId)
+                .orElseThrow(() -> new ApiException(SecurityErrorCode.TENANT_NOT_FOUND));
+        if (tenant.getStatus() != TenantStatus.ACTIVE) {
+            throw new ApiException(SecurityErrorCode.TENANT_INACTIVE);
+        }
+
+        TenantMembership membership = tenantMembershipRepository.findByTenantIdAndUser_UserId(targetTenantId, userId)
+                .orElseThrow(() -> new ApiException(SecurityErrorCode.TENANT_ACCESS_DENIED));
+        if (membership.getStatus() != TenantMembershipStatus.ACTIVE) {
+            throw new ApiException(SecurityErrorCode.TENANT_MEMBERSHIP_REVOKED);
+        }
+
+        session.setTenantId(targetTenantId);
+
+        List<LoginRes.UserContextRes> availableContexts = TenantContext.runWithTenant(
+                targetTenantId,
+                () -> contexts(userId, targetTenantId));
+        LoginRes.UserContextRes activeContext = availableContexts.size() == 1 ? availableContexts.getFirst() : null;
+        if (activeContext == null) {
+            session.setActiveUserPerson(null);
+        } else {
+            UserPerson activeEntity = userPersonRepository
+                    .findByUserPersonIdAndTenantIdAndUser_UserIdAndActiveTrue(
+                            activeContext.userPersonId(), targetTenantId, userId)
+                    .orElse(null);
+            session.setActiveUserPerson(activeEntity);
+        }
+
+        List<LoginRes.TenantRes> availableTenants = tenants(userId);
+        LoginRes.TenantRes activeTenant = toTenantRes(tenant);
+        return new TenantSwitchResult(activeTenant, availableTenants, activeContext, availableContexts);
+    }
+
     @Transactional
     public ContextSwitchResult switchContext(UUID userId, UUID sessionId, UUID userPersonId) {
         AuthSession session = sessionRepository.findById(sessionId)
                 .filter(value -> value.getUser().getUserId().equals(userId) && !value.isRevoked())
                 .orElseThrow(() -> new ApiException(SecurityErrorCode.SESSION_NOT_ACTIVE));
+        UUID tenantId = session.getTenantId();
+        if (tenantId == null) {
+            throw new ApiException(SecurityErrorCode.TENANT_SELECTION_REQUIRED);
+        }
         UserPerson target = userPersonRepository
-                .findByUserPersonIdAndUser_UserIdAndActiveTrue(userPersonId, userId)
+                .findByUserPersonIdAndTenantIdAndUser_UserIdAndActiveTrue(userPersonId, tenantId, userId)
                 .orElseThrow(() -> new ApiException(SecurityErrorCode.PERSON_CONTEXT_NOT_OWNED));
         session.setActiveUserPerson(target);
-        List<LoginRes.UserContextRes> available = contexts(userId);
+        List<LoginRes.UserContextRes> available = contexts(userId, tenantId);
         return new ContextSwitchResult(toLoginContext(target), available);
     }
 
-    /**
-     * Tác dụng: Thực hiện logic contexts của lớp hiện tại.
-     * Input: Nhận UUID userId từ caller hoặc request.
-     * Output: Trả về List<LoginRes.UserContextRes> theo kết quả xử lý.
-     */
     @Transactional(readOnly = true)
-    public List<LoginRes.UserContextRes> contexts(UUID userId) {
-        return userPersonRepository.findAllByUser_UserIdAndActiveTrue(userId).stream()
+    public List<LoginRes.TenantRes> tenants(UUID userId) {
+        return tenantMembershipRepository.findActiveMembershipsForUser(userId).stream()
+                .map(TenantMembership::getTenant)
+                .map(this::toTenantRes)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<LoginRes.UserContextRes> contexts(UUID userId, UUID tenantId) {
+        if (tenantId == null) {
+            return List.of();
+        }
+        return userPersonRepository.findAllByTenantIdAndUser_UserIdAndActiveTrue(tenantId, userId).stream()
                 .map(this::toLoginContext).toList();
+    }
+
+    private LoginRes.TenantRes toTenantRes(Tenant tenant) {
+        return new LoginRes.TenantRes(
+                tenant.getTenantId(),
+                tenant.getCode(),
+                tenant.getName(),
+                tenant.getStatus()
+        );
     }
 
     private LoginRes.UserContextRes toLoginContext(UserPerson userPerson) {
@@ -217,21 +241,11 @@ public class AuthSessionService {
         return userPersonMapper.toLoginContext(userPerson, faceImagePath);
     }
 
-    /**
-     * Tác dụng: Thực hiện logic sessions của lớp hiện tại.
-     * Input: Nhận UUID userId từ caller hoặc request.
-     * Output: Trả về List<AuthSession> theo kết quả xử lý.
-     */
     @Transactional(readOnly = true)
     public List<AuthSession> sessions(UUID userId) {
         return sessionRepository.findAllByUser_UserId(userId);
     }
 
-    /**
-     * Tác dụng: Thực hiện logic updateFcm của lớp hiện tại.
-     * Input: Nhận UUID sessionId, String token, String platform từ caller hoặc request.
-     * Output: Không trả về dữ liệu; cập nhật trạng thái hoặc ném lỗi khi xử lý thất bại.
-     */
     @Transactional
     public void updateFcm(UUID sessionId, String token, String platform) {
         AuthSession session = sessionRepository.findById(sessionId)
@@ -240,11 +254,6 @@ public class AuthSessionService {
         if (platform != null) session.setPlatform(platform.toUpperCase(Locale.ROOT));
     }
 
-    /**
-     * Tác dụng: Thực hiện logic fcmTokensForUser của lớp hiện tại.
-     * Input: Nhận UUID userId từ caller hoặc request.
-     * Output: Trả về Set<String> theo kết quả xử lý.
-     */
     @Transactional(readOnly = true)
     public Set<String> fcmTokensForUser(UUID userId) {
         Set<String> result = new HashSet<>();
@@ -254,11 +263,6 @@ public class AuthSessionService {
         return result;
     }
 
-    /**
-     * Tác dụng: Thu hồi phiên hoặc quyền truy cập theo điều kiện đầu vào.
-     * Input: Nhận AuthSession session từ caller hoặc request.
-     * Output: Không trả về dữ liệu; cập nhật trạng thái hoặc ném lỗi khi xử lý thất bại.
-     */
     private void revoke(AuthSession session) {
         if (!session.isRevoked()) {
             session.setRevoked(true);
@@ -266,11 +270,6 @@ public class AuthSessionService {
         }
     }
 
-    /**
-     * Tác dụng: Tìm và trả về dữ liệu nội bộ theo điều kiện đầu vào.
-     * Input: Nhận UUID id từ caller hoặc request.
-     * Output: Trả về AuthSession theo kết quả xử lý.
-     */
     private AuthSession find(UUID id) {
         return sessionRepository.findById(id)
                 .orElseThrow(() -> new ApiException(SecurityErrorCode.AUTH_SESSION_NOT_FOUND));
@@ -279,6 +278,10 @@ public class AuthSessionService {
     public record ContextSwitchResult(LoginRes.UserContextRes activeContext,
                                       List<LoginRes.UserContextRes> availableContexts) {
     }
+
+    public record TenantSwitchResult(LoginRes.TenantRes activeTenant,
+                                     List<LoginRes.TenantRes> availableTenants,
+                                     LoginRes.UserContextRes activeContext,
+                                     List<LoginRes.UserContextRes> availableContexts) {
+    }
 }
-
-

@@ -376,7 +376,11 @@ public class SessionAttendanceService {
         UUID requestId = UUID.randomUUID();
         String payloadJson = writeJson(payload);
         return attendanceCommandService.enqueueSessionAttendance(
-                new SessionAttendanceCommandMessage(requestId, type, payloadJson)
+                new SessionAttendanceCommandMessage(
+                        com.dat.ai_receptionist_web.context.TenantContext.requireTenantId(),
+                        requestId,
+                        type,
+                        payloadJson)
         );
     }
 
